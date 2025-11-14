@@ -48,7 +48,7 @@ public protocol StreamingLambdaHandler: _Lambda_SendableMetatype {
 
 /// A writer object to write the Lambda response stream into. The HTTP response is started lazily.
 /// before the first call to ``write(_:)`` or ``writeAndFinish(_:)``.
-public protocol LambdaResponseStreamWriter {
+public protocol LambdaResponseStreamWriter: Sendable {
     /// Write a response part into the stream. Bytes written are streamed continually.
     /// - Parameter buffer: The buffer to write.
     /// - Parameter hasCustomHeaders: If `true`, the response will be sent with custom HTTP status code and headers.

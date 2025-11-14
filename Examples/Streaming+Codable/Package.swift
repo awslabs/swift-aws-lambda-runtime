@@ -19,14 +19,16 @@ let package = Package(
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-            ]
+            ],
+            swiftSettings: [.enableExperimentalFeature("NonisolatedNonsendingByDefault")]
         ),
         .testTarget(
             name: "Streaming+CodableTests",
             dependencies: [
                 "StreamingCodable",
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            ]
+            ],
+            swiftSettings: [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
         ),
     ]
 )

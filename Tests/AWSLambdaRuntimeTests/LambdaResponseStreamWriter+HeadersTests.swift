@@ -36,10 +36,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response)
 
         // Verify we have exactly 1 buffer written (single write operation)
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Verify buffer contains valid JSON
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
         #expect(content.contains("\"statusCode\":200"))
     }
@@ -63,10 +63,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response)
 
         // Verify we have exactly 1 buffer written (single write operation)
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Extract JSON from the buffer
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
 
         // Verify all expected fields are present in the JSON
@@ -97,10 +97,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response, encoder: customEncoder)
 
         // Verify we have exactly 1 buffer written (single write operation)
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Verify JSON content with sorted keys
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
 
         // With sorted keys, "headers" should come before "statusCode"
@@ -121,10 +121,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response)
 
         // Verify we have exactly 1 buffer written
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Verify JSON structure
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
 
         // Check expected fields
@@ -149,10 +149,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response)
 
         // Verify we have exactly 1 buffer written
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Verify JSON structure
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
 
         // Check expected fields
@@ -179,10 +179,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response)
 
         // Verify we have exactly 1 buffer written
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Extract JSON part from the buffer
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
 
         // Find the JSON part (everything before any null bytes)
@@ -213,10 +213,10 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(response)
 
         // Verify we have exactly 1 buffer written
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Get the buffer content
-        let buffer = writer.writtenBuffers[0]
+        let buffer = await writer.writtenBuffers[0]
         let content = String(buffer: buffer)
 
         // Verify it contains JSON
@@ -240,7 +240,7 @@ struct LambdaResponseStreamWriterHeadersTests {
         }
 
         // Verify no data was written when encoding fails
-        #expect(writer.writtenBuffers.isEmpty)
+        #expect(await writer.writtenBuffers.isEmpty)
     }
 
     @Test("Write method error propagation")
@@ -255,7 +255,7 @@ struct LambdaResponseStreamWriterHeadersTests {
         }
 
         // Verify the writer attempted to write once
-        #expect(writer.writeCallCount == 1)
+        #expect(await writer.writeCallCount == 1)
     }
 
     // This test is no longer needed since we only have one write operation now
@@ -298,7 +298,7 @@ struct LambdaResponseStreamWriterHeadersTests {
         }
 
         // Verify no data was written when encoding fails
-        #expect(writer.writtenBuffers.isEmpty)
+        #expect(await writer.writtenBuffers.isEmpty)
     }
 
     // MARK: - Integration Tests
@@ -329,21 +329,21 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeAndFinish(moreBuffer)
 
         // Verify the sequence: headers + body + more body
-        #expect(writer.writtenBuffers.count == 3)
-        #expect(writer.isFinished == true)
+        #expect(await writer.writtenBuffers.count == 3)
+        #expect(await writer.isFinished == true)
 
         // Verify headers content
-        let headersBuffer = writer.writtenBuffers[0]
+        let headersBuffer = await writer.writtenBuffers[0]
         let headersContent = String(buffer: headersBuffer)
         #expect(headersContent.contains("\"statusCode\":200"))
         #expect(headersContent.contains("\"Content-Type\":\"text/plain\""))
 
         // Verify body content
-        let firstBodyBuffer = writer.writtenBuffers[1]
+        let firstBodyBuffer = await writer.writtenBuffers[1]
         let firstBodyString = String(buffer: firstBodyBuffer)
         #expect(firstBodyString == "Hello, World!")
 
-        let secondBodyBuffer = writer.writtenBuffers[2]
+        let secondBodyBuffer = await writer.writtenBuffers[2]
         let secondBodyString = String(buffer: secondBodyBuffer)
         #expect(secondBodyString == " Additional content.")
     }
@@ -368,16 +368,16 @@ struct LambdaResponseStreamWriterHeadersTests {
         try await writer.writeStatusAndHeaders(secondResponse)
 
         // Verify both header writes were successful
-        #expect(writer.writtenBuffers.count == 2)  // One buffer per header write
+        #expect(await writer.writtenBuffers.count == 2)  // One buffer per header write
 
         // Verify first header write
-        let firstBuffer = writer.writtenBuffers[0]
+        let firstBuffer = await writer.writtenBuffers[0]
         let firstContent = String(buffer: firstBuffer)
         #expect(firstContent.contains("\"statusCode\":200"))
         #expect(firstContent.contains("\"Content-Type\":\"application/json\""))
 
         // Verify second header write
-        let secondBuffer = writer.writtenBuffers[1]
+        let secondBuffer = await writer.writtenBuffers[1]
         let secondContent = String(buffer: secondBuffer)
         #expect(secondContent.contains("\"statusCode\":201"))
         #expect(secondContent.contains("\"Location\":\"https://example.com/resource/123\""))
@@ -417,16 +417,16 @@ struct LambdaResponseStreamWriterHeadersTests {
         }
 
         // Verify the complete sequence
-        #expect(writer.writtenBuffers.count == 5)  // 1 header + 4 body chunks
-        #expect(writer.isFinished == true)
+        #expect(await writer.writtenBuffers.count == 5)  // 1 header + 4 body chunks
+        #expect(await writer.isFinished == true)
 
         // Verify headers were written correctly
-        let jsonBuffer = writer.writtenBuffers[0]
+        let jsonBuffer = await writer.writtenBuffers[0]
         let jsonString = String(buffer: jsonBuffer)
         #expect(jsonString.contains("\"statusCode\":200"))
 
         // Verify body chunks
-        let bodyChunks = writer.writtenBuffers[1...4].map { String(buffer: $0) }
+        let bodyChunks = await writer.writtenBuffers[1...4].map { String(buffer: $0) }
         let completeBody = bodyChunks.joined()
         let expectedBody = #"{"users": [{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}]}"#
         #expect(completeBody == expectedBody)
@@ -440,20 +440,20 @@ struct LambdaResponseStreamWriterHeadersTests {
         let response = StreamingLambdaStatusAndHeadersResponse(statusCode: 200)
 
         try await basicWriter.writeStatusAndHeaders(response)
-        #expect(basicWriter.writtenBuffers.count == 1)
+        #expect(await basicWriter.writtenBuffers.count == 1)
 
         // Test with a writer that tracks additional state
         let trackingWriter = TrackingLambdaResponseStreamWriter()
         try await trackingWriter.writeStatusAndHeaders(response)
-        #expect(trackingWriter.writtenBuffers.count == 1)
-        #expect(trackingWriter.writeCallCount == 1)  // Single write operation
-        #expect(trackingWriter.finishCallCount == 0)
+        #expect(await trackingWriter.writtenBuffers.count == 1)
+        #expect(await trackingWriter.writeCallCount == 1)  // Single write operation
+        #expect(await trackingWriter.finishCallCount == 0)
 
         // Test with a writer that has custom behavior
         let customWriter = CustomBehaviorLambdaResponseStreamWriter()
         try await customWriter.writeStatusAndHeaders(response)
-        #expect(customWriter.writtenBuffers.count == 1)
-        #expect(customWriter.customBehaviorTriggered == true)
+        #expect(await customWriter.writtenBuffers.count == 1)
+        #expect(await customWriter.customBehaviorTriggered == true)
     }
 
     @Test("Integration: complex scenario with headers, streaming, and finish")
@@ -495,12 +495,13 @@ struct LambdaResponseStreamWriterHeadersTests {
 
         // Verify the complete sequence
         // 2 header writes + 3 events + 1 final event = 6 buffers
-        #expect(writer.writtenBuffers.count == 6)
-        #expect(writer.isFinished == true)
+        #expect(await writer.writtenBuffers.count == 6)
+        #expect(await writer.isFinished == true)
 
         // Verify events (we know the first two buffers are headers)
         let eventBuffers = [
-            writer.writtenBuffers[2], writer.writtenBuffers[3], writer.writtenBuffers[4], writer.writtenBuffers[5],
+            await writer.writtenBuffers[2], await writer.writtenBuffers[3], await writer.writtenBuffers[4],
+            await writer.writtenBuffers[5],
         ]
         let eventStrings = eventBuffers.map { String(buffer: $0) }
         #expect(eventStrings[0] == "data: Event 1\n\n")
@@ -522,14 +523,14 @@ struct LambdaResponseStreamWriterHeadersTests {
 
         // This should compile and work without issues
         try await testWithGenericWriter(writer)
-        #expect(writer.writtenBuffers.count == 1)
+        #expect(await writer.writtenBuffers.count == 1)
 
         // Verify it works with protocol existential
         let protocolWriter: any LambdaResponseStreamWriter = MockLambdaResponseStreamWriter()
         try await protocolWriter.writeStatusAndHeaders(response)
 
         if let mockWriter = protocolWriter as? MockLambdaResponseStreamWriter {
-            #expect(mockWriter.writtenBuffers.count == 1)
+            #expect(await mockWriter.writtenBuffers.count == 1)
         }
     }
 }
@@ -537,7 +538,7 @@ struct LambdaResponseStreamWriterHeadersTests {
 // MARK: - Mock Implementation
 
 /// Mock implementation of LambdaResponseStreamWriter for testing
-final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
+final actor MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var isFinished = false
     private(set) var hasCustomHeaders = false
@@ -576,7 +577,7 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
 // MARK: - Error Handling Mock Implementations
 
 /// Mock implementation that fails on specific write calls for testing error propagation
-final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
+final actor FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var writeCallCount = 0
     private(set) var isFinished = false
@@ -690,7 +691,7 @@ struct FailingJSONEncoder: LambdaOutputEncoder {
 // MARK: - Additional Mock Implementations for Integration Tests
 
 /// Mock implementation that tracks additional state for integration testing
-final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
+final actor TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var writeCallCount = 0
     private(set) var finishCallCount = 0
@@ -727,7 +728,7 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
 }
 
 /// Mock implementation with custom behavior for integration testing
-final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter {
+final actor CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var writtenBuffers: [ByteBuffer] = []
     private(set) var customBehaviorTriggered = false
     private(set) var isFinished = false

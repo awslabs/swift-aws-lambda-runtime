@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=6.2)
+#if swift(<6.2)
 import Logging
 import NIOCore
 import NIOHTTP1
@@ -99,7 +99,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
         ]
     }
 
-    func nextInvocation() async throws -> Invocation {
+    func nextInvocation(isolation: isolated (any Actor)? = #isolation) async throws -> Invocation {
         switch self.state {
         case .connected(let context, .idle):
             return try await withCheckedThrowingContinuation {
@@ -121,6 +121,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 
     func reportError(
+        isolation: isolated (any Actor)? = #isolation,
         _ error: any Error,
         requestID: String
     ) async throws {
@@ -162,6 +163,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 
     func writeResponseBodyPart(
+        isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer,
         requestID: String,
         hasCustomHeaders: Bool
@@ -203,6 +205,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 
     func finishResponseRequest(
+        isolation: isolated (any Actor)? = #isolation,
         finalData: ByteBuffer?,
         requestID: String
     ) async throws {
@@ -235,6 +238,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 
     private func sendResponseBodyPart(
+        isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer,
         sendHeadWithRequestID: String?,
         context: ChannelHandlerContext,
@@ -266,6 +270,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 
     private func sendResponseFinish(
+        isolation: isolated (any Actor)? = #isolation,
         _ byteBuffer: ByteBuffer?,
         sendHeadWithRequestID: String?,
         context: ChannelHandlerContext
