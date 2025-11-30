@@ -129,30 +129,14 @@ struct AWSLambdaPackager: CommandPlugin {
             print("building \"\(product.name)\"")
             let buildCommand =
                 "swift build -c \(buildConfiguration.rawValue) --product \(product.name) --static-swift-stdlib"
-            if let localPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] {
-                // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
-                // because Examples' Package.swift have a dependency on ../..
-                // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
-                let slice = packageDirectory.pathComponents.suffix(2)
-                try Utils.execute(
-                    executable: dockerToolPath,
-                    arguments: [
-                        "run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=\(localPath)", "-v",
-                        "\(packageDirectory.path())../..:/workspace", "-w",
-                        "/workspace/\(slice.joined(separator: "/"))", baseImage, "bash", "-cl", buildCommand,
-                    ],
-                    logLevel: verboseLogging ? .debug : .output
-                )
-            } else {
-                try Utils.execute(
-                    executable: dockerToolPath,
-                    arguments: [
-                        "run", "--rm", "-v", "\(packageDirectory.path()):/workspace", "-w", "/workspace", baseImage,
-                        "bash", "-cl", buildCommand,
-                    ],
-                    logLevel: verboseLogging ? .debug : .output
-                )
-            }
+            try Utils.execute(
+                executable: dockerToolPath,
+                arguments: [
+                    "run", "--rm", "-v", "\(packageDirectory.path()):/workspace", "-w", "/workspace", baseImage,
+                    "bash", "-cl", buildCommand,
+                ],
+                logLevel: verboseLogging ? .debug : .output
+            )
             let productPath = buildOutputPath.appending(path: product.name)
 
             guard FileManager.default.fileExists(atPath: productPath.path()) else {

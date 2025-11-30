@@ -25,7 +25,7 @@ LIBS_TO_CHECK="libFoundation.so libFoundationInternationalization.so lib_Foundat
 pushd Examples/${EXAMPLE} || fatal "Failed to change directory to Examples/${EXAMPLE}."
 
 # recompile the example without the --static-swift-stdlib flag
-LAMBDA_USE_LOCAL_DEPS=../.. swift build -c release || fatal "Failed to build the example."
+swift build -c release || fatal "Failed to build the example."
 
 # check if the binary exists
 if [ ! -f "${OUTPUT_FILE}" ]; then

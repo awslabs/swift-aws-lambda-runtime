@@ -35,7 +35,7 @@ jobs:
     with:
       name: "Integration tests"
       examples_enabled: true
-      matrix_linux_command: "LAMBDA_USE_LOCAL_DEPS=../.. swift build"
+      matrix_linux_command: "swift build"
       # We pass the list of examples here, but we can't pass an array as argument
       # Instead, we pass a String with a valid JSON array.
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
