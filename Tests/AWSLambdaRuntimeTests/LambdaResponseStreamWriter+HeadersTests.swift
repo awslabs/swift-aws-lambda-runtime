@@ -16,6 +16,7 @@
 import AWSLambdaRuntime
 import Logging
 import NIOCore
+import Synchronization
 import Testing
 
 #if canImport(FoundationEssentials)
@@ -537,10 +538,23 @@ struct LambdaResponseStreamWriterHeadersTests {
 // MARK: - Mock Implementation
 
 /// Mock implementation of LambdaResponseStreamWriter for testing
-final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
-    private(set) var writtenBuffers: [ByteBuffer] = []
-    private(set) var isFinished = false
-    private(set) var hasCustomHeaders = false
+@available(LambdaSwift 2.0, *)
+final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter, Sendable {
+    private let _writtenBuffers: Mutex<[ByteBuffer]> = Mutex([])
+    private let _isFinished: Mutex<Bool> = Mutex(false)
+    private let _hasCustomHeaders: Mutex<Bool> = Mutex(false)
+
+    var writtenBuffers: [ByteBuffer] {
+        _writtenBuffers.withLock { $0 }
+    }
+
+    var isFinished: Bool {
+        _isFinished.withLock { $0 }
+    }
+
+    var hasCustomHeaders: Bool {
+        _hasCustomHeaders.withLock { $0 }
+    }
 
     // Add a JSON string with separator for writeStatusAndHeaders
     func writeStatusAndHeaders<Response: Encodable>(
@@ -559,29 +573,46 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     }
 
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
-        writtenBuffers.append(buffer)
-        self.hasCustomHeaders = hasCustomHeaders
+        _writtenBuffers.withLock { $0.append(buffer) }
+        _hasCustomHeaders.withLock { $0 = hasCustomHeaders }
     }
 
     func finish() async throws {
-        isFinished = true
+        _isFinished.withLock { $0 = true }
     }
 
     func writeAndFinish(_ buffer: ByteBuffer) async throws {
-        writtenBuffers.append(buffer)
-        isFinished = true
+        _writtenBuffers.withLock { $0.append(buffer) }
+        _isFinished.withLock { $0 = true }
     }
 }
 
 // MARK: - Error Handling Mock Implementations
 
 /// Mock implementation that fails on specific write calls for testing error propagation
-final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
-    private(set) var writtenBuffers: [ByteBuffer] = []
-    private(set) var writeCallCount = 0
-    private(set) var isFinished = false
-    private(set) var hasCustomHeaders = false
+@available(LambdaSwift 2.0, *)
+final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter, Sendable {
+    private let _writtenBuffers: Mutex<[ByteBuffer]> = Mutex([])
+    private let _writeCallCount: Mutex<Int> = Mutex(0)
+    private let _isFinished: Mutex<Bool> = Mutex(false)
+    private let _hasCustomHeaders: Mutex<Bool> = Mutex(false)
     private let failOnWriteCall: Int
+
+    var writtenBuffers: [ByteBuffer] {
+        _writtenBuffers.withLock { $0 }
+    }
+
+    var writeCallCount: Int {
+        _writeCallCount.withLock { $0 }
+    }
+
+    var isFinished: Bool {
+        _isFinished.withLock { $0 }
+    }
+
+    var hasCustomHeaders: Bool {
+        _hasCustomHeaders.withLock { $0 }
+    }
 
     init(failOnWriteCall: Int) {
         self.failOnWriteCall = failOnWriteCall
@@ -597,18 +628,21 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     }
 
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
-        writeCallCount += 1
-        self.hasCustomHeaders = hasCustomHeaders
+        let count = _writeCallCount.withLock { value in
+            value += 1
+            return value
+        }
+        _hasCustomHeaders.withLock { $0 = hasCustomHeaders }
 
-        if writeCallCount == failOnWriteCall {
+        if count == failOnWriteCall {
             throw TestWriteError()
         }
 
-        writtenBuffers.append(buffer)
+        _writtenBuffers.withLock { $0.append(buffer) }
     }
 
     func finish() async throws {
-        isFinished = true
+        _isFinished.withLock { $0 = true }
     }
 
     func writeAndFinish(_ buffer: ByteBuffer) async throws {
@@ -690,13 +724,38 @@ struct FailingJSONEncoder: LambdaOutputEncoder {
 // MARK: - Additional Mock Implementations for Integration Tests
 
 /// Mock implementation that tracks additional state for integration testing
-final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
-    private(set) var writtenBuffers: [ByteBuffer] = []
-    private(set) var writeCallCount = 0
-    private(set) var finishCallCount = 0
-    private(set) var writeAndFinishCallCount = 0
-    private(set) var isFinished = false
-    private(set) var hasCustomHeaders = false
+@available(LambdaSwift 2.0, *)
+final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter, Sendable {
+    private let _writtenBuffers: Mutex<[ByteBuffer]> = Mutex([])
+    private let _writeCallCount: Mutex<Int> = Mutex(0)
+    private let _finishCallCount: Mutex<Int> = Mutex(0)
+    private let _writeAndFinishCallCount: Mutex<Int> = Mutex(0)
+    private let _isFinished: Mutex<Bool> = Mutex(false)
+    private let _hasCustomHeaders: Mutex<Bool> = Mutex(false)
+
+    var writtenBuffers: [ByteBuffer] {
+        _writtenBuffers.withLock { $0 }
+    }
+
+    var writeCallCount: Int {
+        _writeCallCount.withLock { $0 }
+    }
+
+    var finishCallCount: Int {
+        _finishCallCount.withLock { $0 }
+    }
+
+    var writeAndFinishCallCount: Int {
+        _writeAndFinishCallCount.withLock { $0 }
+    }
+
+    var isFinished: Bool {
+        _isFinished.withLock { $0 }
+    }
+
+    var hasCustomHeaders: Bool {
+        _hasCustomHeaders.withLock { $0 }
+    }
 
     func writeStatusAndHeaders<Response: Encodable>(
         _ response: Response,
@@ -708,36 +767,53 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     }
 
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
-        writeCallCount += 1
-        self.hasCustomHeaders = hasCustomHeaders
-        writtenBuffers.append(buffer)
+        _writeCallCount.withLock { $0 += 1 }
+        _hasCustomHeaders.withLock { $0 = hasCustomHeaders }
+        _writtenBuffers.withLock { $0.append(buffer) }
     }
 
     func finish() async throws {
-        finishCallCount += 1
-        isFinished = true
+        _finishCallCount.withLock { $0 += 1 }
+        _isFinished.withLock { $0 = true }
     }
 
     func writeAndFinish(_ buffer: ByteBuffer) async throws {
-        writeAndFinishCallCount += 1
-        writtenBuffers.append(buffer)
-        isFinished = true
+        _writeAndFinishCallCount.withLock { $0 += 1 }
+        _writtenBuffers.withLock { $0.append(buffer) }
+        _isFinished.withLock { $0 = true }
     }
 
 }
 
 /// Mock implementation with custom behavior for integration testing
-final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter {
-    private(set) var writtenBuffers: [ByteBuffer] = []
-    private(set) var customBehaviorTriggered = false
-    private(set) var isFinished = false
-    private(set) var hasCustomHeaders = false
+@available(LambdaSwift 2.0, *)
+final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter, Sendable {
+    private let _writtenBuffers: Mutex<[ByteBuffer]> = Mutex([])
+    private let _customBehaviorTriggered: Mutex<Bool> = Mutex(false)
+    private let _isFinished: Mutex<Bool> = Mutex(false)
+    private let _hasCustomHeaders: Mutex<Bool> = Mutex(false)
+
+    var writtenBuffers: [ByteBuffer] {
+        _writtenBuffers.withLock { $0 }
+    }
+
+    var customBehaviorTriggered: Bool {
+        _customBehaviorTriggered.withLock { $0 }
+    }
+
+    var isFinished: Bool {
+        _isFinished.withLock { $0 }
+    }
+
+    var hasCustomHeaders: Bool {
+        _hasCustomHeaders.withLock { $0 }
+    }
 
     func writeStatusAndHeaders<Response: Encodable>(
         _ response: Response,
         encoder: (any LambdaOutputEncoder)? = nil
     ) async throws {
-        customBehaviorTriggered = true
+        _customBehaviorTriggered.withLock { $0 = true }
         var buffer = ByteBuffer()
         buffer.writeString("{\"statusCode\":200}")
         try await write(buffer, hasCustomHeaders: true)
@@ -745,18 +821,18 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
 
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         // Trigger custom behavior on any write
-        customBehaviorTriggered = true
-        self.hasCustomHeaders = hasCustomHeaders
-        writtenBuffers.append(buffer)
+        _customBehaviorTriggered.withLock { $0 = true }
+        _hasCustomHeaders.withLock { $0 = hasCustomHeaders }
+        _writtenBuffers.withLock { $0.append(buffer) }
     }
 
     func finish() async throws {
-        isFinished = true
+        _isFinished.withLock { $0 = true }
     }
 
     func writeAndFinish(_ buffer: ByteBuffer) async throws {
-        customBehaviorTriggered = true
-        writtenBuffers.append(buffer)
-        isFinished = true
+        _customBehaviorTriggered.withLock { $0 = true }
+        _writtenBuffers.withLock { $0.append(buffer) }
+        _isFinished.withLock { $0 = true }
     }
 }
