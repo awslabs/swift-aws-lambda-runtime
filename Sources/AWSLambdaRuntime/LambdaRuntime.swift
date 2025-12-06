@@ -78,7 +78,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
         if let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") {
 
-            // Get the max concurrency authorized by user when running on 
+            // Get the max concurrency authorized by user when running on
             // Lambda Managed Instances
             // This is not documented anywhere, except the NodeJS runtime
             // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/utils/env.ts#L34
@@ -102,7 +102,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                     for i in 0..<maxConcurrency {
 
                         group.addTask {
-                            var logger = self.logger 
+                            var logger = self.logger
                             logger[metadataKey: "RIC"] = "\(i)"
                             try await self.startRuntimeInterfaceClient(
                                 endpoint: runtimeEndpoint,
@@ -113,7 +113,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                         }
                     }
                     // Wait for all tasks to complete and propagate any errors
-                    try await group.waitForAll()                    
+                    try await group.waitForAll()
                 }
             }
 
