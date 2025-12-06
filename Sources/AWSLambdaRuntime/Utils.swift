@@ -107,33 +107,33 @@ extension AmazonHeaders {
     }
 }
 
-/// Temporary storage for value being sent from one isolation domain to another
-// use NIOLockedValueBox instead of Mutex to avoid compiler crashes on 6.0
-// see https://github.com/swiftlang/swift/issues/78048
-@usableFromInline
-struct SendingStorage<Value>: ~Copyable, @unchecked Sendable {
-    @usableFromInline
-    struct ValueAlreadySentError: Error {
-        @usableFromInline
-        init() {}
-    }
+// /// Temporary storage for value being sent from one isolation domain to another
+// // use NIOLockedValueBox instead of Mutex to avoid compiler crashes on 6.0
+// // see https://github.com/swiftlang/swift/issues/78048
+// @usableFromInline
+// struct SendingStorage<Value>: ~Copyable, @unchecked Sendable {
+//     @usableFromInline
+//     struct ValueAlreadySentError: Error {
+//         @usableFromInline
+//         init() {}
+//     }
 
-    @usableFromInline
-    // let storage: Mutex<Value?>
-    let storage: NIOLockedValueBox<Value?>
+//     @usableFromInline
+//     // let storage: Mutex<Value?>
+//     let storage: NIOLockedValueBox<Value?>
 
-    @inlinable
-    init(_ value: sending Value) {
-        self.storage = .init(value)
-    }
+//     @inlinable
+//     init(_ value: sending Value) {
+//         self.storage = .init(value)
+//     }
 
-    @inlinable
-    func get() throws -> Value {
-        // try self.storage.withLock {
-        try self.storage.withLockedValue {
-            guard let value = $0 else { throw ValueAlreadySentError() }
-            $0 = nil
-            return value
-        }
-    }
-}
+//     @inlinable
+//     func get() throws -> Value {
+//         // try self.storage.withLock {
+//         try self.storage.withLockedValue {
+//             guard let value = $0 else { throw ValueAlreadySentError() }
+//             $0 = nil
+//             return value
+//         }
+//     }
+// }

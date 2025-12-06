@@ -34,7 +34,6 @@ package struct LambdaRuntimeError: Error {
 
         case missingLambdaRuntimeAPIEnvironmentVariable
         case runtimeCanOnlyBeStartedOnce
-        case handlerCanOnlyBeGetOnce
         case invalidPort
     }
 

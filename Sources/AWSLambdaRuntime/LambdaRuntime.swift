@@ -25,8 +25,7 @@ private let _isRunning = Atomic<Bool>(false)
 @available(LambdaSwift 2.0, *)
 public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
-    /// we protect the handler behind a Mutex to ensure that we only ever have one copy of it
-    let handlerStorage: SendingStorage<Handler>
+    let handler: Handler
     @usableFromInline
     let logger: Logger
     @usableFromInline
@@ -37,7 +36,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         eventLoop: EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
-        self.handlerStorage = SendingStorage(handler)
+        self.handler = handler
         self.eventLoop = eventLoop
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
@@ -74,45 +73,47 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             _isRunning.store(false, ordering: .releasing)
         }
 
-        // The handler can be non-sendable, we want to ensure we only ever have one copy of it
-        let handler = try? self.handlerStorage.get()
-        guard let handler else {
-            throw LambdaRuntimeError(code: .handlerCanOnlyBeGetOnce)
-        }
-
         // are we running inside an AWS Lambda runtime environment ?
         // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
         // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
         if let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") {
 
-            let ipAndPort = runtimeEndpoint.split(separator: ":", maxSplits: 1)
-            let ip = String(ipAndPort[0])
-            guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
+            // Get the max concurrency authorized by user when running on 
+            // Lambda Managed Instances
+            // This is not documented anywhere, except the NodeJS runtime
+            // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/utils/env.ts#L34
+            // and
+            // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/worker/ignition.ts#L12
+            let maxConcurrency = Int(Lambda.env("AWS_LAMBDA_MAX_CONCURRENCY") ?? "1") ?? 1
 
-            do {
-                try await LambdaRuntimeClient.withRuntimeClient(
-                    configuration: .init(ip: ip, port: port),
+            // when max concurrency is 1, do not pay the overhead of launching a Task
+            if maxConcurrency <= 1 {
+                self.logger.trace("Starting one Runtime Interface Client")
+                try await self.startRuntimeInterfaceClient(
+                    endpoint: runtimeEndpoint,
+                    handler: handler,
                     eventLoop: self.eventLoop,
                     logger: self.logger
-                ) { runtimeClient in
-                    try await Lambda.runLoop(
-                        runtimeClient: runtimeClient,
-                        handler: handler,
-                        logger: self.logger
-                    )
-                }
-            } catch {
-                // catch top level errors that have not been handled until now
-                // this avoids the runtime to crash and generate a backtrace
-                if let error = error as? LambdaRuntimeError,
-                    error.code != .connectionToControlPlaneLost
-                {
-                    // if the error is a LambdaRuntimeError but not a connection error,
-                    // we rethrow it to preserve existing behaviour
-                    self.logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
-                    throw error
-                } else {
-                    self.logger.trace("LambdaRuntime.run() connection lost")
+                )
+            } else {
+                try await withThrowingTaskGroup(of: Void.self) { group in
+
+                    self.logger.trace("Starting \(maxConcurrency) Runtime Interface Clients")
+                    for i in 0..<maxConcurrency {
+
+                        group.addTask {
+                            var logger = self.logger 
+                            logger[metadataKey: "RIC"] = "\(i)"
+                            try await self.startRuntimeInterfaceClient(
+                                endpoint: runtimeEndpoint,
+                                handler: self.handler,
+                                eventLoop: self.eventLoop,
+                                logger: logger
+                            )
+                        }
+                    }
+                    // Wait for all tasks to complete and propagate any errors
+                    try await group.waitForAll()                    
                 }
             }
 
@@ -141,7 +142,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 ) { runtimeClient in
                     try await Lambda.runLoop(
                         runtimeClient: runtimeClient,
-                        handler: handler,
+                        handler: self.handler,
                         logger: self.logger
                     )
                 }
@@ -150,6 +151,45 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             // When the LocalServerSupport trait is disabled, we can't start a local server because the local server code is not compiled.
             throw LambdaRuntimeError(code: .missingLambdaRuntimeAPIEnvironmentVariable)
             #endif
+        }
+    }
+
+    internal func startRuntimeInterfaceClient(
+        endpoint: String,
+        handler: Handler,
+        eventLoop: EventLoop,
+        logger: Logger
+    ) async throws {
+
+        let ipAndPort = endpoint.split(separator: ":", maxSplits: 1)
+        let ip = String(ipAndPort[0])
+        guard let port = Int(ipAndPort[1]) else { throw LambdaRuntimeError(code: .invalidPort) }
+
+        do {
+            try await LambdaRuntimeClient.withRuntimeClient(
+                configuration: .init(ip: ip, port: port),
+                eventLoop: eventLoop,
+                logger: logger
+            ) { runtimeClient in
+                try await Lambda.runLoop(
+                    runtimeClient: runtimeClient,
+                    handler: handler,
+                    logger: logger
+                )
+            }
+        } catch {
+            // catch top level errors that have not been handled until now
+            // this avoids the runtime to crash and generate a backtrace
+            if let error = error as? LambdaRuntimeError,
+                error.code != .connectionToControlPlaneLost
+            {
+                // if the error is a LambdaRuntimeError but not a connection error,
+                // we rethrow it to preserve existing behaviour
+                logger.error("LambdaRuntime.run() failed with error", metadata: ["error": "\(error)"])
+                throw error
+            } else {
+                logger.trace("LambdaRuntime.run() connection lost")
+            }
         }
     }
 }

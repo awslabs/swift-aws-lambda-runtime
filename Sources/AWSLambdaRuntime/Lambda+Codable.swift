@@ -17,7 +17,7 @@ import NIOCore
 
 /// The protocol a decoder must conform to so that it can be used with ``LambdaCodableAdapter`` to decode incoming
 /// `ByteBuffer` events.
-public protocol LambdaEventDecoder {
+public protocol LambdaEventDecoder: Sendable {
     /// Decode the `ByteBuffer` representing the received event into the generic `Event` type
     /// the handler will receive.
     /// - Parameters:
@@ -29,7 +29,7 @@ public protocol LambdaEventDecoder {
 
 /// The protocol an encoder must conform to so that it can be used with ``LambdaCodableAdapter`` to encode the generic
 /// ``LambdaOutputEncoder/Output`` object into a `ByteBuffer`.
-public protocol LambdaOutputEncoder {
+public protocol LambdaOutputEncoder: Sendable {
     associatedtype Output
 
     /// Encode the generic type `Output` the handler has returned into a `ByteBuffer`.

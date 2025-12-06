@@ -137,7 +137,7 @@ extension LambdaRuntime {
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
         logger: Logger = Logger(label: "LambdaRuntime"),
-        body: sending @escaping (Event, LambdaContext) async throws -> Output
+        body: @Sendable @escaping (Event, LambdaContext) async throws -> Output
     )
     where
         Handler == LambdaCodableAdapter<
@@ -164,7 +164,7 @@ extension LambdaRuntime {
     public convenience init<Event: Decodable>(
         decoder: JSONDecoder = JSONDecoder(),
         logger: Logger = Logger(label: "LambdaRuntime"),
-        body: sending @escaping (Event, LambdaContext) async throws -> Void
+        body: @Sendable @escaping (Event, LambdaContext) async throws -> Void
     )
     where
         Handler == LambdaCodableAdapter<
