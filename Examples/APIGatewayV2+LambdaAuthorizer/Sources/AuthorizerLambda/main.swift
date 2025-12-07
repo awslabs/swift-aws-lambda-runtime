@@ -58,21 +58,22 @@ let policyAuthorizerHandler:
 //
 // This code doesn't perform any type of token validation. It should be used as a reference only.
 let simpleAuthorizerHandler:
-    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws -> APIGatewayLambdaAuthorizerSimpleResponse = {
-        (_: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
+    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws ->
+        APIGatewayLambdaAuthorizerSimpleResponse = {
+            (_: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
 
-        context.logger.debug("+++ Simple Authorizer called +++")
+            context.logger.debug("+++ Simple Authorizer called +++")
 
-        // typically, this function will check the validity of the incoming token received in the request
+            // typically, this function will check the validity of the incoming token received in the request
 
-        return APIGatewayLambdaAuthorizerSimpleResponse(
-            // this is the authorization decision: yes or no
-            isAuthorized: true,
+            return APIGatewayLambdaAuthorizerSimpleResponse(
+                // this is the authorization decision: yes or no
+                isAuthorized: true,
 
-            // this is additional context we want to return to the caller
-            context: ["abc1": "xyz1"]
-        )
-    }
+                // this is additional context we want to return to the caller
+                context: ["abc1": "xyz1"]
+            )
+        }
 
 // create the runtime and start polling for new events.
 // in this demo we use the simple authorizer handler
