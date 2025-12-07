@@ -58,7 +58,7 @@ let policyAuthorizerHandler:
 //
 // This code doesn't perform any type of token validation. It should be used as a reference only.
 let simpleAuthorizerHandler:
-    (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws -> APIGatewayLambdaAuthorizerSimpleResponse = {
+    @Sendable (APIGatewayLambdaAuthorizerRequest, LambdaContext) async throws -> APIGatewayLambdaAuthorizerSimpleResponse = {
         (_: APIGatewayLambdaAuthorizerRequest, context: LambdaContext) in
 
         context.logger.debug("+++ Simple Authorizer called +++")

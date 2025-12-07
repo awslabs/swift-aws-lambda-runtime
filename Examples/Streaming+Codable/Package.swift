@@ -12,7 +12,7 @@ let package = Package(
         // For standalone usage, comment the line above and uncomment below:
         // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
 
-        .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.4.0"),
     ],
     targets: [
         .executableTarget(

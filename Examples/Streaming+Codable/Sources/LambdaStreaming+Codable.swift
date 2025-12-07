@@ -28,7 +28,7 @@ import Foundation
 /// This handler protocol supports response streaming and background work execution.
 /// Background work can be executed after closing the response stream by calling
 /// ``LambdaResponseStreamWriter/finish()`` or ``LambdaResponseStreamWriter/writeAndFinish(_:)``.
-public protocol StreamingLambdaHandlerWithEvent: _Lambda_SendableMetatype {
+public protocol StreamingLambdaHandlerWithEvent: Sendable, _Lambda_SendableMetatype {
     /// Generic input type that will be decoded from JSON.
     associatedtype Event: Decodable
 
