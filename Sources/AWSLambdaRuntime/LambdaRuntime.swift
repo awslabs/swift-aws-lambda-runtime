@@ -94,7 +94,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 self.logger.trace("Starting one Runtime Interface Client")
                 try await self.startRuntimeInterfaceClient(
                     endpoint: runtimeEndpoint,
-                    handler: handler,
+                    handler: self.handler,
                     eventLoop: self.eventLoop,
                     logger: self.logger
                 )
@@ -111,7 +111,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                                 endpoint: runtimeEndpoint,
                                 handler: self.handler,
                                 eventLoop: self.eventLoop,
-                                logger: logger
+                                logger: self.logger
                             )
                         }
                     }
