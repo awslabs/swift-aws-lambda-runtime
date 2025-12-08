@@ -80,9 +80,12 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
 
             // Get the max concurrency authorized by user when running on
             // Lambda Managed Instances
-            // This is not documented anywhere, except the NodeJS runtime
+            // See:
+            // - https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html#lambda-managed-instances-concurrency-model
+            // - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+            //
+            // and the NodeJS implementation
             // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/utils/env.ts#L34
-            // and
             // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/worker/ignition.ts#L12
             let maxConcurrency = Int(Lambda.env("AWS_LAMBDA_MAX_CONCURRENCY") ?? "1") ?? 1
 
