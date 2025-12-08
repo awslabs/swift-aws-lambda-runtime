@@ -111,7 +111,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                                 endpoint: runtimeEndpoint,
                                 handler: self.handler,
                                 eventLoop: self.eventLoop,
-                                logger: self.logger
+                                logger: logger
                             )
                         }
                     }
