@@ -7,15 +7,12 @@ let package = Package(
     name: "HBLambda",
     platforms: [.macOS(.v15)],
     dependencies: [
-        // For local development (default)
-        .package(name: "swift-aws-lambda-runtime", path: "../.."),
-
-        // For standalone usage, comment the line above and uncomment below:
-        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        // the Swift Lambda Runtime is a dependency of hummingbird-lambda and it exports the runtime
+        // no need to import it here
 
         .package(
             url: "https://github.com/hummingbird-project/hummingbird-lambda.git",
-            branch: "main"
+            from: "2.0.1"
         ),
         .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.1.0"),
     ],
