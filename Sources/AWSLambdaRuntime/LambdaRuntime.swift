@@ -47,7 +47,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
 
         // use the LOG_LEVEL environment variable to set the log level.
         // if the environment variable is not set, use the default log level from the logger provided
-        log.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? logger.logLevel
+        log.logLevel = Lambda.env("LOG_LEVEL").flatMap { .init(rawValue: $0) } ?? logger.logLevel
 
         self.logger = log
         self.logger.debug("LambdaRuntime initialized")
