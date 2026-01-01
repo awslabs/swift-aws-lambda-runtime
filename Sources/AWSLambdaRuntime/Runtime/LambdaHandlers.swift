@@ -128,13 +128,13 @@ public protocol LambdaResponseWriter<Output> {
 /// A ``StreamingLambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
 @available(LambdaSwift 2.0, *)
-public struct StreamingClosureHandler: StreamingLambdaHandler & Sendable {
-    let body: @Sendable (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+public struct StreamingClosureHandler: StreamingLambdaHandler {
+    let body: (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
 
     /// Initialize an instance from a handler function in the form of a closure.
     /// - Parameter body: The handler function written as a closure.
     public init(
-        body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+        body: @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     ) {
         self.body = body
     }
