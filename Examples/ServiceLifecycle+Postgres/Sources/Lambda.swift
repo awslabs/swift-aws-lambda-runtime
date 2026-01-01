@@ -32,7 +32,7 @@ struct LambdaFunction {
 
     private init() throws {
         var logger = Logger(label: "ServiceLifecycleExample")
-        logger.logLevel = Lambda.env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
+        logger.logLevel = Lambda.env("LOG_LEVEL").flatMap { .init(rawValue: $0) } ?? .info
         self.logger = logger
 
         self.pgClient = try LambdaFunction.createPostgresClient(
