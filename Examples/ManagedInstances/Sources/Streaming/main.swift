@@ -32,8 +32,8 @@ struct SendNumbersWithPause: StreamingLambdaHandler, Sendable {
         context: LambdaContext
     ) async throws {
 
-        // the payload here is an API Gateway V1 request
-        // Check the body of the request to extract the business event
+        // The payload here is a Lambda Function URL request
+        // Check the body of the Function URL request to extract the business event
         let payload = try JSONDecoder().decode(FunctionURLRequest.self, from: Data(event.readableBytesView))
         let _ = payload.body
 
