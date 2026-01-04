@@ -32,7 +32,7 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
 
     @usableFromInline
     let eventLoop: EventLoop
-    
+
     @usableFromInline
     let handler: Handler
 

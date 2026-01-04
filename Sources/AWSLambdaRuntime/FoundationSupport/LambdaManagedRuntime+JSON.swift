@@ -129,7 +129,7 @@ extension LambdaManagedRuntime {
             Output,
             LambdaJSONEventDecoderSendable,
             LambdaJSONOutputEncoderSendable<Output>
-        > 
+        >
     {
         let handler = LambdaCodableAdapterSendable(
             encoder: encoder,
@@ -229,4 +229,4 @@ extension LambdaManagedRuntime {
 }
 #endif  // trait: FoundationJSONSupport
 
-#endif // trait: ManagedRuntimeSupport
+#endif  // trait: ManagedRuntimeSupport

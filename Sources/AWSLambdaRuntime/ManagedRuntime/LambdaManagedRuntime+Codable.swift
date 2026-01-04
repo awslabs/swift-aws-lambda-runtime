@@ -108,5 +108,4 @@ public struct LambdaCodableAdapterSendable<
     }
 }
 
-
 #endif

@@ -157,7 +157,7 @@ import NIOCore
 /// A ``LambdaHandler`` conforming handler object that can be constructed with a closure.
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
 @available(LambdaSwift 2.0, *)
-public struct ClosureHandlerSendable<Event: Decodable, Output>: LambdaHandler, Sendable{
+public struct ClosureHandlerSendable<Event: Decodable, Output>: LambdaHandler, Sendable {
     let body: @Sendable (Event, LambdaContext) async throws -> Output
 
     /// Initialize with a closure handler over generic `Input` and `Output` types.
