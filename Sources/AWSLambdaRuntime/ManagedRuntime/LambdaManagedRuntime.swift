@@ -65,7 +65,7 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
 
     /// Starts the Runtime Interface Client (RIC), i.e. the loop that will poll events,
     /// dispatch them to the Handler and push back results or errors.
-    /// Thus function make sure only one run() is called at a time
+    /// This function makes sure only one run() is called at a time
     internal func _run() async throws {
 
         // we use an atomic global variable to ensure only one LambdaRuntime is running at the time

@@ -17,7 +17,7 @@ This example demonstrates deploying Swift Lambda functions to Lambda Managed Ins
 
 ## Capacity Provider Configuration
 
-[Create your own capcity provider](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-capacity-providers.html#lambda-managed-instances-creating-capacity-provider) before deploying this example.
+[Create your own capacity provider](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-capacity-providers.html#lambda-managed-instances-creating-capacity-provider) before deploying this example.
 
 This example uses a pre-configured capacity provider with the ARN:
 ```
@@ -32,7 +32,7 @@ swift package archive --allow-network-access docker
 
 # Change the values below to match your setup 
 REGION=us-west-2
-CAPACITY_PROVIDER=arn:aws:lambda:us-west-2:486652066693:capacity-provider:TestEC2
+CAPACITY_PROVIDER=arn:aws:lambda:us-west-2:<YOUR ACCOUNT ID>:capacity-provider:<YOUR CAPACITY PROVIDER NAME>
 
 # Deploy using SAM
 sam deploy \
@@ -122,5 +122,5 @@ out.txt && cat out.txt && rm out.txt
 
 To remove all resources:
 ```bash
-sam delete --stack-name swift-lambda-managed-instances --region ${REGION}$
+sam delete --stack-name swift-lambda-managed-instances --region ${REGION}
 ```

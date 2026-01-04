@@ -8,7 +8,7 @@ Description: SAM Template for Lambda Managed Instances Example
 Parameters:
   CapacityProviderArn:
     Type: String
-    Default: arn:aws:lambda:us-west-2:486652066693:capacity-provider:TestEC2  # TODO : CHANGE ME!
+    Default: arn:aws:lambda:us-west-2:${AWS::AccountId}:capacity-provider:MyCapacityProvider  # TODO : CHANGE The Name!
     Description: ARN of the existing capacity provider for Lambda Managed Instances
 
 Globals:
