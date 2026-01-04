@@ -39,7 +39,7 @@ public protocol LambdaOutputEncoder {
     func encode(_ value: Output, into buffer: inout ByteBuffer) throws
 }
 
-public struct VoidEncoder: LambdaOutputEncoder {
+public struct VoidEncoder: LambdaOutputEncoder, Sendable {
     public typealias Output = Void
 
     public init() {}
