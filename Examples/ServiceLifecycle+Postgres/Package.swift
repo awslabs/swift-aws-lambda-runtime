@@ -15,9 +15,9 @@ let package = Package(
         // For standalone usage, comment the line above and uncomment below:
         // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
 
-        .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.0.0"),
-        .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.26.0"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.6.3"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.4.0"),
+        .package(url: "https://github.com/vapor/postgres-nio.git", from: "1.30.0"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.9.1"),
     ],
     targets: [
         .executableTarget(
