@@ -336,7 +336,7 @@ extension LambdaContext {
             traceID: "test-trace-id",
             invokedFunctionARN: "arn:aws:lambda:us-east-1:123456789012:function:test",
             timeout: .seconds(30),
-            logger: Logger(label: "test")
+            logger: Logger(label: "MockedLambdaContext")
         )
     }
 }
