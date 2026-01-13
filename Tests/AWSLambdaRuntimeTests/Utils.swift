@@ -32,7 +32,7 @@ extension Date {
 
 @available(LambdaSwift 2.0, *)
 extension LambdaContext {
-    static func makeTest() -> LambdaContext {
+    public static func makeTest() -> LambdaContext {
         LambdaContext.__forTestsOnly(
             requestID: "test-request-id",
             traceID: "test-trace-id",
