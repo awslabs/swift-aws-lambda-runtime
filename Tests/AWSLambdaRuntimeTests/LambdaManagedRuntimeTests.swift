@@ -80,40 +80,40 @@ struct LambdaManagedRuntimeTests {
     }
 
     // Test 3: Thread-Safe Adapter Tests
-    // @Test("Sendable adapters work with concurrent execution")
-    // @available(LambdaSwift 2.0, *)
-    // func testSendableAdapters() async throws {
-    //     let decoder = LambdaJSONEventDecoderSendable(JSONDecoder())
-    //     let encoder = LambdaJSONOutputEncoderSendable<String>(JSONEncoder())
+    @Test("Sendable adapters work with concurrent execution")
+    @available(LambdaSwift 2.0, *)
+    func testSendableAdapters() async throws {
+        let decoder = LambdaJSONEventDecoder(JSONDecoder())
+        let encoder = LambdaJSONOutputEncoder<String>(JSONEncoder())
 
-    //     let concurrentTasks = 10
+        let concurrentTasks = 10
 
-    //     let results = try await withThrowingTaskGroup(of: String.self) { group in
-    //         for i in 0..<concurrentTasks {
-    //             group.addTask {
-    //                 // Test concurrent decoding
-    //                 let inputBuffer = ByteBuffer(string: #"{"message": "test-\#(i)"}"#)
-    //                 let decoded = try decoder.decode(TestEvent.self, from: inputBuffer)
+        let results = try await withThrowingTaskGroup(of: String.self) { group in
+            for i in 0..<concurrentTasks {
+                group.addTask {
+                    // Test concurrent decoding
+                    let inputBuffer = ByteBuffer(string: #"{"message": "test-\#(i)"}"#)
+                    let decoded = try decoder.decode(TestEvent.self, from: inputBuffer)
 
-    //                 // Test concurrent encoding
-    //                 let output = "response-\(i)"
-    //                 var encoded = ByteBuffer()
-    //                 try encoder.encode(output, into: &encoded)
+                    // Test concurrent encoding
+                    let output = "response-\(i)"
+                    var encoded = ByteBuffer()
+                    try encoder.encode(output, into: &encoded)
 
-    //                 return "\(decoded.message)-\(String(buffer: encoded))"
-    //             }
-    //         }
+                    return "\(decoded.message)-\(String(buffer: encoded))"
+                }
+            }
 
-    //         var collectedResults: [String] = []
-    //         for try await result in group {
-    //             collectedResults.append(result)
-    //         }
-    //         return collectedResults
-    //     }
+            var collectedResults: [String] = []
+            for try await result in group {
+                collectedResults.append(result)
+            }
+            return collectedResults
+        }
 
-    //     #expect(results.count == concurrentTasks)
-    //     #expect(results.allSatisfy { $0.contains("test-") && $0.contains("response-") })
-    // }
+        #expect(results.count == concurrentTasks)
+        #expect(results.allSatisfy { $0.contains("test-") && $0.contains("response-") })
+    }
 
     // Test 4: Concurrency Level Detection
     @Test("Runtime detects AWS_LAMBDA_MAX_CONCURRENCY configuration")
