@@ -1,0 +1,81 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Lambda Managed Instances Example
+
+# This template deploys three Lambda functions to Lambda Managed Instances
+# using a pre-existing capacity provider.
+
+Parameters:
+  CapacityProviderArn:
+    Type: String
+    Default: arn:aws:lambda:us-west-2:${AWS::AccountId}:capacity-provider:MyCapacityProvider  # TODO : CHANGE The Name!
+    Description: ARN of the existing capacity provider for Lambda Managed Instances
+
+Globals:
+  Function:
+    Handler: swift.bootstrap  # ignored by the Swift runtime
+    Runtime: provided.al2023
+    Architectures:
+      - arm64
+    Timeout: 15
+    CapacityProviderConfig:
+      Arn: !Ref CapacityProviderArn
+      PerExecutionEnvironmentMaxConcurrency: 8
+    Environment:
+      Variables:
+        LOG_LEVEL: trace
+
+Resources:
+  # HelloJSON Function - JSON input/output with structured data
+  HelloJSONFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HelloJSON/HelloJSON.zip
+      FunctionName: !Sub "${AWS::StackName}-HelloJSON"
+
+  # Streaming Function - Demonstrates response streaming capabilities
+  StreamingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/Streaming/Streaming.zip
+      FunctionName: !Sub "${AWS::StackName}-Streaming"
+      Timeout: 60  # Longer timeout for streaming operations
+      FunctionUrlConfig:
+        AuthType: AWS_IAM
+        InvokeMode: RESPONSE_STREAM
+
+  # BackgroundTasks Function - Handles long-running background processing
+  BackgroundTasksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/BackgroundTasks/BackgroundTasks.zip
+      FunctionName: !Sub "${AWS::StackName}-BackgroundTasks"
+      Timeout: 300  # 5 minutes for background processing
+      Environment:
+        Variables:
+          LOG_LEVEL: debug
+
+Outputs:
+  # Function URL for reference
+  StreamingFunctionUrl:
+    Description: Streaming Function URL
+    Value: !GetAtt StreamingFunctionUrl.FunctionUrl
+
+  # Function ARNs for reference
+  HelloJSONFunctionArn:
+    Description: "HelloJSON Function ARN"
+    Value: !GetAtt HelloJSONFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-HelloJSONArn"
+
+  StreamingFunctionArn:
+    Description: "Streaming Function ARN"
+    Value: !GetAtt StreamingFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-StreamingArn"
+
+  BackgroundTasksFunctionArn:
+    Description: "BackgroundTasks Function ARN"
+    Value: !GetAtt BackgroundTasksFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-BackgroundTasksArn"
