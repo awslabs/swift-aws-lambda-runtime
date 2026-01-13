@@ -125,7 +125,6 @@ extension LambdaResponseStreamWriter {
         try await self.writeStatusAndHeaders(response, encoder: LambdaJSONOutputEncoder(encoder))
     }
 }
-
 @available(LambdaSwift 2.0, *)
 extension LambdaRuntime {
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a non-`Void` return type**.
