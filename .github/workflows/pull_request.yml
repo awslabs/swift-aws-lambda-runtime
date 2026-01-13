@@ -40,7 +40,7 @@ jobs:
       # We pass the list of examples here, but we can't pass an array as argument
       # Instead, we pass a String with a valid JSON array.
       # The workaround is mentioned here https://github.com/orgs/community/discussions/11692
-      examples: "[ 'APIGatewayV1', 'APIGatewayV2', 'APIGatewayV2+LambdaAuthorizer', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'HelloWorldNoTraits', 'HummingbirdLambda', 'ManagedInstances', 'MultiSourceAPI', 'MultiTenant', 'ResourcesPackaging', 'S3EventNotifier', 'S3_AWSSDK', 'S3_Soto', 'Streaming+APIGateway', 'Streaming+FunctionUrl', 'Streaming+Codable', 'ServiceLifecycle+Postgres', 'Testing', 'Tutorial' ]"
+      examples: "[ 'APIGatewayV1', 'APIGatewayV2', 'APIGatewayV2+LambdaAuthorizer', 'BackgroundTasks', 'HelloJSON', 'HelloWorld', 'HelloWorldNoTraits', 'HummingbirdLambda', 'MultiSourceAPI', 'MultiTenant', 'ResourcesPackaging', 'S3EventNotifier', 'S3_AWSSDK', 'S3_Soto', 'Streaming+APIGateway', 'Streaming+FunctionUrl', 'Streaming+Codable', 'ServiceLifecycle+Postgres', 'Testing', 'Tutorial' ]"
       archive_plugin_examples: "[ 'HelloWorld', 'ResourcesPackaging' ]"
       archive_plugin_enabled: true
 
