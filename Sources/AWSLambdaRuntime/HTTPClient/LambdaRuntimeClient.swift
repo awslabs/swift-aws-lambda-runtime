@@ -106,7 +106,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     // connections that are currently being closed. In the `run` method we must await all of them
     // being fully closed before we can return from it.
     private var closingConnections: [any Channel] = []
-    
+
     // Track channels that are in the process of closing to handle race conditions
     // where an old channel's closeFuture fires after a new connection is established
     private var channelsBeingClosed: Set<ObjectIdentifier> = []
@@ -270,7 +270,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
 
     private func channelClosed(_ channel: any Channel) {
         let channelID = ObjectIdentifier(channel)
-        
+
         // Check if this is an old channel that we're already tracking as closed
         // This handles the race condition where:
         // 1. connectionWillClose() is called, marking the channel as closing
@@ -280,27 +280,28 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         if channelsBeingClosed.contains(channelID) {
             // This is an old channel that's finishing its close operation
             channelsBeingClosed.remove(channelID)
-            
+
             // Also remove from closingConnections if present
             if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
                 self.closingConnections.remove(at: index)
             }
-            
+
             // If we're in closing state and all connections are now closed, complete the close
             if case .closing(let continuation) = self.closingState,
-               self.closingConnections.isEmpty,
-               channelsBeingClosed.isEmpty {
+                self.closingConnections.isEmpty,
+                channelsBeingClosed.isEmpty
+            {
                 self.closingState = .closed
                 continuation.resume()
             }
-            
+
             self.logger.trace(
                 "Old channel closed after new connection established",
                 metadata: ["channel": "\(channel)"]
             )
             return
         }
-        
+
         switch (self.connectionState, self.closingState) {
         case (_, .closed):
             // This should not happen, but if it does, it means we're receiving a close
@@ -310,7 +311,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 "Received channelClosed after closingState is .closed",
                 metadata: [
                     "channel": "\(channel)",
-                    "connectionState": "\(self.connectionState)"
+                    "connectionState": "\(self.connectionState)",
                 ]
             )
             return
@@ -354,7 +355,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     "Old channel closing while new connection is active",
                     metadata: [
                         "closingChannel": "\(channel)",
-                        "currentChannel": "\(currentChannel)"
+                        "currentChannel": "\(currentChannel)",
                     ]
                 )
             }
@@ -476,10 +477,10 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
     nonisolated func connectionWillClose(channel: any Channel) {
         self.assumeIsolated { isolated in
             let channelID = ObjectIdentifier(channel)
-            
+
             // Mark this channel as being closed to track it through the close lifecycle
             isolated.channelsBeingClosed.insert(channelID)
-            
+
             switch isolated.connectionState {
             case .disconnected:
                 // this case should never happen. But whatever
@@ -505,7 +506,7 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
                         "Old channel will close while new connection is active",
                         metadata: [
                             "closingChannel": "\(channel)",
-                            "currentChannel": "\(stateChannel)"
+                            "currentChannel": "\(stateChannel)",
                         ]
                     )
                     return
