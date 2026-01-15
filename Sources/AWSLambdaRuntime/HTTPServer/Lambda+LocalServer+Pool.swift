@@ -131,27 +131,20 @@ extension LambdaHTTPServer {
                     }
                 }
             } onCancel: {
-                // Ensure we properly handle cancellation by removing stored continuation
-                let continuationsToCancel = self.lock.withLock { state -> [CheckedContinuation<T, any Error>] in
-                    var toCancel: [CheckedContinuation<T, any Error>] = []
-
-                    if let continuation = state.waitingForAny {
-                        toCancel.append(continuation)
+                // Only remove THIS task's continuation
+                let continuationToCancel = self.lock.withLock { state -> CheckedContinuation<T, any Error>? in
+                    if let requestId = requestId {
+                        // Remove only the continuation for this specific requestId
+                        return state.waitingForSpecific.removeValue(forKey: requestId)
+                    } else {
+                        // Remove only the FIFO continuation
+                        let cont = state.waitingForAny
                         state.waitingForAny = nil
+                        return cont
                     }
-
-                    for continuation in state.waitingForSpecific.values {
-                        toCancel.append(continuation)
-                    }
-                    state.waitingForSpecific.removeAll()
-
-                    return toCancel
                 }
-
-                // Resume all continuations outside the lock to avoid potential deadlocks
-                for continuation in continuationsToCancel {
-                    continuation.resume(throwing: CancellationError())
-                }
+                
+                continuationToCancel?.resume(throwing: CancellationError())
             }
         }
 
@@ -167,6 +160,30 @@ extension LambdaHTTPServer {
 
         func makeAsyncIterator() -> Pool {
             self
+        }
+
+        /// Cancel all waiting continuations - used during server shutdown
+        func cancelAll() {
+            let continuationsToCancel = self.lock.withLock { state -> [CheckedContinuation<T, any Error>] in
+                var toCancel: [CheckedContinuation<T, any Error>] = []
+                
+                if let continuation = state.waitingForAny {
+                    toCancel.append(continuation)
+                    state.waitingForAny = nil
+                }
+                
+                for continuation in state.waitingForSpecific.values {
+                    toCancel.append(continuation)
+                }
+                state.waitingForSpecific.removeAll()
+                
+                return toCancel
+            }
+            
+            // Resume all continuations outside the lock
+            for continuation in continuationsToCancel {
+                continuation.resume(throwing: CancellationError())
+            }
         }
 
         struct PoolError: Error {
