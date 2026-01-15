@@ -143,7 +143,7 @@ extension LambdaHTTPServer {
                         return cont
                     }
                 }
-                
+
                 continuationToCancel?.resume(throwing: CancellationError())
             }
         }
@@ -166,20 +166,20 @@ extension LambdaHTTPServer {
         func cancelAll() {
             let continuationsToCancel = self.lock.withLock { state -> [CheckedContinuation<T, any Error>] in
                 var toCancel: [CheckedContinuation<T, any Error>] = []
-                
+
                 if let continuation = state.waitingForAny {
                     toCancel.append(continuation)
                     state.waitingForAny = nil
                 }
-                
+
                 for continuation in state.waitingForSpecific.values {
                     toCancel.append(continuation)
                 }
                 state.waitingForSpecific.removeAll()
-                
+
                 return toCancel
             }
-            
+
             // Resume all continuations outside the lock
             for continuation in continuationsToCancel {
                 continuation.resume(throwing: CancellationError())

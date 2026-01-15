@@ -222,7 +222,7 @@ internal struct LambdaHTTPServer {
             // collect and return the result of the LambdaHandler
             let serverOrHandlerResult1 = await group.next()!
             group.cancelAll()
-            
+
             // Cancel all waiting continuations in the pools to prevent hangs
             server.invocationPool.cancelAll()
             server.responsePool.cancelAll()
