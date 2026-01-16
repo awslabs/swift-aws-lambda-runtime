@@ -103,11 +103,11 @@ struct LambdaRuntimeClientChannelLifecycleTests {
                     // This tests that old channel cleanup doesn't interfere with new connection
                     let _ = try? await runtimeClient.nextInvocation()
 
-                    // If we reach here without hanging, the test passes
+                    // If we reach here without freezing, the test passes
                     // The old channel was properly cleaned up
                 } catch {
                     // Expected to fail with connection error, which is fine
-                    // The important part is that we don't hang
+                    // The important part is that we don't freeze
                 }
             }
         }
@@ -124,7 +124,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
         // 3. Client reconnects (new channel)
         // 4. Client initiates shutdown
         // 5. Old channel's closeFuture fires during shutdown
-        // Expected: Shutdown should complete without hanging
+        // Expected: Shutdown should complete without freezeing
 
         struct ShutdownWithOldChannelBehavior: LambdaServerBehavior {
             let requestId = UUID().uuidString
@@ -297,7 +297,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
                     try await writer2.writeAndFinish(ByteBuffer(string: "response"))
                 } catch {
                     // Connection error is acceptable here
-                    // The important part is that we didn't hang or crash
+                    // The important part is that we didn't freeze or crash
                 }
             }
         }
@@ -356,7 +356,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
                     let _ = try await runtimeClient.nextInvocation()
                     // Note: The disconnect might not happen immediately,
                     // so we may get a successful invocation here.
-                    // The important part is that we don't hang or crash.
+                    // The important part is that we don't freeze or crash.
                 } catch let error as LambdaRuntimeError {
                     // Expected error - connection was closed
                     #expect(error.code == .connectionToControlPlaneLost)
@@ -364,7 +364,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
                     // Other errors are also acceptable (ChannelError, IOError, etc.)
                 }
 
-                // If we reach here without hanging, the state transition worked correctly
+                // If we reach here without freezeing, the state transition worked correctly
             }
         }
     }
@@ -424,7 +424,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
                             try await Task.sleep(for: .milliseconds(10))
                         } catch {
                             // Connection errors are expected and acceptable
-                            // The important part is we don't crash or hang
+                            // The important part is we don't crash or freeze
                             break
                         }
                     }
