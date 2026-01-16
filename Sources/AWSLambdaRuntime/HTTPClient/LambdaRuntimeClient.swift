@@ -278,28 +278,35 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         // 3. The old channel's closeFuture fires (closingState might be .closed)
         // 4. We receive channelClosed() for the OLD channel while NEW channel is connected
         if channelsBeingClosed.contains(channelID) {
-            // This is an old channel that's finishing its close operation
-            channelsBeingClosed.remove(channelID)
+            // If this channel is still the currently connected channel, let the main
+            // state-handling logic below run instead of treating it as an old channel.
+            if case .connected(let stateChannel, _) = self.connectionState, channel === stateChannel {
+                // Remove from tracking and fall through to the main switch statement
+                channelsBeingClosed.remove(channelID)
+            } else {
+                // This is an old channel that's finishing its close operation
+                channelsBeingClosed.remove(channelID)
 
-            // Also remove from closingConnections if present
-            if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
-                self.closingConnections.remove(at: index)
+                // Also remove from closingConnections if present
+                if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
+                    self.closingConnections.remove(at: index)
+                }
+
+                // If we're in closing state and all connections are now closed, complete the close
+                if case .closing(let continuation) = self.closingState,
+                    self.closingConnections.isEmpty,
+                    channelsBeingClosed.isEmpty
+                {
+                    self.closingState = .closed
+                    continuation.resume()
+                }
+
+                self.logger.trace(
+                    "Old channel closed after new connection established",
+                    metadata: ["channel": "\(channel)"]
+                )
+                return
             }
-
-            // If we're in closing state and all connections are now closed, complete the close
-            if case .closing(let continuation) = self.closingState,
-                self.closingConnections.isEmpty,
-                channelsBeingClosed.isEmpty
-            {
-                self.closingState = .closed
-                continuation.resume()
-            }
-
-            self.logger.trace(
-                "Old channel closed after new connection established",
-                metadata: ["channel": "\(channel)"]
-            )
-            return
         }
 
         switch (self.connectionState, self.closingState) {
@@ -350,7 +357,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             if currentChannel === channel {
                 self.connectionState = .disconnected
             } else {
-                // This is an old channel closing - just track it
+                // This is an old channel closing - remove from tracking
+                if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
+                    self.closingConnections.remove(at: index)
+                }
+                
                 self.logger.trace(
                     "Old channel closing while new connection is active",
                     metadata: [
@@ -364,6 +375,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             // Only transition to disconnected if this is the CURRENT channel closing
             if currentChannel === channel {
                 self.connectionState = .disconnected
+            } else {
+                // This is an old channel closing - remove from tracking
+                if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
+                    self.closingConnections.remove(at: index)
+                }
             }
 
             if self.closingConnections.isEmpty && channelsBeingClosed.isEmpty {
