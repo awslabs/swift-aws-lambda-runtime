@@ -197,7 +197,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
 
             func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
                 // Trigger disconnect after each response to force reconnection
-                return .success("delayed-disconnect")
+                .success("delayed-disconnect")
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {
@@ -260,7 +260,7 @@ struct LambdaRuntimeClientChannelLifecycleTests {
 
             func processResponse(requestId: String, response: String?) -> Result<String?, ProcessResponseError> {
                 // Close connection after response
-                return .success("delayed-disconnect")
+                .success("delayed-disconnect")
             }
 
             func processError(requestId: String, error: ErrorResponse) -> Result<Void, ProcessErrorError> {

@@ -361,7 +361,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 if let index = self.closingConnections.firstIndex(where: { $0 === channel }) {
                     self.closingConnections.remove(at: index)
                 }
-                
+
                 self.logger.trace(
                     "Old channel closing while new connection is active",
                     metadata: [
