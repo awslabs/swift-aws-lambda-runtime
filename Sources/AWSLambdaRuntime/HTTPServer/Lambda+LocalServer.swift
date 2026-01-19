@@ -141,22 +141,24 @@ internal struct LambdaHTTPServer {
             .childChannelOption(.maxMessagesPerRead, value: 1)
             .childChannelInitializer { channel in
                 channel.pipeline.configureHTTPServerPipeline(withErrorHandling: true).flatMap { _ in
-                    channel.eventLoop.makeSucceededVoidFuture()
-                }.flatMap { _ in
                     // Handle connection in a detached task
-                    let asyncChannel = try! NIOAsyncChannel(
-                        wrappingChannelSynchronously: channel,
-                        configuration: NIOAsyncChannel.Configuration(
-                            inboundType: HTTPServerRequestPart.self,
-                            outboundType: HTTPServerResponsePart.self
+                    do {
+                        let asyncChannel = try NIOAsyncChannel(
+                            wrappingChannelSynchronously: channel,
+                            configuration: NIOAsyncChannel.Configuration(
+                                inboundType: HTTPServerRequestPart.self,
+                                outboundType: HTTPServerResponsePart.self
+                            )
                         )
-                    )
 
-                    Task.detached {
-                        await server.handleConnection(channel: asyncChannel, logger: logger)
+                        Task.detached {
+                            await server.handleConnection(channel: asyncChannel, logger: logger)
+                        }
+
+                        return channel.eventLoop.makeSucceededVoidFuture()
+                    } catch {
+                        return channel.eventLoop.makeFailedFuture(error)
                     }
-
-                    return channel.eventLoop.makeSucceededVoidFuture()
                 }
             }
 
@@ -200,7 +202,10 @@ internal struct LambdaHTTPServer {
 
             // Now that the local HTTP server and LambdaHandler tasks are started, wait for the
             // first of the two that will terminate.
-            // When first task completes, close server and wait for other task
+            // When first task completes, close the server channel and wait for the other task.
+            // Note: we intentionally do not call `group.cancelAll()` here. Closing the channel causes
+            // the server task (which is awaiting `channel.closeFuture`) to complete naturally, and
+            // we then wait for the remaining task to finish via `group.next()`.
             let serverOrHandlerResult1 = await group.next()!
 
             channel.close(promise: nil)
