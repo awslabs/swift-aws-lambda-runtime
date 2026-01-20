@@ -31,9 +31,9 @@ public struct JSONLogHandler: LogHandler {
     private let traceID: String
     private let encoder: JSONEncoder
     
-    public init(label: String, requestID: String, traceID: String) {
+    public init(label: String, logLevel: Logger.Level = .info, requestID: String, traceID: String) {
         self.label = label
-        self.logLevel = .info
+        self.logLevel = logLevel
         self.requestID = requestID
         self.traceID = traceID
         

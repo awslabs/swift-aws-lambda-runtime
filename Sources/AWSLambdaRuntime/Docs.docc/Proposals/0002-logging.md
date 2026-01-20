@@ -161,15 +161,15 @@ Key features:
 A new `LogHandler` implementation for JSON format logging:
 
 ```swift
-internal struct JSONLogHandler: LogHandler, Sendable {
+public struct JSONLogHandler: LogHandler, Sendable {
     public var logLevel: Logger.Level
     public var metadata: Logger.Metadata
     
-    internal init(
+    public init(
         label: String,
-        level: Logger.Level,
-        requestID: String? = nil,
-        traceID: String? = nil
+        logLevel: Logger.Level = .info,
+        requestID: String,
+        traceID: String
     )
     
     public func log(
