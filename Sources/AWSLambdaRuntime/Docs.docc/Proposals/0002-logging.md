@@ -6,6 +6,7 @@ AWS Lambda supports [advanced logging controls](https://docs.aws.amazon.com/lamb
 
 Versions:
 
+- v2 (2025-01-20): Make `LogHandler` public
 - v1 (2025-01-18): Initial version
 
 ### Motivation
