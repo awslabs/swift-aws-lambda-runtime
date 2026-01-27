@@ -90,8 +90,14 @@ public struct StreamingLambdaCodableAdapter<
 
         var decodedBody: Handler.Event!
 
+        // Try to decode the event. It first tries FunctionURLRequest, then APIGatewayRequest, then "as-is"
+
         // try to decode the event as a FunctionURLRequest, then fetch its body attribute
         if let request = try? self.decoder.decode(FunctionURLRequest.self, from: event) {
+            // decode the body as user-provided JSON type
+            // this function handles the base64 decoding when needed
+            decodedBody = try request.decodeBody(Handler.Event.self)
+        } else if let request = try? self.decoder.decode(APIGatewayRequest.self, from: event) {
             // decode the body as user-provided JSON type
             // this function handles the base64 decoding when needed
             decodedBody = try request.decodeBody(Handler.Event.self)

@@ -122,6 +122,7 @@ struct LambdaContextTests {
         let context = LambdaContext.__forTestsOnly(
             requestID: "test-request",
             traceID: "test-trace",
+            tenantID: nil,
             invokedFunctionARN: "test-arn",
             timeout: .seconds(30),
             logger: Logger(label: "test")

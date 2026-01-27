@@ -44,7 +44,7 @@ struct HttpServer {
 
     static func main() async throws {
         var log = Logger(label: "MockServer")
-        log.logLevel = env("LOG_LEVEL").flatMap(Logger.Level.init) ?? .info
+        log.logLevel = env("LOG_LEVEL").flatMap { .init(rawValue: $0) } ?? .info
 
         let server = HttpServer(
             host: env("HOST") ?? "127.0.0.1",

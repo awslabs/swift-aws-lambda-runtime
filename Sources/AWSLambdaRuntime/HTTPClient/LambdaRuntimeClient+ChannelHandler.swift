@@ -392,6 +392,7 @@ extension LambdaChannelHandler: ChannelInboundHandler {
         switch self.state {
         case .connected(let context, .waitingForNextInvocation(let continuation)):
             do {
+                self.logger.trace("Lambda Invocation Headers", metadata: ["headers": "\(response.head.headers)"])
                 let metadata = try InvocationMetadata(headers: response.head.headers)
                 self.state = .connected(context, .waitingForResponse)
                 continuation.resume(returning: Invocation(metadata: metadata, event: response.body ?? ByteBuffer()))

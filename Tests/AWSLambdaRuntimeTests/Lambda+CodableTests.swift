@@ -67,6 +67,7 @@ struct JSONTests {
         let context = LambdaContext.__forTestsOnly(
             requestID: UUID().uuidString,
             traceID: UUID().uuidString,
+            tenantID: nil,
             invokedFunctionARN: "arn:",
             timeout: .milliseconds(6000),
             logger: self.logger

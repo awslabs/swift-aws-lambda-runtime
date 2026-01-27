@@ -1,0 +1,96 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Streaming Example
+
+# This is an example SAM template for the purpose of this project.
+# When deploying such infrastructure in production environment,
+# we strongly encourage you to follow these best practices for improved security and resiliency
+# - Enable access loggin on API Gateway
+#   See: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html)
+# - Ensure that AWS Lambda function is configured for function-level concurrent execution limit
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html
+#        https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html
+# - Check encryption settings for Lambda environment variable
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html
+# - Ensure that AWS Lambda function is configured for a Dead Letter Queue(DLQ)
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq
+# - Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html
+#   Code Example: https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres
+
+Resources:
+  # Lambda function with streaming support
+  StreamingNumbers:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip
+      Timeout: 60  # Must be bigger than the time it takes to stream the output
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2
+      MemorySize: 128
+      Architectures:
+        - arm64
+      Environment:
+        Variables:
+          LOG_LEVEL: trace
+      Events:
+        StreamingApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref StreamingApi
+            Path: /stream
+            Method: ANY
+
+  # API Gateway REST API with streaming support
+  StreamingApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      DefinitionBody:
+        openapi: "3.0.1"
+        info:
+          title: "StreamingAPI"
+          version: "1.0"
+        paths:
+          /stream:
+            x-amazon-apigateway-any-method:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub "arn:aws:apigateway:${AWS::Region}:lambda:path/2021-11-15/functions/${StreamingNumbers.Arn}/response-streaming-invocations"
+                timeoutInMillis: 60000
+                responseTransferMode: STREAM
+                credentials: !GetAtt ApiGatewayLambdaInvokeRole.Arn
+
+  # IAM Role for API Gateway to invoke Lambda with streaming
+  ApiGatewayLambdaInvokeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: apigateway.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: InvokeLambdaWithResponseStream
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - lambda:InvokeFunction
+                  - lambda:InvokeWithResponseStream
+                Resource: !GetAtt StreamingNumbers.Arn
+
+Outputs:
+  # API Gateway endpoint URL
+  ApiUrl:
+    Description: API Gateway endpoint URL for streaming
+    Value: !Sub "https://${StreamingApi}.execute-api.${AWS::Region}.amazonaws.com/prod/stream"
+
+  # Lambda function ARN
+  LambdaArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt StreamingNumbers.Arn

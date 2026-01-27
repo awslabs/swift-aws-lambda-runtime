@@ -13,6 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import AWSLambdaEvents
 import AWSLambdaRuntime
 import NIOCore
 
@@ -28,6 +29,11 @@ struct SendNumbersWithPause: StreamingLambdaHandler {
         responseWriter: some LambdaResponseStreamWriter,
         context: LambdaContext
     ) async throws {
+
+        // the payload here is an API Gateway V1 request
+        // Check the body of the request to extract the business event
+        let payload = try JSONDecoder().decode(APIGatewayRequest.self, from: Data(event.readableBytesView))
+        let _ = payload.body
 
         // Send HTTP status code and headers before streaming the response body
         try await responseWriter.writeStatusAndHeaders(

@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: SAM Template for Multi Tenant Lambda Example
+
+# This is an example SAM template for the purpose of this project.
+# When deploying such infrastructure in production environment,
+# we strongly encourage you to follow these best practices for improved security and resiliency
+# - Enable access logging on API Gateway
+#   See: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html)
+# - Ensure that AWS Lambda function is configured for function-level concurrent execution limit
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html
+#        https://docs.aws.amazon.com/lambda/latest/dg/configuration-concurrency.html
+# - Check encryption settings for Lambda environment variable
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars-encryption.html
+# - Ensure that AWS Lambda function is configured for a Dead Letter Queue(DLQ)
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/invocation-async-retain-records.html#invocation-dlq
+# - Ensure that AWS Lambda function is configured inside a VPC when it needs to access private resources
+#   See: https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html
+#   Code Example: https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ServiceLifecycle%2BPostgres
+
+Resources:
+  # API Gateway REST API
+  MultiTenantApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      DefinitionBody:
+        openapi: 3.0.1
+        info:
+          title: MultiTenant API
+          version: 1.0.0
+        paths:
+          /{proxy+}:
+            x-amazon-apigateway-any-method:
+              parameters:
+                - name: tenant-id
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+                - name: proxy
+                  in: path
+                  required: true
+                  schema:
+                    type: string
+              x-amazon-apigateway-request-validator: params-only
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MultiTenantLambda.Arn}/invocations
+                requestParameters:
+                  integration.request.header.X-Amz-Tenant-Id: method.request.querystring.tenant-id
+          /:
+            x-amazon-apigateway-any-method:
+              parameters:
+                - name: tenant-id
+                  in: query
+                  required: true
+                  schema:
+                    type: string
+              x-amazon-apigateway-request-validator: params-only
+              x-amazon-apigateway-integration:
+                type: aws_proxy
+                httpMethod: POST
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${MultiTenantLambda.Arn}/invocations
+                requestParameters:
+                  integration.request.header.X-Amz-Tenant-Id: method.request.querystring.tenant-id
+        x-amazon-apigateway-request-validators:
+          params-only:
+            validateRequestParameters: true
+            validateRequestBody: false
+
+  # Lambda function
+  MultiTenantLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MultiTenant/MultiTenant.zip
+      Timeout: 60
+      Handler: swift.bootstrap  # ignored by the Swift runtime
+      Runtime: provided.al2023
+      MemorySize: 128
+      Architectures:
+        - arm64
+      # https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation-configure.html#tenant-isolation-cfn
+      TenancyConfig:
+        TenantIsolationMode: PER_TENANT
+      Environment:
+        Variables:
+          # by default, AWS Lambda runtime produces no log
+          # use `LOG_LEVEL: debug` for lifecycle and event handling information
+          # use `LOG_LEVEL: trace` for detailed input event information
+          LOG_LEVEL: trace
+      Events:
+        RootPath:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MultiTenantApi
+            Path: /
+            Method: ANY
+        ProxyPath:
+          Type: Api
+          Properties:
+            RestApiId: !Ref MultiTenantApi
+            Path: /{proxy+}
+            Method: ANY
+
+  # Permission for API Gateway to invoke Lambda
+  MultiTenantLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref MultiTenantLambda
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${MultiTenantApi}/*/*
+
+Outputs:
+  # print API Gateway endpoint
+  APIGatewayEndpoint:
+    Description: API Gateway endpoint URL
+    # https://docs.aws.amazon.com/lambda/latest/dg/tenant-isolation-invoke.html#tenant-isolation-invoke-apigateway
+    Value: !Sub "https://${MultiTenantApi}.execute-api.${AWS::Region}.amazonaws.com/Prod?tenant-id=seb"

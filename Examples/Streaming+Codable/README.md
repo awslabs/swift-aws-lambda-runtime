@@ -178,11 +178,11 @@ When you have the `aws` command line installed and configured, you will find the
 ```bash
 URL=https://ul3nf4dogmgyr7ffl5r5rs22640fwocc.lambda-url.us-east-1.on.aws/
 REGION=us-east-1
-ACCESS_KEY=AK...
-SECRET_KEY=...
-AWS_SESSION_TOKEN=...
 
-curl --user "${ACCESS_KEY}":"${SECRET_KEY}"   \
+# Set the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN environment variables
+eval $(aws configure export-credentials --format env)
+
+curl --user "${AWS_ACCESS_KEY_ID}":"${AWS_SECRET_ACCESS_KEY}"   \
      --aws-sigv4 "aws:amz:${REGION}:lambda" \
      -H "x-amz-security-token: ${AWS_SESSION_TOKEN}" \
      --no-buffer \
@@ -272,9 +272,12 @@ Value               https://gaudpin2zjqizfujfnqxstnv6u0czrfu.lambda-url.us-east-
 Once the function is deployed, you can invoke it with `curl`, similarly to what you did when deploying with the AWS CLI.
 
 ```bash
+# Set the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN environment variables
+eval $(aws configure export-credentials --format env)
+
 curl -X POST \
      --data '{"count": 3, "message": "Hello World!", "delayMs": 1000}' \
-     --user "$ACCESS_KEY":"$SECRET_KEY"   \
+     --user "$AWS_ACCESS_KEY_ID":"$AWS_SECRET_ACCESS_KEY"   \
      --aws-sigv4 "aws:amz:${REGION}:lambda" \
      -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
      --no-buffer \

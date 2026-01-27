@@ -46,6 +46,8 @@ package struct InvocationMetadata: Hashable, Sendable {
     package let clientContext: String?
     @usableFromInline
     package let cognitoIdentity: String?
+    @usableFromInline
+    package let tenantID: String?
 
     package init(headers: HTTPHeaders) throws(LambdaRuntimeError) {
         guard let requestID = headers.first(name: AmazonHeaders.requestID), !requestID.isEmpty else {
@@ -69,6 +71,7 @@ package struct InvocationMetadata: Hashable, Sendable {
             headers.first(name: AmazonHeaders.traceID) ?? "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=0"
         self.clientContext = headers["Lambda-Runtime-Client-Context"].first
         self.cognitoIdentity = headers["Lambda-Runtime-Cognito-Identity"].first
+        self.tenantID = headers[AmazonHeaders.tenantID].first
     }
 }
 

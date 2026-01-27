@@ -73,6 +73,11 @@ Here is the content of this guide:
    >[!NOTE]
    > When building on Linux, your current user must have permission to use docker. On most Linux distributions, you can do so by adding your user to the `docker` group with the following command: `sudo usermod -aG docker $USER`. You must log out and log back in for the changes to take effect.
 
+   >[!NOTE]
+   > If you encounter Docker credential store errors during the build, remove the `credsStore` entry from your `~/.docker/config.json` file or disable the plugin sandbox with `--disable-sandbox`. See [issue #609](https://github.com/awslabs/swift-aws-lambda-runtime/issues/609) for details.
+
+   
+
 ### Choosing the AWS Region where to deploy
 
 [AWS Global infrastructure](https://aws.amazon.com/about-aws/global-infrastructure/) spans over 34 geographic Regions (and continuously expanding). When you create a resource on AWS, such as a Lambda function, you have to select a geographic region where the resource will be created. The two main factors to consider to select a Region are the physical proximity with your users and geographical compliance. 

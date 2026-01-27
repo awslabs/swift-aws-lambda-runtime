@@ -3,20 +3,16 @@
 
 import PackageDescription
 
-// needed for CI to test the local version of the library
-import struct Foundation.URL
-
 let package = Package(
     name: "HBLambda",
     platforms: [.macOS(.v15)],
     dependencies: [
-        .package(
-            url: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
-            from: "2.0.0"
-        ),
+        // the Swift Lambda Runtime is a dependency of hummingbird-lambda and it exports the runtime
+        // no need to import it here
+
         .package(
             url: "https://github.com/hummingbird-project/hummingbird-lambda.git",
-            branch: "main"
+            from: "2.0.1"
         ),
         .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.1.0"),
     ],
@@ -30,30 +26,3 @@ let package = Package(
         )
     ]
 )
-
-if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
-    localDepsPath != "",
-    let v = try? URL(fileURLWithPath: localDepsPath).resourceValues(forKeys: [.isDirectoryKey]),
-    v.isDirectory == true
-{
-    // when we use the local runtime as deps, let's remove the dependency added above
-    let indexToRemove = package.dependencies.firstIndex { dependency in
-        if case .sourceControl(
-            name: _,
-            location: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
-            requirement: _
-        ) = dependency.kind {
-            return true
-        }
-        return false
-    }
-    if let indexToRemove {
-        package.dependencies.remove(at: indexToRemove)
-    }
-
-    // then we add the dependency on LAMBDA_USE_LOCAL_DEPS' path (typically ../..)
-    print("[INFO] Compiling against swift-aws-lambda-runtime located at \(localDepsPath)")
-    package.dependencies += [
-        .package(name: "swift-aws-lambda-runtime", path: localDepsPath)
-    ]
-}

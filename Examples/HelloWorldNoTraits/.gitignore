@@ -2,3 +2,4 @@ response.json
 samconfig.toml
 template.yaml
 Makefile
+Dockerfile

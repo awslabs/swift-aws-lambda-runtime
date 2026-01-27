@@ -28,7 +28,13 @@ enum Consts {
     static let initializationError = "InitializationError"
 }
 
-/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object.
+/// AWS Lambda HTTP Headers, used to populate the `LambdaContext` object. E.g.
+/// Content-Type: application/json;
+/// Lambda-Runtime-Aws-Request-Id: bfcc9017-7f34-4154-9699-ff0229e9ad2b;
+/// Lambda-Runtime-Aws-Tenant-Id: seb;
+/// Lambda-Runtime-Deadline-Ms: 1763672952393;
+/// Lambda-Runtime-Invoked-Function-Arn: arn:aws:lambda:us-west-2:486652066693:function:MultiTenant-MultiTenantLambda-1E9mgLUtIQ9N;
+/// Lambda-Runtime-Trace-Id: Root=1-691f833c-79cf6a2b23942f8925881714;Parent=76ab2f41125eef94;Sampled=0;Lineage=1:9581a8d4:0; Date: Thu, 20 Nov 2025 21:08:12 GMT; Transfer-Encoding: chunked
 enum AmazonHeaders {
     static let requestID = "Lambda-Runtime-Aws-Request-Id"
     static let traceID = "Lambda-Runtime-Trace-Id"
@@ -36,6 +42,7 @@ enum AmazonHeaders {
     static let cognitoIdentity = "X-Amz-Cognito-Identity"
     static let deadline = "Lambda-Runtime-Deadline-Ms"
     static let invokedFunctionARN = "Lambda-Runtime-Invoked-Function-Arn"
+    static let tenantID = "Lambda-Runtime-Aws-Tenant-Id"
 }
 
 extension String {

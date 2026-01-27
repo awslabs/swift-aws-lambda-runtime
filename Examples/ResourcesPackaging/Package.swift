@@ -1,14 +1,6 @@
-// swift-tools-version:6.1
-// This example has to be in Swift 6.1 because it is used in the test archive plugin CI job
-// That job runs on GitHub's ubuntu-latest environment that only supports Swift 6.1
-// https://github.com/actions/runner-images?tab=readme-ov-file
-// https://github.com/actions/runner-images/blob/main/images/ubuntu/Ubuntu2404-Readme.md
-// We can update to Swift 6.2 when GitHUb hosts will have Swift 6.2
+// swift-tools-version:6.2
 
 import PackageDescription
-
-// needed for CI to test the local version of the library
-import struct Foundation.URL
 
 let package = Package(
     name: "ResourcesPackaging",
@@ -17,7 +9,11 @@ let package = Package(
         .executable(name: "MyLambda", targets: ["MyLambda"])
     ],
     dependencies: [
-        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0")
+        // For local development (default)
+        .package(name: "swift-aws-lambda-runtime", path: "../..")
+
+        // For standalone usage, comment the line above and uncomment below:
+        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
     ],
     targets: [
         .executableTarget(
@@ -32,30 +28,3 @@ let package = Package(
         )
     ]
 )
-
-if let localDepsPath = Context.environment["LAMBDA_USE_LOCAL_DEPS"],
-    localDepsPath != "",
-    let v = try? URL(fileURLWithPath: localDepsPath).resourceValues(forKeys: [.isDirectoryKey]),
-    v.isDirectory == true
-{
-    // when we use the local runtime as deps, let's remove the dependency added above
-    let indexToRemove = package.dependencies.firstIndex { dependency in
-        if case .sourceControl(
-            name: _,
-            location: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
-            requirement: _
-        ) = dependency.kind {
-            return true
-        }
-        return false
-    }
-    if let indexToRemove {
-        package.dependencies.remove(at: indexToRemove)
-    }
-
-    // then we add the dependency on LAMBDA_USE_LOCAL_DEPS' path (typically ../..)
-    print("[INFO] Compiling against swift-aws-lambda-runtime located at \(localDepsPath)")
-    package.dependencies += [
-        .package(name: "swift-aws-lambda-runtime", path: localDepsPath)
-    ]
-}

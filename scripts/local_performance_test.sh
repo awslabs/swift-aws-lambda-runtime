@@ -19,7 +19,7 @@ error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
 
 export HOST=127.0.0.1
-export PORT=7000
+export PORT=7777
 export AWS_LAMBDA_RUNTIME_API="$HOST:$PORT"
 export LOG_LEVEL=error # important, otherwise log becomes a bottleneck
 
@@ -41,8 +41,8 @@ fi
 
 echo "🏗️ Building library and test functions"
 swift build -c release -Xswiftc -g
-LAMBDA_USE_LOCAL_DEPS=../.. swift build --package-path Examples/HelloWorld -c release -Xswiftc -g
-LAMBDA_USE_LOCAL_DEPS=../.. swift build --package-path Examples/HelloJSON -c release -Xswiftc -g
+swift build --package-path Examples/HelloWorld -c release -Xswiftc -g
+swift build --package-path Examples/HelloJSON -c release -Xswiftc -g
 
 cleanup() {
   pkill -9 MockServer && echo "killed previous mock server" # ignore-unacceptable-language

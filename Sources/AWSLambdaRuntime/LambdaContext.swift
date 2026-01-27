@@ -86,9 +86,14 @@ public struct ClientContext: Codable, Sendable {
 /// The Lambda runtime generates and passes the `LambdaContext` to the Lambda handler as an argument.
 @available(LambdaSwift 2.0, *)
 public struct LambdaContext: CustomDebugStringConvertible, Sendable {
+
+    // use a final class as storage to have value type semantic with
+    // low overhead of class for copy on write operations
+    // https://www.youtube.com/watch?v=iLDldae64xE
     final class _Storage: Sendable {
         let requestID: String
         let traceID: String
+        let tenantID: String?
         let invokedFunctionARN: String
         let deadline: LambdaClock.Instant
         let cognitoIdentity: String?
@@ -98,6 +103,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         init(
             requestID: String,
             traceID: String,
+            tenantID: String?,
             invokedFunctionARN: String,
             deadline: LambdaClock.Instant,
             cognitoIdentity: String?,
@@ -106,6 +112,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         ) {
             self.requestID = requestID
             self.traceID = traceID
+            self.tenantID = tenantID
             self.invokedFunctionARN = invokedFunctionARN
             self.deadline = deadline
             self.cognitoIdentity = cognitoIdentity
@@ -124,6 +131,11 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     /// The AWS X-Ray tracing header.
     public var traceID: String {
         self.storage.traceID
+    }
+
+    /// The Tenant ID.
+    public var tenantID: String? {
+        self.storage.tenantID
     }
 
     /// The ARN of the Lambda function, version, or alias that's specified in the invocation.
@@ -153,6 +165,12 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         self.storage.logger
     }
 
+    @available(
+        *,
+        deprecated,
+        message:
+            "This method will be removed in a future major version update. Use init(requestID:traceID:tenantID:invokedFunctionARN:deadline:cognitoIdentity:clientContext:logger) instead."
+    )
     public init(
         requestID: String,
         traceID: String,
@@ -162,9 +180,31 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         clientContext: ClientContext? = nil,
         logger: Logger
     ) {
+        self.init(
+            requestID: requestID,
+            traceID: traceID,
+            tenantID: nil,
+            invokedFunctionARN: invokedFunctionARN,
+            deadline: deadline,
+            cognitoIdentity: cognitoIdentity,
+            clientContext: clientContext,
+            logger: logger
+        )
+    }
+    public init(
+        requestID: String,
+        traceID: String,
+        tenantID: String?,
+        invokedFunctionARN: String,
+        deadline: LambdaClock.Instant,
+        cognitoIdentity: String? = nil,
+        clientContext: ClientContext? = nil,
+        logger: Logger
+    ) {
         self.storage = _Storage(
             requestID: requestID,
             traceID: traceID,
+            tenantID: tenantID,
             invokedFunctionARN: invokedFunctionARN,
             deadline: deadline,
             cognitoIdentity: cognitoIdentity,
@@ -187,6 +227,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     package static func __forTestsOnly(
         requestID: String,
         traceID: String,
+        tenantID: String?,
         invokedFunctionARN: String,
         timeout: Duration,
         logger: Logger
@@ -194,6 +235,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         LambdaContext(
             requestID: requestID,
             traceID: traceID,
+            tenantID: tenantID,
             invokedFunctionARN: invokedFunctionARN,
             deadline: LambdaClock().now.advanced(by: timeout),
             logger: logger

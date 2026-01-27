@@ -48,9 +48,9 @@ public enum Lambda {
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
                 logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
 
-                // when log level is trace or lower, print the first Kb of the payload
+                // when log level is trace or lower, print the first 6 Mb of the payload
                 let bytes = invocation.event
-                let maxPayloadPreviewSize = 1024
+                let maxPayloadPreviewSize = 6 * 1024 * 1024
                 var metadata: Logger.Metadata? = nil
                 if logger.logLevel <= .trace,
                     let buffer = bytes.getSlice(at: 0, length: min(bytes.readableBytes, maxPayloadPreviewSize))
@@ -73,6 +73,7 @@ public enum Lambda {
                         context: LambdaContext(
                             requestID: invocation.metadata.requestID,
                             traceID: invocation.metadata.traceID,
+                            tenantID: invocation.metadata.tenantID,
                             invokedFunctionARN: invocation.metadata.invokedFunctionARN,
                             deadline: LambdaClock.Instant(
                                 millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
