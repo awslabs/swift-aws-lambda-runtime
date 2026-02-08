@@ -55,6 +55,6 @@ struct BackgroundProcessingHandler: LambdaWithBackgroundProcessingHandler, Senda
     }
 }
 
-let adapter = LambdaCodableAdapterSendable(handler: BackgroundProcessingHandler())
+let adapter = LambdaCodableAdapter(handler: BackgroundProcessingHandler())
 let runtime = LambdaManagedRuntime(handler: adapter)
 try await runtime.run()
