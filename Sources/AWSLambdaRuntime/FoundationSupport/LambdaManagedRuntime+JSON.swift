@@ -29,52 +29,6 @@ import class Foundation.JSONEncoder
 import Logging
 
 @available(LambdaSwift 2.0, *)
-extension LambdaCodableAdapterSendable {
-    /// Initializes an instance given an encoder, decoder, and a handler with a non-`Void` output.
-    ///   - Parameters:
-    ///   - encoder: The encoder object that will be used to encode the generic `Output` obtained from the `handler`'s `outputWriter` into a `ByteBuffer`. By default, a JSONEncoder is used.
-    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`. By default, a JSONDecoder is used.
-    ///   - handler: The handler object.
-    public init(
-        encoder: JSONEncoder = JSONEncoder(),
-        decoder: JSONDecoder = JSONDecoder(),
-        handler: Handler
-    )
-    where
-        Output: Encodable,
-        Output == Handler.Output,
-        Encoder == LambdaJSONOutputEncoder<Output>,
-        Decoder == LambdaJSONEventDecoder
-    {
-        self.init(
-            encoder: LambdaJSONOutputEncoder(encoder),
-            decoder: LambdaJSONEventDecoder(decoder),
-            handler: handler
-        )
-    }
-
-    /// Initializes an instance given a decoder, and a handler with a `Void` output.
-    ///   - Parameters:
-    ///   - decoder: The decoder object that will be used to decode the received `ByteBuffer` event into the generic `Event` type served to the `handler`. By default, a JSONDecoder is used.
-    ///   - handler: The handler object.
-    public init(
-        decoder: JSONDecoder = JSONDecoder(),
-        handler: sending Handler
-    )
-    where
-        Output == Void,
-        Handler.Output == Void,
-        Decoder == LambdaJSONEventDecoder,
-        Encoder == VoidEncoder
-    {
-        self.init(
-            decoder: LambdaJSONEventDecoder(decoder),
-            handler: handler
-        )
-    }
-}
-
-@available(LambdaSwift 2.0, *)
 extension LambdaManagedRuntime {
     /// Initialize an instance with a `LambdaHandler` defined in the form of a closure **with a non-`Void` return type**.
     /// - Parameters:
@@ -89,18 +43,18 @@ extension LambdaManagedRuntime {
         body: @Sendable @escaping (Event, LambdaContext) async throws -> Output
     )
     where
-        Handler == LambdaCodableAdapterSendable<
-            LambdaHandlerAdapterSendable<Event, Output, ClosureHandlerSendable<Event, Output>>,
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Output, ClosureHandlerSendable<Event, Output>>,
             Event,
             Output,
             LambdaJSONEventDecoder,
             LambdaJSONOutputEncoder<Output>
         >
     {
-        let handler = LambdaCodableAdapterSendable(
+        let handler = LambdaCodableAdapter(
             encoder: encoder,
             decoder: decoder,
-            handler: LambdaHandlerAdapterSendable(handler: ClosureHandlerSendable(body: body))
+            handler: LambdaHandlerAdapter(handler: ClosureHandlerSendable(body: body))
         )
 
         self.init(handler: handler, logger: logger)
@@ -116,17 +70,17 @@ extension LambdaManagedRuntime {
         body: @Sendable @escaping (Event, LambdaContext) async throws -> Void
     )
     where
-        Handler == LambdaCodableAdapterSendable<
-            LambdaHandlerAdapterSendable<Event, Void, ClosureHandlerSendable<Event, Void>>,
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Void, ClosureHandlerSendable<Event, Void>>,
             Event,
             Void,
             LambdaJSONEventDecoder,
             VoidEncoder
         >
     {
-        let handler = LambdaCodableAdapterSendable(
+        let handler = LambdaCodableAdapter(
             decoder: LambdaJSONEventDecoder(decoder),
-            handler: LambdaHandlerAdapterSendable(handler: ClosureHandlerSendable(body: body))
+            handler: LambdaHandlerAdapter(handler: ClosureHandlerSendable(body: body))
         )
 
         self.init(handler: handler, logger: logger)
@@ -143,8 +97,8 @@ extension LambdaManagedRuntime {
         lambdaHandler: LHandler
     )
     where
-        Handler == LambdaCodableAdapterSendable<
-            LambdaHandlerAdapterSendable<Event, Void, LHandler>,
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Void, LHandler>,
             Event,
             Void,
             LambdaJSONEventDecoder,
@@ -153,9 +107,9 @@ extension LambdaManagedRuntime {
         LHandler.Event == Event,
         LHandler.Output == Void
     {
-        let handler = LambdaCodableAdapterSendable(
+        let handler = LambdaCodableAdapter(
             decoder: LambdaJSONEventDecoder(decoder),
-            handler: LambdaHandlerAdapterSendable(handler: lambdaHandler)
+            handler: LambdaHandlerAdapter(handler: lambdaHandler)
         )
 
         self.init(handler: handler, logger: logger)
@@ -174,8 +128,8 @@ extension LambdaManagedRuntime {
         lambdaHandler: LHandler
     )
     where
-        Handler == LambdaCodableAdapterSendable<
-            LambdaHandlerAdapterSendable<Event, Output, LHandler>,
+        Handler == LambdaCodableAdapter<
+            LambdaHandlerAdapter<Event, Output, LHandler>,
             Event,
             Output,
             LambdaJSONEventDecoder,
@@ -184,10 +138,10 @@ extension LambdaManagedRuntime {
         LHandler.Event == Event,
         LHandler.Output == Output
     {
-        let handler = LambdaCodableAdapterSendable(
+        let handler = LambdaCodableAdapter(
             encoder: encoder,
             decoder: decoder,
-            handler: LambdaHandlerAdapterSendable(handler: lambdaHandler)
+            handler: LambdaHandlerAdapter(handler: lambdaHandler)
         )
 
         self.init(handler: handler, logger: logger)
