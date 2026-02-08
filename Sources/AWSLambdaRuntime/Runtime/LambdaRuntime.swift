@@ -87,7 +87,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
             guard let handler else {
                 throw LambdaRuntimeError(code: .handlerCanOnlyBeGetOnce)
             }
-        
+
             // are we running inside an AWS Lambda runtime environment ?
             // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
             // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
