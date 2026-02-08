@@ -22,6 +22,22 @@ import Synchronization
 @available(LambdaSwift 2.0, *)
 private let _isLambdaRuntimeRunning = Atomic<Bool>(false)
 
+// Shared guard helper
+@available(LambdaSwift 2.0, *)
+internal func withRuntimeGuard<T>(_ body: () async throws -> T) async throws -> T {
+    // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
+    let (_, original) = _isLambdaRuntimeRunning.compareExchange(
+        expected: false,
+        desired: true,
+        ordering: .acquiringAndReleasing
+    )
+    guard !original else { throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce) }
+
+    defer { _isLambdaRuntimeRunning.store(false, ordering: .releasing) }
+
+    return try await body()
+}
+
 @available(LambdaSwift 2.0, *)
 public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler {
     @usableFromInline
@@ -64,49 +80,36 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     /// This function makes sure only one run() is called at a time
     internal func _run() async throws {
 
-        // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
-        let (_, original) = _isLambdaRuntimeRunning.compareExchange(
-            expected: false,
-            desired: true,
-            ordering: .acquiringAndReleasing
-        )
+        try await withRuntimeGuard {
 
-        // if the original value was already true, run() is already running
-        if original {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
-        }
+            // The handler can be non-sendable, we want to ensure we only ever have one copy of it
+            let handler = try? self.handlerStorage.get()
+            guard let handler else {
+                throw LambdaRuntimeError(code: .handlerCanOnlyBeGetOnce)
+            }
+        
+            // are we running inside an AWS Lambda runtime environment ?
+            // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
+            // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
+            if let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") {
 
-        defer {
-            _isLambdaRuntimeRunning.store(false, ordering: .releasing)
-        }
+                self.logger.trace("Starting the Runtime Interface Client")
+                try await LambdaRuntime.startRuntimeInterfaceClient(
+                    endpoint: runtimeEndpoint,
+                    handler: handler,
+                    eventLoop: self.eventLoop,
+                    logger: self.logger
+                )
 
-        // The handler can be non-sendable, we want to ensure we only ever have one copy of it
-        let handler = try? self.handlerStorage.get()
-        guard let handler else {
-            throw LambdaRuntimeError(code: .handlerCanOnlyBeGetOnce)
-        }
+            } else {
 
-        // are we running inside an AWS Lambda runtime environment ?
-        // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
-        // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
-        if let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") {
-
-            self.logger.trace("Starting the Runtime Interface Client")
-            try await LambdaRuntime.startRuntimeInterfaceClient(
-                endpoint: runtimeEndpoint,
-                handler: handler,
-                eventLoop: self.eventLoop,
-                logger: self.logger
-            )
-
-        } else {
-
-            self.logger.trace("Starting the local test HTTP server")
-            try await LambdaRuntime.startLocalServer(
-                handler: handler,
-                eventLoop: self.eventLoop,
-                logger: self.logger
-            )
+                self.logger.trace("Starting the local test HTTP server")
+                try await LambdaRuntime.startLocalServer(
+                    handler: handler,
+                    eventLoop: self.eventLoop,
+                    logger: self.logger
+                )
+            }
         }
     }
 

@@ -19,11 +19,6 @@ import Logging
 import NIOCore
 import Synchronization
 
-// This is our guardian to ensure only one LambdaManagedRuntime is running at the time
-// We use an Atomic here to ensure thread safety
-@available(LambdaSwift 2.0, *)
-private let _isLambdaManagedRuntimeRunning = Atomic<Bool>(false)
-
 @available(LambdaSwift 2.0, *)
 public final class LambdaManagedRuntime<Handler>: Sendable where Handler: StreamingLambdaHandler & Sendable {
 
@@ -68,78 +63,65 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
     /// This function makes sure only one run() is called at a time
     internal func _run() async throws {
 
-        // we use an atomic global variable to ensure only one LambdaRuntime is running at the time
-        let (_, original) = _isLambdaManagedRuntimeRunning.compareExchange(
-            expected: false,
-            desired: true,
-            ordering: .acquiringAndReleasing
-        )
+        try await withRuntimeGuard {
 
-        // if the original value was already true, run() is already running
-        if original {
-            throw LambdaRuntimeError(code: .runtimeCanOnlyBeStartedOnce)
-        }
+            // are we running inside an AWS Lambda runtime environment ?
+            // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
+            // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
+            if let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") {
 
-        defer {
-            _isLambdaManagedRuntimeRunning.store(false, ordering: .releasing)
-        }
+                // Get the max concurrency authorized by user when running on
+                // Lambda Managed Instances
+                // See:
+                // - https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html#lambda-managed-instances-concurrency-model
+                // - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
+                //
+                // and the NodeJS implementation
+                // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/utils/env.ts#L34
+                // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/worker/ignition.ts#L12
+                let maxConcurrency = Int(Lambda.env("AWS_LAMBDA_MAX_CONCURRENCY") ?? "1") ?? 1
 
-        // are we running inside an AWS Lambda runtime environment ?
-        // AWS_LAMBDA_RUNTIME_API is set when running on Lambda
-        // https://docs.aws.amazon.com/lambda/latest/dg/runtimes-api.html
-        if let runtimeEndpoint = Lambda.env("AWS_LAMBDA_RUNTIME_API") {
+                // when max concurrency is 1, do not pay the overhead of launching a Task
+                if maxConcurrency <= 1 {
+                    self.logger.trace("Starting the Runtime Interface Client")
+                    try await LambdaRuntime.startRuntimeInterfaceClient(
+                        endpoint: runtimeEndpoint,
+                        handler: self.handler,
+                        eventLoop: self.eventLoop,
+                        logger: self.logger
+                    )
+                } else {
 
-            // Get the max concurrency authorized by user when running on
-            // Lambda Managed Instances
-            // See:
-            // - https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html#lambda-managed-instances-concurrency-model
-            // - https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
-            //
-            // and the NodeJS implementation
-            // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/utils/env.ts#L34
-            // https://github.com/aws/aws-lambda-nodejs-runtime-interface-client/blob/a4560c87426fa0a34756296a30d7add1388e575c/src/worker/ignition.ts#L12
-            let maxConcurrency = Int(Lambda.env("AWS_LAMBDA_MAX_CONCURRENCY") ?? "1") ?? 1
+                    try await withThrowingTaskGroup(of: Void.self) { group in
 
-            // when max concurrency is 1, do not pay the overhead of launching a Task
-            if maxConcurrency <= 1 {
-                self.logger.trace("Starting the Runtime Interface Client")
-                try await LambdaRuntime.startRuntimeInterfaceClient(
-                    endpoint: runtimeEndpoint,
+                        self.logger.trace("Starting \(maxConcurrency) Runtime Interface Clients")
+                        for i in 0..<maxConcurrency {
+
+                            group.addTask {
+                                var logger = self.logger
+                                logger[metadataKey: "RIC"] = "\(i)"
+                                try await LambdaRuntime.startRuntimeInterfaceClient(
+                                    endpoint: runtimeEndpoint,
+                                    handler: self.handler,
+                                    eventLoop: self.eventLoop,
+                                    logger: logger
+                                )
+                            }
+                        }
+                        // Wait for all tasks to complete and propagate any errors
+                        try await group.waitForAll()
+                    }
+                }
+
+            } else {
+
+                self.logger.trace("Starting the local test HTTP server")
+                try await LambdaRuntime.startLocalServer(
                     handler: self.handler,
                     eventLoop: self.eventLoop,
                     logger: self.logger
                 )
-            } else {
-
-                try await withThrowingTaskGroup(of: Void.self) { group in
-
-                    self.logger.trace("Starting \(maxConcurrency) Runtime Interface Clients")
-                    for i in 0..<maxConcurrency {
-
-                        group.addTask {
-                            var logger = self.logger
-                            logger[metadataKey: "RIC"] = "\(i)"
-                            try await LambdaRuntime.startRuntimeInterfaceClient(
-                                endpoint: runtimeEndpoint,
-                                handler: self.handler,
-                                eventLoop: self.eventLoop,
-                                logger: logger
-                            )
-                        }
-                    }
-                    // Wait for all tasks to complete and propagate any errors
-                    try await group.waitForAll()
-                }
             }
-
-        } else {
-
-            self.logger.trace("Starting the local test HTTP server")
-            try await LambdaRuntime.startLocalServer(
-                handler: self.handler,
-                eventLoop: self.eventLoop,
-                logger: self.logger
-            )
         }
     }
 }
