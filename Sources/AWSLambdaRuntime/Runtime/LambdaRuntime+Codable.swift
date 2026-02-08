@@ -145,7 +145,7 @@ public struct LambdaCodableAdapter<
 
 @available(LambdaSwift 2.0, *)
 // Add Sendable conformance when components are Sendable
-extension LambdaCodableAdapter: Sendable 
+extension LambdaCodableAdapter: Sendable
 where Handler: Sendable, Encoder: Sendable, Decoder: Sendable {}
 
 /// A ``LambdaResponseStreamWriter`` wrapper that conforms to ``LambdaResponseWriter``.
