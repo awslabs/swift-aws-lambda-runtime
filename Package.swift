@@ -18,11 +18,13 @@ let package = Package(
         .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
     ],
     traits: [
+        "ManagedRuntimeSupport",
         "FoundationJSONSupport",
         "ServiceLifecycleSupport",
         "LocalServerSupport",
         .default(
             enabledTraits: [
+                "ManagedRuntimeSupport",
                 "FoundationJSONSupport",
                 "ServiceLifecycleSupport",
                 "LocalServerSupport",
@@ -30,10 +32,10 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.81.0"),
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
-        .package(url: "https://github.com/apple/swift-collections.git", from: "1.1.4"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.8.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.92.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.8.0"),
+        .package(url: "https://github.com/apple/swift-collections.git", from: "1.3.0"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.9.0"),
     ],
     targets: [
         .target(
