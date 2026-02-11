@@ -12,6 +12,8 @@ let package = Package(
     ],
     dependencies: [
         // For local development (default)
+        // When using the below line, use LAMBDA_USE_LOCAL_DEPS=../.. for swift package archive command, e.g.
+        // `LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker`
         .package(name: "swift-aws-lambda-runtime", path: "../.."),
 
         // For standalone usage, comment the line above and uncomment below:
