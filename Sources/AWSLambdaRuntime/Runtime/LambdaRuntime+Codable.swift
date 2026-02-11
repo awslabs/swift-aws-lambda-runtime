@@ -39,7 +39,7 @@ public protocol LambdaOutputEncoder {
     func encode(_ value: Output, into buffer: inout ByteBuffer) throws
 }
 
-public struct VoidEncoder: LambdaOutputEncoder {
+public struct VoidEncoder: LambdaOutputEncoder, Sendable {
     public typealias Output = Void
 
     public init() {}
@@ -80,6 +80,10 @@ public struct LambdaHandlerAdapter<
         try await outputWriter.write(output)
     }
 }
+
+@available(LambdaSwift 2.0, *)
+// Add Sendable conformance when components are Sendable
+extension LambdaHandlerAdapter: Sendable where Handler: Sendable {}
 
 /// Adapts a ``LambdaWithBackgroundProcessingHandler`` conforming handler to conform to ``StreamingLambdaHandler``.
 @available(LambdaSwift 2.0, *)
@@ -138,6 +142,11 @@ public struct LambdaCodableAdapter<
         try await self.handler.handle(event, outputWriter: writer, context: context)
     }
 }
+
+@available(LambdaSwift 2.0, *)
+// Add Sendable conformance when components are Sendable
+extension LambdaCodableAdapter: Sendable
+where Handler: Sendable, Encoder: Sendable, Decoder: Sendable {}
 
 /// A ``LambdaResponseStreamWriter`` wrapper that conforms to ``LambdaResponseWriter``.
 public struct LambdaCodableResponseWriter<Output, Encoder: LambdaOutputEncoder, Base: LambdaResponseStreamWriter>:

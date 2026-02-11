@@ -478,13 +478,13 @@ struct MyHandler: LambdaWithBackgroundProcessingHandler, Sendable {
     }
 }
 
-// Use LambdaCodableAdapterSendable for struct handlers
-let adapter = LambdaCodableAdapterSendable(handler: MyHandler())
+// Just like with LambdaRuntime, use LambdaCodableAdapter to pass it to LambdaManagedruntime
+let adapter = LambdaCodableAdapter(handler: MyHandler())
 let runtime = LambdaManagedRuntime(handler: adapter)
 try await runtime.run()
 ```
 
-For simple data structures, the Swift compiler automatically infers `Sendable` conformance, but you should explicitly declare it for clarity and safety.
+For simple data structures, the Swift compiler automatically infers `Sendable` conformance, but we recommand declaring it explicitly for clarity and safety.
 
 #### Key Benefits
 
