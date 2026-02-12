@@ -1,5 +1,12 @@
 # Lambda Managed Instances
 
+@Metadata {
+    @PageKind(article)
+    @PageColor(orange)
+    @SupportedLanguage(swift)
+    @PageImage(source: "lambda.png", alt: "AWS Lambda", purpose: icon)
+}
+
 Deploy Swift Lambda functions on Amazon EC2 instances with concurrent execution support
 
 ## Overview

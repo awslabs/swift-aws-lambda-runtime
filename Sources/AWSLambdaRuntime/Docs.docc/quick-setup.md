@@ -1,5 +1,12 @@
 # Getting Started Quickly
 
+@Metadata {
+    @PageKind(article)
+    @PageColor(orange)
+    @SupportedLanguage(swift)
+    @PageImage(source: "lambda.png", alt: "AWS Lambda", purpose: icon)
+}
+
 Learn how to create your first project in 3 minutes.
 
 Follow these instructions to get a high-level overview of the steps to write, test, and deploy your first Lambda function written in Swift.

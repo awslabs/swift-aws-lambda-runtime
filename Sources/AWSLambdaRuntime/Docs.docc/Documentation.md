@@ -1,5 +1,12 @@
 # ``AWSLambdaRuntime``
 
+@Metadata {
+    @PageKind(article)
+    @PageColor(orange)
+    @SupportedLanguage(swift)
+    @PageImage(source: "lambda.png", alt: "AWS Lambda", purpose: icon)
+}
+
 An AWS Lambda runtime for the Swift programming language
 
 ## Overview
