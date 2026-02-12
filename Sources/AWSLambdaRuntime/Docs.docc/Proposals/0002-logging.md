@@ -1,8 +1,10 @@
 # Structured JSON Logging Support for swift-aws-lambda-runtime
 
-AWS Lambda supports [advanced logging controls](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-logformat.html) that enable functions to emit logs in JSON structured format and control log level granularity. The Swift AWS Lambda Runtime should support these capabilities to provide developers with enhanced logging, filtering, and observability features.
+AWS Lambda supports advanced logging controls that enable functions to emit logs in JSON structured format and control log level granularity. The Swift AWS Lambda Runtime should support these capabilities to provide developers with enhanced logging, filtering, and observability features.
 
 ## Overview
+
+For more details, see the [AWS Lambda advanced logging controls documentation](https://docs.aws.amazon.com/lambda/latest/dg/monitoring-cloudwatchlogs-logformat.html).
 
 Versions:
 
