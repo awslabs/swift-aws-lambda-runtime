@@ -55,7 +55,7 @@ Resources:
 
 ## Test Locally
 
-Start the local server:
+Start the local server with TEXT logging:
 
 ```bash
 swift run
@@ -84,7 +84,7 @@ AWS_LAMBDA_LOG_FORMAT=JSON swift run
 
 ```bash
 swift build
-swift package archive --allow-network-connections docker
+LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker
 ```
 
 The deployment package will be at:
@@ -124,20 +124,20 @@ Outputs:
 Deploy:
 
 ```bash
-sam build
 sam deploy --guided
 ```
 
 ## Deploy with AWS CLI
 
 ```bash
+ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
 aws lambda create-function \
   --function-name JSONLoggingExample \
   --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip \
-  --runtime provided.al2 \
+  --runtime provided.al2023 \
   --handler swift.bootstrap \
   --architectures arm64 \
-  --role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution \
+  --role arn:aws:iam::${ACCOUNT_ID}:role/lambda_basic_execution \
   --logging-config LogFormat=JSON,ApplicationLogLevel=DEBUG,SystemLogLevel=INFO
 ```
 
@@ -146,8 +146,9 @@ aws lambda create-function \
 ```bash
 aws lambda invoke \
   --function-name JSONLoggingExample \
+  --cli-binary-format raw-in-base64-out \
   --payload '{"name":"Alice","level":"debug"}' \
-  response.json && cat response.json
+  response.json && cat response.json && rm response.json
 ```
 
 ## Query Logs with CloudWatch Logs Insights
