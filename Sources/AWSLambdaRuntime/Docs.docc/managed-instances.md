@@ -15,7 +15,7 @@ Lambda Managed Instances enables you to run Lambda functions on your current-gen
 
 The key difference from traditional Lambda is concurrent execution support—multiple invocations can run simultaneously within the same execution environment on the same EC2 host.
 
-## When to Use Lambda Managed Instances
+### When to Use Lambda Managed Instances
 
 Lambda Managed Instances are ideal for:
 
@@ -24,11 +24,11 @@ Lambda Managed Instances are ideal for:
 - **High-throughput scenarios** where concurrent execution on the same host improves performance and resource utilization
 - **Workloads requiring EC2 flexibility** while maintaining serverless operational simplicity
 
-## Code Changes Required
+### Code Changes Required
 
 Migrating existing Lambda functions to Lambda Managed Instances requires two simple changes:
 
-### 1. Use `LambdaManagedRuntime` Instead of `LambdaRuntime`
+#### 1. Use `LambdaManagedRuntime` Instead of `LambdaRuntime`
 
 Replace your standard `LambdaRuntime` initialization with `LambdaManagedRuntime`:
 
@@ -50,7 +50,7 @@ let runtime = LambdaManagedRuntime {
 try await runtime.run()
 ```
 
-### 2. Ensure Handlers Conform to `Sendable`
+#### 2. Ensure Handlers Conform to `Sendable`
 
 Because Lambda Managed Instances support concurrent invocations, your handler functions and structs must conform to the `Sendable` protocol to ensure thread safety:
 
@@ -79,7 +79,7 @@ try await runtime.run()
 
 For simple data structures, the Swift compiler automatically infers `Sendable` conformance, but explicitly declaring it is recommended for clarity and safety.
 
-## How It Works
+### How It Works
 
 The runtime automatically detects the configured concurrency level through the `AWS_LAMBDA_MAX_CONCURRENCY` environment variable and launches the appropriate number of Runtime Interface Clients (RICs) to handle concurrent requests efficiently.
 
@@ -110,14 +110,14 @@ targets: [
 ]
 ```
 
-## Prerequisites
+### Prerequisites
 
 Before deploying to Lambda Managed Instances:
 
 1. Create a [Lambda Managed Instances capacity provider](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-capacity-providers.html) in your AWS account
 2. Configure your deployment to reference the capacity provider ARN
 
-## Example Functions
+### Example Functions
 
 The Swift AWS Lambda Runtime includes three comprehensive examples demonstrating Lambda Managed Instances capabilities:
 
@@ -127,7 +127,7 @@ The Swift AWS Lambda Runtime includes three comprehensive examples demonstrating
 
 See the [ManagedInstances example directory](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/ManagedInstances) for complete deployment instructions using AWS SAM.
 
-## Additional Resources
+### Additional Resources
 
 - [AWS Lambda Managed Instances Documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html)
 - [Execution Environment Guide](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-execution-environment.html)
