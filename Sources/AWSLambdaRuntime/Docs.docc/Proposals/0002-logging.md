@@ -6,6 +6,7 @@ AWS Lambda supports [advanced logging controls](https://docs.aws.amazon.com/lamb
 
 Versions:
 
+- v3 (2025-02-12): Add `LambdaManagedRuntime` in teh list of struct to modify
 - v2 (2025-01-20): Make `LogHandler` public
 - v1 (2025-01-18): Initial version
 
@@ -302,11 +303,15 @@ This ensures consistent JSON formatting and log level control across all runtime
    - Add `LoggingConfiguration` parameter to initializers
    - Integrate per-request logger creation
 
-2. `Sources/AWSLambdaRuntime/Lambda.swift`
+2. `Sources/AWSLambdaRuntime/ManagedRuntime/LambdaManagedRuntime.swift`
+   - Add `LoggingConfiguration` parameter to initializers
+   - Integrate per-request logger creation
+
+3. `Sources/AWSLambdaRuntime/Lambda.swift`
    - Update run loop to create request-specific loggers
    - Pass enhanced context to handlers
 
-3. `Sources/AWSLambdaRuntime/LambdaContext.swift`
+4. `Sources/AWSLambdaRuntime/LambdaContext.swift`
    - Ensure logger property uses request-specific instance
 
 ### Migration Considerations
