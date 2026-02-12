@@ -430,6 +430,80 @@ struct LambdaFunction {
 
 You can see a complete working example in the [ServiceLifecycle+Postgres example](Examples/ServiceLifecycle+Postgres/README.md), which demonstrates how to manage a PostgreSQL client alongside the Lambda runtime using ServiceLifecycle.
 
+### Lambda Managed Instances
+
+[Lambda Managed Instances](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html) enables you to run Lambda functions on your current-generation Amazon EC2 instances while maintaining serverless simplicity. This deployment model provides EC2 flexibility and cost optimization by running your functions on customer-owned EC2 instances, while AWS handles all infrastructure management tasks including instance lifecycle, OS and runtime patching, routing, load balancing, and auto-scaling.
+
+To deploy a Swift Lambda function to Lambda Managed Instances, you need to make two key changes to your code:
+
+#### 1. Use `LambdaManagedRuntime` instead of `LambdaRuntime`
+
+Replace your standard `LambdaRuntime` initialization with `LambdaManagedRuntime`:
+
+```swift
+import AWSLambdaRuntime
+
+// Standard Lambda function - change this:
+// let runtime = LambdaRuntime { ... }
+
+// Lambda Managed Instances - to this:
+let runtime = LambdaManagedRuntime {
+    (event: HelloRequest, context: LambdaContext) in
+    
+    HelloResponse(greetings: "Hello \(event.name)!")
+}
+
+try await runtime.run()
+```
+
+#### 2. Ensure Handler Functions and Structs are `Sendable`
+
+Because Lambda Managed Instances can run functions concurrently on the same EC2 host, your handler functions or the structs containing them must conform to the `Sendable` protocol:
+
+```swift
+import AWSLambdaRuntime
+
+// For struct-based handlers, explicitly conform to Sendable
+struct MyHandler: LambdaWithBackgroundProcessingHandler, Sendable {
+    typealias Event = MyRequest
+    typealias Output = MyResponse
+    
+    func handle(
+        _ event: Event,
+        outputWriter: some LambdaResponseWriter<Output>,
+        context: LambdaContext
+    ) async throws {
+        // Your handler logic here
+        try await outputWriter.write(MyResponse(message: "Processed"))
+    }
+}
+
+// Just like with LambdaRuntime, use LambdaCodableAdapter to pass it to LambdaManagedruntime
+let adapter = LambdaCodableAdapter(handler: MyHandler())
+let runtime = LambdaManagedRuntime(handler: adapter)
+try await runtime.run()
+```
+
+For simple data structures, the Swift compiler automatically infers `Sendable` conformance, but we recommand declaring it explicitly for clarity and safety.
+
+#### Key Benefits
+
+- **EC2 Flexibility**: Run on specialized EC2 instance types including Graviton4 and network-optimized instances
+- **Cost Optimization**: Better cost efficiency for sustained workloads
+- **Serverless Simplicity**: AWS manages all infrastructure concerns while you focus on code
+- **Concurrent Execution**: Functions can run concurrently on the same host for improved throughput
+
+#### Prerequisites
+
+Before deploying to Lambda Managed Instances, you need to:
+
+1. Create a [Lambda Managed Instances capacity provider](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-capacity-providers.html)
+2. Configure your deployment to reference the capacity provider ARN
+
+You can see complete working examples in the [ManagedInstances example directory](Examples/ManagedInstances/README.md), which demonstrates deploying HelloJSON, Streaming, and BackgroundTasks functions to Lambda Managed Instances using AWS SAM.
+
+For more information, see the [AWS Lambda Managed Instances documentation](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances.html) and the [execution environment guide](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-execution-environment.html).
+
 ### Use Lambda Background Tasks
 
 Background tasks allow code to execute asynchronously after the main response has been returned, enabling additional processing without affecting response latency. This approach is ideal for scenarios like logging, data updates, or notifications that can be deferred. The code leverages Lambda's "Response Streaming" feature, which is effective for balancing real-time user responsiveness with the ability to perform extended tasks post-response. For more information about Lambda background tasks, see [this AWS blog post](https://aws.amazon.com/blogs/compute/running-code-after-returning-a-response-from-an-aws-lambda-function/).

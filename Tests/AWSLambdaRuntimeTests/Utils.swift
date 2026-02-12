@@ -13,6 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
+
+@testable import AWSLambdaRuntime
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -22,5 +26,20 @@ import Foundation
 extension Date {
     var millisSinceEpoch: Int64 {
         Int64(self.timeIntervalSince1970 * 1000)
+    }
+}
+// MARK: - Test Helpers
+
+@available(LambdaSwift 2.0, *)
+extension LambdaContext {
+    public static func makeTest() -> LambdaContext {
+        LambdaContext.__forTestsOnly(
+            requestID: "test-request-id",
+            traceID: "test-trace-id",
+            tenantID: "test-tenant-id",
+            invokedFunctionARN: "arn:aws:lambda:us-east-1:123456789012:function:test",
+            timeout: .seconds(30),
+            logger: Logger(label: "MockedLambdaContext")
+        )
     }
 }

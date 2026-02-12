@@ -3,6 +3,7 @@
 .swiftformatignore
 .spi.yml
 .swift-format
+Makefile
 .github/*
 *.md
 **/*.md
