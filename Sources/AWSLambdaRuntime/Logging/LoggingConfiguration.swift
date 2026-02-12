@@ -133,4 +133,31 @@ public struct LoggingConfiguration: Sendable {
             return logger
         }
     }
+
+    /// Create a logger for runtime-level messages (before any invocation).
+    /// In text mode, this returns the base logger provided by the user.
+    /// In JSON mode, this creates a JSON logger using the base logger's label.
+    public func makeRuntimeLogger() -> Logger {
+        switch self.format {
+        case .text:
+            var logger = self.baseLogger
+            if let level = self.applicationLogLevel {
+                logger.logLevel = level
+            }
+            return logger
+
+        case .json:
+            var logger = Logger(label: self.baseLogger.label) { label in
+                JSONLogHandler(
+                    label: label,
+                    requestID: "N/A",
+                    traceID: "N/A"
+                )
+            }
+            if let level = self.applicationLogLevel {
+                logger.logLevel = level
+            }
+            return logger
+        }
+    }
 }
