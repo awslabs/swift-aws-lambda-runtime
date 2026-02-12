@@ -47,7 +47,6 @@ public struct JSONLogHandler: LogHandler {
 
         // Configure encoder for consistent output
         self.encoder = JSONEncoder()
-        // Use ISO8601 format with fractional seconds
         self.encoder.dateEncodingStrategy = .iso8601
         self.encoder.outputFormatting = []  // Compact output (no pretty printing)
     }
@@ -77,20 +76,22 @@ public struct JSONLogHandler: LogHandler {
             metadata: allMetadata.isEmpty ? nil : allMetadata.mapValues { $0.description }
         )
 
-        // Encode and emit JSON to stderr (matching StreamLogHandler behavior).
-        // We use fwrite + fflush rather than print() because Swift's print()
-        // writes to stdout which may be fully buffered on Lambda (no TTY),
+        // Encode to JSON and write to stderr using POSIX write() on fd 2.
+        // We avoid print() because Swift's stdout is fully buffered on Lambda (no TTY),
         // causing log lines to never be flushed before the invocation completes.
-        // See: https://github.com/apple/swift-log/blob/main/Sources/Logging/Logging.swift#L1404-L1432
-        if let jsonData = try? encoder.encode(logEntry),
-            var jsonString = String(data: jsonData, encoding: .utf8)
-        {
-            jsonString.append("\n")
-            jsonString.withCString { ptr in
-                flockfile(stderr)
-                defer { funlockfile(stderr) }
-                _ = fwrite(ptr, 1, strlen(ptr), stderr)
-                fflush(stderr)
+        // POSIX write() on fd 2 is unbuffered and avoids referencing the global
+        // `stderr` C pointer which is not concurrency-safe on Linux/Swift 6.
+        if let jsonData = try? encoder.encode(logEntry) {
+            var output = jsonData
+            output.append(contentsOf: "\n".utf8)
+            output.withUnsafeBytes { buffer in
+                #if canImport(Darwin)
+                _ = Darwin.write(2, buffer.baseAddress!, buffer.count)
+                #elseif canImport(Glibc)
+                _ = Glibc.write(2, buffer.baseAddress!, buffer.count)
+                #elseif canImport(Musl)
+                _ = Musl.write(2, buffer.baseAddress!, buffer.count)
+                #endif
             }
         }
     }
