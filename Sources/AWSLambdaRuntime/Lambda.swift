@@ -32,6 +32,26 @@ import ucrt
 
 @available(LambdaSwift 2.0, *)
 public enum Lambda {
+    @available(
+        *,
+        deprecated,
+        message:
+            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:) instead."
+    )
+    @inlinable
+    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
+        runtimeClient: RuntimeClient,
+        handler: Handler,
+        logger: Logger
+    ) async throws where Handler: StreamingLambdaHandler {
+        try await self.runLoop(
+            runtimeClient: runtimeClient,
+            handler: handler,
+            loggingConfiguration: LoggingConfiguration(logger: logger),
+            logger: logger
+        )
+    }
+
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
