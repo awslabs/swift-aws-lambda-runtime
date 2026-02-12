@@ -46,6 +46,8 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     @usableFromInline
     let logger: Logger
     @usableFromInline
+    let loggingConfiguration: LoggingConfiguration
+    @usableFromInline
     let eventLoop: EventLoop
 
     public init(
@@ -56,17 +58,24 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         self.handlerStorage = SendingStorage(handler)
         self.eventLoop = eventLoop
 
+        // Initialize logging configuration
+        self.loggingConfiguration = LoggingConfiguration(logger: logger)
+
         // by setting the log level here, we understand it can not be changed dynamically at runtime
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
         var log = logger
 
-        // use the LOG_LEVEL environment variable to set the log level.
-        // if the environment variable is not set, use the default log level from the logger provided
-        log.logLevel = Lambda.env("LOG_LEVEL").flatMap { .init(rawValue: $0) } ?? logger.logLevel
+        // Apply log level from configuration if available
+        if let level = self.loggingConfiguration.applicationLogLevel {
+            log.logLevel = level
+        }
 
         self.logger = log
-        self.logger.debug("LambdaRuntime initialized")
+        self.logger.debug("LambdaRuntime initialized", metadata: [
+            "logFormat": "\(self.loggingConfiguration.format)",
+            "logLevel": "\(log.logLevel)"
+        ])
     }
 
     #if !ServiceLifecycleSupport
@@ -98,6 +107,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                     endpoint: runtimeEndpoint,
                     handler: handler,
                     eventLoop: self.eventLoop,
+                    loggingConfiguration: self.loggingConfiguration,
                     logger: self.logger
                 )
 
@@ -107,6 +117,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 try await LambdaRuntime.startLocalServer(
                     handler: handler,
                     eventLoop: self.eventLoop,
+                    loggingConfiguration: self.loggingConfiguration,
                     logger: self.logger
                 )
             }
@@ -117,6 +128,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         endpoint: String,
         handler: Handler,
         eventLoop: EventLoop,
+        loggingConfiguration: LoggingConfiguration,
         logger: Logger
     ) async throws {
 
@@ -133,6 +145,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 try await Lambda.runLoop(
                     runtimeClient: runtimeClient,
                     handler: handler,
+                    loggingConfiguration: loggingConfiguration,
                     logger: logger
                 )
             }
@@ -155,6 +168,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     internal static func startLocalServer(
         handler: sending Handler,
         eventLoop: EventLoop,
+        loggingConfiguration: LoggingConfiguration,
         logger: Logger
     ) async throws {
         #if LocalServerSupport
@@ -181,6 +195,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                 try await Lambda.runLoop(
                     runtimeClient: runtimeClient,
                     handler: handler,
+                    loggingConfiguration: loggingConfiguration,
                     logger: logger
                 )
             }

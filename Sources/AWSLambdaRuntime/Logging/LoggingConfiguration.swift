@@ -24,12 +24,16 @@ public struct LoggingConfiguration: Sendable {
     
     public let format: LogFormat
     public let applicationLogLevel: Logger.Level?
+    private let baseLogger: Logger
     
     public init(logger: Logger) {
         // Read AWS_LAMBDA_LOG_FORMAT (default: Text)
         self.format = LogFormat(
             rawValue: Lambda.env("AWS_LAMBDA_LOG_FORMAT") ?? "Text"
         ) ?? .text
+        
+        // Store the base logger for cloning
+        self.baseLogger = logger
         
         // Determine log level with proper precedence
         let awsLambdaLogLevel = Lambda.env("AWS_LAMBDA_LOG_LEVEL")
@@ -104,8 +108,10 @@ public struct LoggingConfiguration: Sendable {
     ) -> Logger {
         switch self.format {
         case .text:
-            // Use existing default logger
-            var logger = Logger(label: label)
+            // Clone the base logger and add request metadata
+            var logger = self.baseLogger
+            logger[metadataKey: "aws-request-id"] = .string(requestID)
+            logger[metadataKey: "aws-trace-id"] = .string(traceID)
             if let level = self.applicationLogLevel {
                 logger.logLevel = level
             }
