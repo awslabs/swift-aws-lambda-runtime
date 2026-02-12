@@ -81,6 +81,7 @@ public struct JSONLogHandler: LogHandler {
         // We use fwrite + fflush rather than print() because Swift's print()
         // writes to stdout which may be fully buffered on Lambda (no TTY),
         // causing log lines to never be flushed before the invocation completes.
+        // See: https://github.com/apple/swift-log/blob/main/Sources/Logging/Logging.swift#L1404-L1432
         if let jsonData = try? encoder.encode(logEntry),
             var jsonString = String(data: jsonData, encoding: .utf8)
         {
