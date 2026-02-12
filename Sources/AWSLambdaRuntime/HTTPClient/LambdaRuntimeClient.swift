@@ -133,6 +133,32 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         self.logger = logger
     }
 
+    /// Assume that the current context is isolated to this actor's event loop and execute the closure.
+    ///
+    /// This is a workaround for `Actor.assumeIsolated` which can crash on open-source Swift toolchains
+    /// built with runtime assertions enabled. In those toolchains, `assumeIsolated` performs a strict
+    /// runtime check via `_taskIsCurrentExecutor` that fails when called from NIO callbacks
+    /// (e.g. `whenComplete`, channel handler methods) because there is no Swift Concurrency task
+    /// tracking the current executor in thread-local storage.
+    ///
+    /// We use `eventLoop.preconditionInEventLoop()` as our safety check instead, then perform
+    /// the same unsafe cast that `assumeIsolated` does internally after its check passes.
+    /// See: https://github.com/swiftlang/swift/blob/main/stdlib/public/Concurrency/ExecutorAssertions.swift#L348
+    /// See: https://forums.swift.org/t/actor-assumeisolated-erroneously-crashes-when-using-a-dispatch-queue-as-the-underlying-executor/72434/3
+    nonisolated func assumeIsolatedOnEventLoop(
+        _ operation: (isolated LambdaRuntimeClient) -> Void
+    ) {
+        self.eventLoop.preconditionInEventLoop()
+        // This is safe: we verified we're on the event loop, which is this actor's executor.
+        withoutActuallyEscaping(operation) { escapingOperation in
+            let strippedOperation = unsafeBitCast(
+                escapingOperation,
+                to: ((LambdaRuntimeClient) -> Void).self
+            )
+            strippedOperation(self)
+        }
+    }
+
     @usableFromInline
     func close() async {
         self.logger.trace("Close lambda runtime client")
@@ -436,7 +462,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 ]
             )
             channel.closeFuture.whenComplete { result in
-                self.assumeIsolated { runtimeClient in
+                self.assumeIsolatedOnEventLoop { runtimeClient in
                     // close the channel
                     runtimeClient.channelClosed(channel)
                     // Note: Do NOT set connectionState = .disconnected here!
@@ -483,7 +509,7 @@ extension LambdaRuntimeClient: LambdaChannelHandlerDelegate {
     nonisolated func connectionErrorHappened(_ error: any Error, channel: any Channel) {}
 
     nonisolated func connectionWillClose(channel: any Channel) {
-        self.assumeIsolated { isolated in
+        self.assumeIsolatedOnEventLoop { isolated in
             switch isolated.connectionState {
             case .disconnected:
                 // this case should never happen. But whatever
