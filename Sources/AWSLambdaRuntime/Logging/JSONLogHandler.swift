@@ -15,6 +15,14 @@
 
 import Logging
 
+#if canImport(Darwin)
+import Darwin.C
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -69,11 +77,20 @@ public struct JSONLogHandler: LogHandler {
             metadata: allMetadata.isEmpty ? nil : allMetadata.mapValues { $0.description }
         )
 
-        // Encode and emit JSON to stdout
+        // Encode and emit JSON to stderr (matching StreamLogHandler behavior).
+        // We use fwrite + fflush rather than print() because Swift's print()
+        // writes to stdout which may be fully buffered on Lambda (no TTY),
+        // causing log lines to never be flushed before the invocation completes.
         if let jsonData = try? encoder.encode(logEntry),
-            let jsonString = String(data: jsonData, encoding: .utf8)
+            var jsonString = String(data: jsonData, encoding: .utf8)
         {
-            print(jsonString)
+            jsonString.append("\n")
+            jsonString.withCString { ptr in
+                flockfile(stderr)
+                defer { funlockfile(stderr) }
+                _ = fwrite(ptr, 1, strlen(ptr), stderr)
+                fflush(stderr)
+            }
         }
     }
 
