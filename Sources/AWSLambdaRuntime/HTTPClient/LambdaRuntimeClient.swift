@@ -145,7 +145,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     /// the same unsafe cast that `assumeIsolated` does internally after its check passes.
     /// See: https://github.com/swiftlang/swift/blob/main/stdlib/public/Concurrency/ExecutorAssertions.swift#L348
     /// See: https://forums.swift.org/t/actor-assumeisolated-erroneously-crashes-when-using-a-dispatch-queue-as-the-underlying-executor/72434/3
-    nonisolated func assumeIsolatedOnEventLoop(
+    private nonisolated func assumeIsolatedOnEventLoop(
         _ operation: (isolated LambdaRuntimeClient) -> Void
     ) {
         self.eventLoop.preconditionInEventLoop()
@@ -461,7 +461,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                     "lambda_ip": "\(self.configuration.ip)",
                 ]
             )
-            channel.closeFuture.whenComplete { result in
+            channel.closeFuture.whenComplete { _ in
                 self.assumeIsolatedOnEventLoop { runtimeClient in
                     // close the channel
                     runtimeClient.channelClosed(channel)
