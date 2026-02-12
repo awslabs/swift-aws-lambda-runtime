@@ -46,7 +46,7 @@ public enum Lambda {
 
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
-                
+
                 // Create a per-request logger with request-specific metadata
                 let requestLogger = loggingConfiguration.makeLogger(
                     label: "Lambda",

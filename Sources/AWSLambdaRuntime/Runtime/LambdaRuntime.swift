@@ -72,10 +72,13 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         }
 
         self.logger = log
-        self.logger.debug("LambdaRuntime initialized", metadata: [
-            "logFormat": "\(self.loggingConfiguration.format)",
-            "logLevel": "\(log.logLevel)"
-        ])
+        self.logger.debug(
+            "LambdaRuntime initialized",
+            metadata: [
+                "logFormat": "\(self.loggingConfiguration.format)",
+                "logLevel": "\(log.logLevel)",
+            ]
+        )
     }
 
     #if !ServiceLifecycleSupport

@@ -13,37 +13,37 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
 
-import Logging
-
 @available(LambdaSwift 2.0, *)
 public struct JSONLogHandler: LogHandler {
     public var logLevel: Logger.Level
     public var metadata: Logger.Metadata = [:]
-    
+
     private let label: String
     private let requestID: String
     private let traceID: String
     private let encoder: JSONEncoder
-    
+
     public init(label: String, logLevel: Logger.Level = .info, requestID: String, traceID: String) {
         self.label = label
         self.logLevel = logLevel
         self.requestID = requestID
         self.traceID = traceID
-        
+
         // Configure encoder for consistent output
         self.encoder = JSONEncoder()
         // Use ISO8601 format with fractional seconds
         self.encoder.dateEncodingStrategy = .iso8601
-        self.encoder.outputFormatting = [] // Compact output (no pretty printing)
+        self.encoder.outputFormatting = []  // Compact output (no pretty printing)
     }
-    
+
     public func log(
         level: Logger.Level,
         message: Logger.Message,
@@ -58,7 +58,7 @@ public struct JSONLogHandler: LogHandler {
         if let metadata = metadata {
             allMetadata.merge(metadata) { _, new in new }
         }
-        
+
         // Create log entry struct
         let logEntry = LogEntry(
             timestamp: Date(),
@@ -68,14 +68,15 @@ public struct JSONLogHandler: LogHandler {
             traceId: self.traceID,
             metadata: allMetadata.isEmpty ? nil : allMetadata.mapValues { $0.description }
         )
-        
+
         // Encode and emit JSON to stdout
         if let jsonData = try? encoder.encode(logEntry),
-           let jsonString = String(data: jsonData, encoding: .utf8) {
+            let jsonString = String(data: jsonData, encoding: .utf8)
+        {
             print(jsonString)
         }
     }
-    
+
     private static func mapLogLevel(_ level: Logger.Level) -> String {
         switch level {
         case .trace: return "TRACE"
@@ -87,14 +88,14 @@ public struct JSONLogHandler: LogHandler {
         case .critical: return "FATAL"
         }
     }
-    
+
     public subscript(metadataKey key: String) -> Logger.Metadata.Value? {
         get { metadata[key] }
         set { metadata[key] = newValue }
     }
-    
+
     // MARK: - Log Entry Structure
-    
+
     private struct LogEntry: Codable {
         let timestamp: Date
         let level: String

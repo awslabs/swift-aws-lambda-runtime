@@ -36,26 +36,29 @@ struct Response: Encodable {
 
 let runtime = LambdaRuntime {
     (event: Request, context: LambdaContext) in
-    
+
     // These log statements will be formatted as JSON when AWS_LAMBDA_LOG_FORMAT=JSON
     context.logger.trace("Processing request with trace level")
     context.logger.debug("Request details", metadata: ["name": .string(event.name)])
     context.logger.info("Processing request for \(event.name)")
-    
+
     if let level = event.level {
         context.logger.notice("Custom log level requested: \(level)")
     }
-    
+
     context.logger.warning("This is a warning message")
-    
+
     // Simulate different scenarios
     if event.name.lowercased() == "error" {
-        context.logger.error("Error scenario triggered", metadata: [
-            "errorType": .string("SimulatedError"),
-            "errorCode": .string("TEST_ERROR")
-        ])
+        context.logger.error(
+            "Error scenario triggered",
+            metadata: [
+                "errorType": .string("SimulatedError"),
+                "errorCode": .string("TEST_ERROR"),
+            ]
+        )
     }
-    
+
     return Response(
         message: "Hello \(event.name)! Logs are in JSON format.",
         timestamp: Date().ISO8601Format()
