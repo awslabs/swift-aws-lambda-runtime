@@ -81,10 +81,7 @@ public struct JSONLogHandler: LogHandler {
         // and the write() syscall dominate the cost by orders of magnitude.
         // If profiling ever shows this matters, consider manual JSON serialization
         // which would also bypass the Codable overhead entirely.
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        encoder.outputFormatting = []  // Compact output (no pretty printing)
-        if let jsonData = try? encoder.encode(logEntry) {
+        if let jsonData = Self.encodeLogEntry(logEntry) {
             var output = jsonData
             output.append(contentsOf: "\n".utf8)
             output.withUnsafeBytes { buffer in
@@ -99,7 +96,33 @@ public struct JSONLogHandler: LogHandler {
         }
     }
 
-    private static func mapLogLevel(_ level: Logger.Level) -> String {
+    public subscript(metadataKey key: String) -> Logger.Metadata.Value? {
+        get { metadata[key] }
+        set { metadata[key] = newValue }
+    }
+
+    // MARK: - Log Entry Structure
+
+    struct LogEntry: Codable {
+        let timestamp: Date
+        let level: String
+        let message: String
+        let requestId: String
+        let traceId: String
+        let metadata: [String: String]?
+    }
+
+    /// Encodes a log entry to JSON data. Extracted for testability.
+    /// Returns nil if encoding fails.
+    internal static func encodeLogEntry(_ logEntry: LogEntry) -> Data? {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = []  // Compact output (no pretty printing)
+        return try? encoder.encode(logEntry)
+    }
+
+    /// Maps a swift-log level to the AWS Lambda log level string.
+    internal static func mapLogLevel(_ level: Logger.Level) -> String {
         switch level {
         case .trace: return "TRACE"
         case .debug: return "DEBUG"
@@ -109,21 +132,5 @@ public struct JSONLogHandler: LogHandler {
         case .error: return "ERROR"
         case .critical: return "FATAL"
         }
-    }
-
-    public subscript(metadataKey key: String) -> Logger.Metadata.Value? {
-        get { metadata[key] }
-        set { metadata[key] = newValue }
-    }
-
-    // MARK: - Log Entry Structure
-
-    private struct LogEntry: Codable {
-        let timestamp: Date
-        let level: String
-        let message: String
-        let requestId: String
-        let traceId: String
-        let metadata: [String: String]?
     }
 }
