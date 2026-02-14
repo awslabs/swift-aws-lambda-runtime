@@ -26,6 +26,12 @@ public struct LoggingConfiguration: Sendable {
     public let applicationLogLevel: Logger.Level?
     private let baseLogger: Logger
 
+    /// Note: No log messages are emitted during initialization because the logging
+    /// configuration is not yet fully constructed. The provided `logger` still uses its
+    /// original format and log level, so any messages emitted here would bypass the
+    /// configured format (e.g. appearing as plain text when JSON mode is selected).
+    /// Callers should use `makeRuntimeLogger()` after initialization to obtain a
+    /// properly configured logger for any diagnostic messages.
     public init(logger: Logger) {
         // Read AWS_LAMBDA_LOG_FORMAT (default: Text)
         self.format =
@@ -37,51 +43,28 @@ public struct LoggingConfiguration: Sendable {
         self.baseLogger = logger
 
         // Determine log level with proper precedence
+        // When both AWS_LAMBDA_LOG_LEVEL and LOG_LEVEL are set:
+        //   - JSON format: AWS_LAMBDA_LOG_LEVEL takes precedence
+        //   - Text format: LOG_LEVEL takes precedence (backward compatibility)
         let awsLambdaLogLevel = Lambda.env("AWS_LAMBDA_LOG_LEVEL")
         let logLevel = Lambda.env("LOG_LEVEL")
 
         switch (self.format, awsLambdaLogLevel, logLevel) {
-        case (.json, .some(let awsLevel), .some(let legacyLevel)):
-            // JSON format with both env vars set - use AWS_LAMBDA_LOG_LEVEL and warn
-            self.applicationLogLevel = Self.parseLogLevel(awsLevel)
-            logger.warning(
-                "Both AWS_LAMBDA_LOG_LEVEL and LOG_LEVEL are set. Using AWS_LAMBDA_LOG_LEVEL for JSON format.",
-                metadata: [
-                    "AWS_LAMBDA_LOG_LEVEL": .string(awsLevel),
-                    "LOG_LEVEL": .string(legacyLevel),
-                ]
-            )
-
-        case (.json, .some(let awsLevel), .none):
-            // JSON format with AWS_LAMBDA_LOG_LEVEL only
+        case (.json, .some(let awsLevel), _):
+            // JSON format: prefer AWS_LAMBDA_LOG_LEVEL
             self.applicationLogLevel = Self.parseLogLevel(awsLevel)
 
         case (.json, .none, .some(let legacyLevel)):
-            // JSON format with LOG_LEVEL only - use it but warn
+            // JSON format with LOG_LEVEL only - use it as fallback
             self.applicationLogLevel = Self.parseLogLevel(legacyLevel)
-            logger.warning(
-                "Using LOG_LEVEL with JSON format. Consider using AWS_LAMBDA_LOG_LEVEL instead.",
-                metadata: ["LOG_LEVEL": .string(legacyLevel)]
-            )
 
-        case (.text, .some(let awsLevel), .some(let legacyLevel)):
-            // Text format with both - prefer LOG_LEVEL for backward compatibility
+        case (.text, _, .some(let legacyLevel)):
+            // Text format: prefer LOG_LEVEL for backward compatibility
             self.applicationLogLevel = Self.parseLogLevel(legacyLevel)
-            logger.debug(
-                "Both AWS_LAMBDA_LOG_LEVEL and LOG_LEVEL are set. Using LOG_LEVEL for Text format.",
-                metadata: [
-                    "AWS_LAMBDA_LOG_LEVEL": .string(awsLevel),
-                    "LOG_LEVEL": .string(legacyLevel),
-                ]
-            )
 
         case (.text, .some(let awsLevel), .none):
             // Text format with AWS_LAMBDA_LOG_LEVEL only
             self.applicationLogLevel = Self.parseLogLevel(awsLevel)
-
-        case (.text, .none, .some(let legacyLevel)):
-            // Text format with LOG_LEVEL only - existing behavior
-            self.applicationLogLevel = Self.parseLogLevel(legacyLevel)
 
         case (_, .none, .none):
             // No log level configured - use default
