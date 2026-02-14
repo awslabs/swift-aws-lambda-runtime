@@ -83,7 +83,7 @@ When JSON format is enabled, application logs will follow this structure:
   "level": "INFO",
   "message": "User authentication successful",
   "requestId": "8286a188-ba32-4475-8077-530cd35c09a9",
-  "xrayTraceId": "1-5e1b4151-43a0913a12345678901234567"
+  "traceId": "1-5e1b4151-43a0913a12345678901234567"
 }
 ```
 
