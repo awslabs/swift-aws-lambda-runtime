@@ -8,7 +8,7 @@ For more details, see the [AWS Lambda advanced logging controls documentation](h
 
 Versions:
 
-- v3 (2025-02-12): Add `LambdaManagedRuntime` in teh list of struct to modify
+- v3 (2025-02-12): Add `LambdaManagedRuntime` in the list of struct to modify
 - v2 (2025-01-20): Make `LogHandler` public
 - v1 (2025-01-18): Initial version
 
