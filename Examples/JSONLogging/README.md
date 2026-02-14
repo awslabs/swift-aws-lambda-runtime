@@ -44,7 +44,7 @@ Resources:
     Properties:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip
       Handler: swift.bootstrap
-      Runtime: provided.al2
+      Runtime: provided.al2023
       Architectures:
         - arm64
       LoggingConfig:
@@ -106,8 +106,7 @@ Resources:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip
       Timeout: 60
       Handler: swift.bootstrap
-      Runtime: provided.al2
-      MemorySize: 128
+      Runtime: provided.al2023
       Architectures:
         - arm64
       LoggingConfig:
