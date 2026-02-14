@@ -84,21 +84,36 @@ public struct JSONLogHandler: LogHandler {
         if let jsonData = Self.encodeLogEntry(logEntry) {
             var output = jsonData
             output.append(contentsOf: "\n".utf8)
-            output.withUnsafeBytes { buffer in
-                #if canImport(Darwin)
-                _ = Darwin.write(2, buffer.baseAddress!, buffer.count)
-                #elseif canImport(Glibc)
-                _ = Glibc.write(2, buffer.baseAddress!, buffer.count)
-                #elseif canImport(Musl)
-                _ = Musl.write(2, buffer.baseAddress!, buffer.count)
-                #endif
-            }
+            self.writeToStderr(output)
+        } else {
+            // JSON encoding failed — emit a plain-text fallback to stderr so the log
+            // message is not silently lost. This should only happen if metadata contains
+            // values that cannot be encoded, which is unlikely with String-typed metadata.
+            let fallback = Data(
+                "JSON_ENCODE_ERROR level=\(logEntry.level) message=\(logEntry.message)\n".utf8
+            )
+            self.writeToStderr(fallback)
         }
     }
 
     public subscript(metadataKey key: String) -> Logger.Metadata.Value? {
         get { metadata[key] }
         set { metadata[key] = newValue }
+    }
+
+    /// Writes raw bytes to stderr (fd 2) using POSIX write().
+    /// We avoid print() because Swift's stdout is fully buffered on Lambda (no TTY),
+    /// and we avoid the global `stderr` C pointer which is not concurrency-safe on Linux/Swift 6.
+    private func writeToStderr(_ data: Data) {
+        data.withUnsafeBytes { buffer in
+            #if canImport(Darwin)
+            _ = Darwin.write(2, buffer.baseAddress!, buffer.count)
+            #elseif canImport(Glibc)
+            _ = Glibc.write(2, buffer.baseAddress!, buffer.count)
+            #elseif canImport(Musl)
+            _ = Musl.write(2, buffer.baseAddress!, buffer.count)
+            #endif
+        }
     }
 
     // MARK: - Log Entry Structure
