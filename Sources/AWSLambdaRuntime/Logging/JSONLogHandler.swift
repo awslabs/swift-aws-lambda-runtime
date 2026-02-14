@@ -37,18 +37,12 @@ public struct JSONLogHandler: LogHandler {
     private let label: String
     private let requestID: String
     private let traceID: String
-    private let encoder: JSONEncoder
 
     public init(label: String, logLevel: Logger.Level = .info, requestID: String, traceID: String) {
         self.label = label
         self.logLevel = logLevel
         self.requestID = requestID
         self.traceID = traceID
-
-        // Configure encoder for consistent output
-        self.encoder = JSONEncoder()
-        self.encoder.dateEncodingStrategy = .iso8601
-        self.encoder.outputFormatting = []  // Compact output (no pretty printing)
     }
 
     public func log(
@@ -81,6 +75,15 @@ public struct JSONLogHandler: LogHandler {
         // causing log lines to never be flushed before the invocation completes.
         // POSIX write() on fd 2 is unbuffered and avoids referencing the global
         // `stderr` C pointer which is not concurrency-safe on Linux/Swift 6.
+        // We create a new encoder per call to avoid sharing a mutable reference type
+        // across concurrent log calls, since JSONEncoder is not thread-safe.
+        // JSONEncoder allocation is on the order of nanoseconds — the JSON serialization
+        // and the write() syscall dominate the cost by orders of magnitude.
+        // If profiling ever shows this matters, consider manual JSON serialization
+        // which would also bypass the Codable overhead entirely.
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = []  // Compact output (no pretty printing)
         if let jsonData = try? encoder.encode(logEntry) {
             var output = jsonData
             output.append(contentsOf: "\n".utf8)
