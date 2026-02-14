@@ -129,6 +129,8 @@ sam deploy --guided
 
 ## Deploy with AWS CLI
 
+As an alternative to SAM, you can use the AWS CLI:
+
 ```bash
 ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
 aws lambda create-function \
@@ -153,7 +155,15 @@ aws lambda invoke \
 
 ## Query Logs with CloudWatch Logs Insights
 
-With JSON formatted logs, you can use powerful queries:
+With JSON formatted logs, you can use powerful queries in [CloudWatch Logs Insights](https://console.aws.amazon.com/cloudwatch/home#logsV2:logs-insights).
+
+### Using the AWS Console
+
+1. Open the [CloudWatch Logs Insights console](https://console.aws.amazon.com/cloudwatch/home#logsV2:logs-insights)
+2. In the "Select log group(s)" dropdown, choose the log group for your Lambda function (typically `/aws/lambda/JSONLoggingExample`)
+3. Type or paste one of the queries below into the query editor
+4. Adjust the time range in the top-right corner to cover the period you're interested in
+5. Click "Run query"
 
 ```
 # Find all ERROR level logs
@@ -173,6 +183,50 @@ stats count() by level
 fields @timestamp, message, metadata.errorType
 | filter metadata.errorType = "SimulatedError"
 ```
+
+### Using the AWS CLI
+
+You can also run Logs Insights queries from the command line. Each query is a two-step process: start the query, then fetch the results.
+
+```bash
+# 1. Start a query (adjust --start-time and --end-time as needed)
+QUERY_ID=$(aws logs start-query \
+  --log-group-name '/aws/lambda/JSONLoggingExample' \
+  --start-time $(date -v-1H +%s) \
+  --end-time $(date +%s) \
+  --query-string 'fields @timestamp, level, message | filter level = "ERROR" | sort @timestamp desc' \
+  --query 'queryId' --output text)
+
+# 2. Wait a moment for the query to complete, then get the results
+sleep 2
+aws logs get-query-results --query-id "$QUERY_ID"
+```
+
+A few more examples:
+
+```bash
+# Count logs by level over the last 24 hours
+QUERY_ID=$(aws logs start-query \
+  --log-group-name '/aws/lambda/JSONLoggingExample' \
+  --start-time $(date -v-24H +%s) \
+  --end-time $(date +%s) \
+  --query-string 'stats count() by level' \
+  --query 'queryId' --output text)
+sleep 2
+aws logs get-query-results --query-id "$QUERY_ID"
+
+# Find logs with a specific error type in the last hour
+QUERY_ID=$(aws logs start-query \
+  --log-group-name '/aws/lambda/JSONLoggingExample' \
+  --start-time $(date -v-1H +%s) \
+  --end-time $(date +%s) \
+  --query-string 'fields @timestamp, message, metadata.errorType | filter metadata.errorType = "SimulatedError"' \
+  --query 'queryId' --output text)
+sleep 2
+aws logs get-query-results --query-id "$QUERY_ID"
+```
+
+> **Note**: On Linux, replace `date -v-1H +%s` with `date -d '1 hour ago' +%s` (and similarly for other time offsets).
 
 ## Log Levels
 
