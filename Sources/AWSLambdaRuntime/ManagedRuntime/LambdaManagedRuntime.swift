@@ -48,13 +48,7 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
         // by setting the log level here, we understand it can not be changed dynamically at runtime
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
-        var log = self.loggingConfiguration.makeRuntimeLogger()
-
-        // Apply log level from configuration if available
-        if let level = self.loggingConfiguration.applicationLogLevel {
-            log.logLevel = level
-        }
-
+        let log = self.loggingConfiguration.makeRuntimeLogger()
         self.logger = log
         self.logger.debug(
             "LambdaManagedRuntime initialized",
