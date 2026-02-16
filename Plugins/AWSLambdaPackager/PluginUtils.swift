@@ -92,16 +92,19 @@ struct Utils {
         if let customWorkingDirectory {
             process.currentDirectoryURL = URL(fileURLWithPath: customWorkingDirectory.path())
         }
-        process.terminationHandler = { _ in
-            outputQueue.async {
-                outputHandler(try? pipe.fileHandleForReading.readToEnd())
-            }
-        }
 
         try process.run()
         process.waitUntilExit()
 
-        // wait for output to be full processed
+        // Stop the readability handler before reading remaining data to avoid
+        // a race between the handler and readToEnd() on Linux, which can cause
+        // a SIGSEGV in the Swift runtime's metadata resolution.
+        pipe.fileHandleForReading.readabilityHandler = nil
+
+        // Read any remaining data from the pipe
+        outputQueue.async { outputHandler(try? pipe.fileHandleForReading.readToEnd()) }
+
+        // wait for output to be fully processed
         outputSync.wait()
 
         let output = outputMutex.withLock { $0 }
