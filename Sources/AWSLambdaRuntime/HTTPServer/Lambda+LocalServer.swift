@@ -383,7 +383,10 @@ internal struct LambdaHTTPServer {
             logger[metadataKey: "requestId"] = "\(requestId)"
 
             logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
-            self.invocationPool.push(LocalServerInvocation(requestId: requestId, request: body))
+            let forwardedHeaders = head.headers
+            self.invocationPool.push(
+                LocalServerInvocation(requestId: requestId, request: body, headers: forwardedHeaders)
+            )
 
             // wait for the lambda function to process the request
             // Handle streaming responses by collecting all chunks for this requestId
@@ -518,7 +521,10 @@ internal struct LambdaHTTPServer {
 
         var headers = response.headers ?? HTTPHeaders()
         if let body = response.body {
-            headers.add(name: "Content-Length", value: "\(body.readableBytes)")
+            // Avoid adding Content-Length if already provided (e.g. forwarded from /invoke)
+            if !headers.contains(name: "Content-Length") && !headers.contains(name: "Transfer-Encoding") {
+                headers.add(name: "Content-Length", value: "\(body.readableBytes)")
+            }
         }
 
         if let status = response.status {
@@ -569,11 +575,12 @@ internal struct LambdaHTTPServer {
     struct LocalServerInvocation: Sendable {
         let requestId: String
         let request: ByteBuffer
+        let headers: HTTPHeaders
 
         func acceptedResponse() -> LocalServerResponse {
 
             // required headers
-            let headers = HTTPHeaders([
+            var headers = HTTPHeaders([
                 (AmazonHeaders.requestID, self.requestId),
                 (
                     AmazonHeaders.invokedFunctionARN,
@@ -582,6 +589,9 @@ internal struct LambdaHTTPServer {
                 (AmazonHeaders.traceID, "Root=\(AmazonHeaders.generateXRayTraceID());Sampled=1"),
                 (AmazonHeaders.deadline, "\(LambdaClock.maxLambdaDeadline)"),
             ])
+
+            // Forward all invocation headers
+            headers.add(contentsOf: self.headers)
 
             return LocalServerResponse(
                 id: self.requestId,
