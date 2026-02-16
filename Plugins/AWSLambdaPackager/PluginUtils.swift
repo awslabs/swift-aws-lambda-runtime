@@ -95,7 +95,9 @@ struct Utils {
         // triggers _bridgeAnythingToObjectiveC / swift_dynamicCast which can
         // crash with a SIGSEGV during concurrent Swift runtime metadata resolution.
         let readFileHandle = pipe.fileHandleForReading
+        outputSync.enter()
         outputQueue.async {
+            defer { outputSync.leave() }
             // Read in a loop until EOF
             while true {
                 let data = readFileHandle.availableData
