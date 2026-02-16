@@ -80,9 +80,6 @@ struct Utils {
         }
 
         let pipe = Pipe()
-        pipe.fileHandleForReading.readabilityHandler = { fileHandle in
-            outputQueue.async { outputHandler(fileHandle.availableData) }
-        }
 
         let process = Process()
         process.standardOutput = pipe
@@ -93,16 +90,24 @@ struct Utils {
             process.currentDirectoryURL = URL(fileURLWithPath: customWorkingDirectory.path())
         }
 
+        // Read from the pipe on a background thread using a manual read loop.
+        // We avoid FileHandle.readabilityHandler because on Linux its setter
+        // triggers _bridgeAnythingToObjectiveC / swift_dynamicCast which can
+        // crash with a SIGSEGV during concurrent Swift runtime metadata resolution.
+        let readFileHandle = pipe.fileHandleForReading
+        outputQueue.async {
+            // Read in a loop until EOF
+            while true {
+                let data = readFileHandle.availableData
+                if data.isEmpty {
+                    break  // EOF
+                }
+                outputHandler(data)
+            }
+        }
+
         try process.run()
         process.waitUntilExit()
-
-        // Stop the readability handler before reading remaining data to avoid
-        // a race between the handler and readToEnd() on Linux, which can cause
-        // a SIGSEGV in the Swift runtime's metadata resolution.
-        pipe.fileHandleForReading.readabilityHandler = nil
-
-        // Read any remaining data from the pipe
-        outputQueue.async { outputHandler(try? pipe.fileHandleForReading.readToEnd()) }
 
         // wait for output to be fully processed
         outputSync.wait()
