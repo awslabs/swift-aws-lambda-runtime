@@ -31,11 +31,12 @@ check_prerequisites() {
     These values are read from '~/.aws/credentials'.
     "
 
-    read -r -p "Are you ready to create your first Lambda function in Swift? [y/n] " continue
-    if [[ ! $continue =~ ^[Yy]$ ]]; then
-    echo "OK, try again later when you feel ready"
-    exit 1
-    fi
+    printf "Are you ready to create your first Lambda function in Swift? [y/n] "
+    read -r continue
+    case $continue in
+        [Yy]*) ;;
+        *) echo "OK, try again later when you feel ready"; exit 1 ;;
+    esac
 }
 
 create_lambda_execution_role() {

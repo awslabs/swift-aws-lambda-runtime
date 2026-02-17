@@ -15,7 +15,6 @@
 
 import Dispatch
 import Foundation
-import PackagePlugin
 import Synchronization
 
 @available(macOS 15.0, *)
