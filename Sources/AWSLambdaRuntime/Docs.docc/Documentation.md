@@ -1,5 +1,12 @@
 # ``AWSLambdaRuntime``
 
+@Metadata {
+    @PageKind(article)
+    @PageColor(orange)
+    @SupportedLanguage(swift)
+    @PageImage(source: "lambda.png", alt: "AWS Lambda", purpose: icon)
+}
+
 An AWS Lambda runtime for the Swift programming language
 
 ## Overview
@@ -21,3 +28,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 - <doc:/tutorials/table-of-content>
 - <doc:quick-setup>
 - <doc:Deployment>
+
+### Advanced Deployment
+
+- <doc:managed-instances>

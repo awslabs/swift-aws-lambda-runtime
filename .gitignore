@@ -10,7 +10,6 @@ xcuserdata
 Package.resolved
 .serverless
 .vscode
-Makefile
 .devcontainer
 .amazonq
 .kiro

@@ -1,5 +1,12 @@
 # Deploying your Swift Lambda functions
 
+@Metadata {
+    @PageKind(article)
+    @PageColor(orange)
+    @SupportedLanguage(swift)
+    @PageImage(source: "lambda.png", alt: "AWS Lambda", purpose: icon)
+}
+
 Learn how to deploy your Swift Lambda functions to AWS.
 
 ### Overview
