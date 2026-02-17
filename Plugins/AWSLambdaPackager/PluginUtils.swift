@@ -80,9 +80,6 @@ struct Utils {
         }
 
         let pipe = Pipe()
-        pipe.fileHandleForReading.readabilityHandler = { fileHandle in
-            outputQueue.async { outputHandler(fileHandle.availableData) }
-        }
 
         let process = Process()
         process.standardOutput = pipe
@@ -92,16 +89,29 @@ struct Utils {
         if let customWorkingDirectory {
             process.currentDirectoryURL = URL(fileURLWithPath: customWorkingDirectory.path())
         }
-        process.terminationHandler = { _ in
-            outputQueue.async {
-                outputHandler(try? pipe.fileHandleForReading.readToEnd())
+
+        // Read from the pipe on a background thread using a manual read loop.
+        // We avoid FileHandle.readabilityHandler because on Linux its setter
+        // triggers _bridgeAnythingToObjectiveC / swift_dynamicCast which can
+        // crash with a SIGSEGV during concurrent Swift runtime metadata resolution.
+        let readFileHandle = pipe.fileHandleForReading
+        outputSync.enter()
+        outputQueue.async {
+            defer { outputSync.leave() }
+            // Read in a loop until EOF
+            while true {
+                let data = readFileHandle.availableData
+                if data.isEmpty {
+                    break  // EOF
+                }
+                outputHandler(data)
             }
         }
 
         try process.run()
         process.waitUntilExit()
 
-        // wait for output to be full processed
+        // wait for output to be fully processed
         outputSync.wait()
 
         let output = outputMutex.withLock { $0 }
