@@ -382,10 +382,9 @@ internal struct LambdaHTTPServer {
             let requestId = UUID().uuidString
             logger[metadataKey: "requestId"] = "\(requestId)"
 
-            logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")
-            let forwardedHeaders = head.headers
+            logger.trace("/invoke received invocation, pushing it to the pool and wait for a lambda response")            
             self.invocationPool.push(
-                LocalServerInvocation(requestId: requestId, request: body, headers: forwardedHeaders)
+                LocalServerInvocation(requestId: requestId, request: body, headers: head.headers)
             )
 
             // wait for the lambda function to process the request
