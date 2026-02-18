@@ -39,7 +39,7 @@ struct AWSLambdaPackager: CommandPlugin {
         }
 
         let builtProducts: [LambdaProduct: URL]
-        if self.isAmazonLinux2() {
+        if self.isAmazonLinux() {
             // build directly on the machine
             builtProducts = try self.build(
                 packageIdentity: context.package.id,
@@ -289,11 +289,11 @@ struct AWSLambdaPackager: CommandPlugin {
         return archives
     }
 
-    private func isAmazonLinux2() -> Bool {
+    private func isAmazonLinux() -> Bool {
         if let data = FileManager.default.contents(atPath: "/etc/system-release"),
             let release = String(data: data, encoding: .utf8)
         {
-            return release.hasPrefix("Amazon Linux release 2")
+            return release.hasPrefix("Amazon Linux")
         } else {
             return false
         }
