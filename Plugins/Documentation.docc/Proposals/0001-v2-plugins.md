@@ -11,7 +11,7 @@ This document describes a proposal for the v2 plugins for `swift-aws-lambda-runt
 Versions:
 
 * v1 (2024-12-25): Initial version
-* v2 (2025-03-13): 
+* v2 (2025-03-13):
 - Include [comments from the community](https://forums.swift.org/t/lambda-plugins-for-v2/76859).
 - [init] Add the templates for `main.swift`
 - [build] Add the section **Cross-compiling options**
@@ -19,6 +19,9 @@ Versions:
 - [deploy] Add `--input-path` parameter.
 - [deploy] Add details how the function name is computed.
 - [deploy] Add `--architecture` option and details how the default is computed.
+* v3 (2026-02-17):
+- [build] Add `--container-cli` option to support Apple's `container` CLI as an alternative to Docker (addresses [#644](https://github.com/awslabs/swift-aws-lambda-runtime/issues/644)).
+- [build] Add the section **Container CLI options**
 
 ## Motivation
 
@@ -160,7 +163,8 @@ The plugin interface is based on the existing `archive` plugin, with the additio
 ```text
 OVERVIEW: A SwiftPM plugin to build and package your Lambda function.
 
-REQUIREMENTS: To use this plugin, Docker must be installed and running.
+REQUIREMENTS: To use this plugin, Docker or Apple container must be installed and running
+              (when using docker or container cross-compilation methods).
 
 USAGE: swift package archive
             [--help] [--verbose]
@@ -172,6 +176,7 @@ USAGE: swift package archive
             [--disable-docker-image-update]
             [--no-strip]
             [--cross-compile <value>]
+            [--container-cli <value>]
             [--allow-network-connections docker]
 
 OPTIONS:
@@ -192,6 +197,9 @@ OPTIONS:
 --no-strip                    Do not strip the binary of debug symbols.
 --cross-compile <value>       Cross-compile the binary using the specified method.
                                 (default: docker) Accepted values are: docker, swift-static-sdk, custom-sdk
+--container-cli <value>       Specify the container CLI to use for Docker-based builds.
+                                (default: docker) Accepted values are: docker, container
+                                This parameter is only used when --cross-compile is set to docker.
 ```
 
 #### Cross compiling options
@@ -204,6 +212,40 @@ For an ideal developer experience, we would imagine the following sequence:
 - the plugin checks if the custom sdk is installed on the machine (`swift sdk list`) [questions : is it possible to call `swift` from a package ? Should we check the file systems instead ? Should this work on multiple OSes, such as macOS and Linux? ]
 - if not installed or outdated, the plugin downloads a custom SDK from a safe source and installs it [questions : who should maintain such SDK binaries? Where to host them? We must have a kind of signature to ensure the SDK has not been modified. How to manage Swift version and align with the local toolchain?]
 - the plugin build the archive using the custom sdk
+
+#### Container CLI options
+
+The plugin supports using different container CLIs to build Lambda packages. By default, it uses Docker, but it can also use Apple's `container` CLI on macOS, which provides native support for OCI (Open Container Initiative) images.
+
+**Supported Container CLIs:**
+
+- **Docker** (default): Uses the standard Docker CLI
+  - Pull images: `docker pull <image>`
+  - Run containers: `docker run --rm -v <volume> -w <workdir> <image> bash -cl "<cmd>"`
+
+- **Apple container**: Uses Apple's native container CLI (available on macOS)
+  - Pull images: `container image pull <image>`
+  - Run containers: `container run --rm -v <volume> -w <workdir> <image> bash -cl "<cmd>"`
+
+**Configuration:**
+
+The container CLI can be specified via the command-line flag: `--container-cli docker` or `--container-cli container`. If not specified, the plugin defaults to `docker`.
+
+**Example usage:**
+
+```bash
+# Use Docker (default)
+swift package lambda-build
+
+# Use Apple container
+swift package lambda-build --container-cli container
+```
+
+**Requirements:**
+
+- When using `docker`, Docker Desktop or Docker Engine must be installed and running
+- When using `container`, Apple's container CLI must be installed and running
+- The `--container-cli` option is only applicable when using Docker-based cross-compilation (`--cross-compile docker`)
 
 ### Deploy (lambda-deploy)
 
