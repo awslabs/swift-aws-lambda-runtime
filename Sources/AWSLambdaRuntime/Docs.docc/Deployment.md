@@ -640,7 +640,7 @@ LambdaApiStack: destroying... [1/1]
 
 We welcome contributions to this section. If you have experience deploying Swift Lambda functions with third-party tools like Serverless Framework, Terraform, or Pulumi, please share your knowledge with the community.
 
-## ⚠️ Security and Reliability Notice
+### ⚠️ Security and Reliability Notice
 
 These are example applications for demonstration purposes. When deploying such infrastructure in production environments, we strongly encourage you to follow these best practices for improved security and resiliency:
 
