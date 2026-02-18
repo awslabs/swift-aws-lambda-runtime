@@ -29,7 +29,7 @@ let package = Package(
         .executableTarget(
             name: "MultiTenantLocal",
             dependencies: [
-                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
             ]
         ),
     ]
