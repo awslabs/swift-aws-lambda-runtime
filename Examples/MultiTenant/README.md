@@ -6,7 +6,8 @@ This example demonstrates how to build a multi-tenant Lambda function using Swif
 
 This example implements a request tracking system that maintains separate counters and request histories for each tenant. The Lambda function:
 
-- Accepts requests from multiple tenants via API Gateway
+- Accepts requests from multiple tenants via API Gateway (MultiTenant)
+- Accepts direct JSON payloads without API Gateway (MultiTenantLocal)
 - Maintains isolated execution environments per tenant
 - Tracks request counts and timestamps for each tenant
 - Returns tenant-specific data in JSON format
@@ -40,6 +41,8 @@ The example consists of:
 2. **TenantDataStore** - Actor-based storage providing thread-safe access to tenant data across invocations
 
 3. **Lambda Handler** - Processes API Gateway requests and manages tenant data
+
+4. **MultiTenantLocal Handler** - Processes plain JSON requests without API Gateway
 
 ## Code Structure
 
@@ -174,6 +177,24 @@ requestParameters:
 3. **Note the API Gateway endpoint** from the CloudFormation outputs
 
 ## Testing
+
+### Local Testing (No API Gateway)
+
+Run the simple handler locally and invoke it directly using the local server. This example does not depend on API Gateway or its request/response types.
+
+1. Start the local server:
+   ```bash
+   swift run MultiTenantLocal
+   ```
+
+2. Invoke with a tenant header and a JSON body:
+   ```bash
+   # Test multi-tenant function locally
+   curl -X POST http://127.0.0.1:7000/invoke \
+     -H "Content-Type: application/json" \
+     -H "Lambda-Runtime-Aws-Tenant-Id: tenant-123" \
+     -d '{"message" :  "hello"}'
+   ```
 
 ### Using API Gateway
 

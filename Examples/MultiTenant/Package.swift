@@ -6,7 +6,8 @@ let package = Package(
     name: "swift-aws-lambda-runtime-example",
     platforms: [.macOS(.v15)],
     products: [
-        .executable(name: "MultiTenant", targets: ["MultiTenant"])
+        .executable(name: "MultiTenant", targets: ["MultiTenant"]),
+        .executable(name: "MultiTenantLocal", targets: ["MultiTenantLocal"]),
     ],
     dependencies: [
         // For local development (default)
@@ -24,6 +25,12 @@ let package = Package(
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
             ]
-        )
+        ),
+        .executableTarget(
+            name: "MultiTenantLocal",
+            dependencies: [
+                .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime")
+            ]
+        ),
     ]
 )
