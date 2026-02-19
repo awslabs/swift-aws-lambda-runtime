@@ -55,6 +55,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 products: configuration.products,
                 toolsProvider: { name in try context.tool(named: name).url },
                 outputDirectory: configuration.outputDirectory,
+                containerCLI: configuration.containerCLI,
                 baseImage: configuration.baseDockerImage,
                 disableDockerImageUpdate: configuration.disableDockerImageUpdate,
                 buildConfiguration: configuration.buildConfiguration,
@@ -85,23 +86,24 @@ struct AWSLambdaPackager: CommandPlugin {
         products: [Product],
         toolsProvider: (String) throws -> URL,
         outputDirectory: URL,
+        containerCLI: ContainerCLI,
         baseImage: String,
         disableDockerImageUpdate: Bool,
         buildConfiguration: PackageManager.BuildConfiguration,
         verboseLogging: Bool
     ) throws -> [LambdaProduct: URL] {
-        let dockerToolPath = try toolsProvider("docker")
+        let containerCLIPath = try toolsProvider(containerCLI.executableName)
 
         print("-------------------------------------------------------------------------")
-        print("building \"\(packageIdentity)\" in docker")
+        print("building \"\(packageIdentity)\" in \(containerCLI.displayName)")
         print("-------------------------------------------------------------------------")
 
         if !disableDockerImageUpdate {
-            // update the underlying docker image, if necessary
-            print("updating \"\(baseImage)\" docker image")
+            // update the underlying image, if necessary
+            print("updating \"\(baseImage)\" image")
             try Utils.execute(
-                executable: dockerToolPath,
-                arguments: ["pull", baseImage],
+                executable: containerCLIPath,
+                arguments: containerCLI.pullArguments(image: baseImage),
                 logLevel: verboseLogging ? .debug : .output
             )
         }
@@ -109,11 +111,14 @@ struct AWSLambdaPackager: CommandPlugin {
         // get the build output path
         let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
         let dockerBuildOutputPath = try Utils.execute(
-            executable: dockerToolPath,
-            arguments: [
-                "run", "--rm", "-v", "\(packageDirectory.path()):/workspace", "-w", "/workspace", baseImage, "bash",
-                "-cl", buildOutputPathCommand,
-            ],
+            executable: containerCLIPath,
+            arguments: containerCLI.runArguments(
+                baseImage: baseImage,
+                workingDirectory: "/workspace",
+                mounts: ["\(packageDirectory.path()):/workspace"],
+                env: nil,
+                command: buildOutputPathCommand
+            ),
             logLevel: verboseLogging ? .debug : .silent
         )
         guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
@@ -135,21 +140,26 @@ struct AWSLambdaPackager: CommandPlugin {
                 // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
                 let slice = packageDirectory.pathComponents.suffix(2)
                 try Utils.execute(
-                    executable: dockerToolPath,
-                    arguments: [
-                        "run", "--rm", "--env", "LAMBDA_USE_LOCAL_DEPS=\(localPath)", "-v",
-                        "\(packageDirectory.path())../..:/workspace", "-w",
-                        "/workspace/\(slice.joined(separator: "/"))", baseImage, "bash", "-cl", buildCommand,
-                    ],
+                    executable: containerCLIPath,
+                    arguments: containerCLI.runArguments(
+                        baseImage: baseImage,
+                        workingDirectory: "/workspace/\(slice.joined(separator: "/"))",
+                        mounts: ["\(packageDirectory.path())../..:/workspace"],
+                        env: ["LAMBDA_USE_LOCAL_DEPS": localPath],
+                        command: buildCommand
+                    ),
                     logLevel: verboseLogging ? .debug : .output
                 )
             } else {
                 try Utils.execute(
-                    executable: dockerToolPath,
-                    arguments: [
-                        "run", "--rm", "-v", "\(packageDirectory.path()):/workspace", "-w", "/workspace", baseImage,
-                        "bash", "-cl", buildCommand,
-                    ],
+                    executable: containerCLIPath,
+                    arguments: containerCLI.runArguments(
+                        baseImage: baseImage,
+                        workingDirectory: "/workspace",
+                        mounts: ["\(packageDirectory.path()):/workspace"],
+                        env: nil,
+                        command: buildCommand
+                    ),
                     logLevel: verboseLogging ? .debug : .output
                 )
             }
@@ -304,7 +314,7 @@ struct AWSLambdaPackager: CommandPlugin {
             """
             OVERVIEW: A SwiftPM plugin to build and package your lambda function.
 
-            REQUIREMENTS: To use this plugin, you must have docker installed and started.
+            REQUIREMENTS: To use this plugin, you must have docker or container installed and started.
 
             USAGE: swift package --allow-network-connections docker archive
                                                        [--help] [--verbose]
@@ -314,6 +324,7 @@ struct AWSLambdaPackager: CommandPlugin {
                                                        [--swift-version <version>]
                                                        [--base-docker-image <docker_image_name>]
                                                        [--disable-docker-image-update]
+                                                       [--container-cli <docker | container>]
                                                       
 
             OPTIONS:
@@ -331,9 +342,69 @@ struct AWSLambdaPackager: CommandPlugin {
                                           (default : swift-<version>:amazonlinux2)
                                           This parameter cannot be used when --swift-version is specified.
             --disable-docker-image-update Do not attempt to update the docker image
+            --container-cli <name>        The container CLI to use (docker or container)
+                                          (default is docker)
             --help                        Show help information.
             """
         )
+    }
+}
+
+@available(macOS 15.0, *)
+private enum ContainerCLI: String, CustomStringConvertible {
+    case docker
+    case container
+
+    var executableName: String {
+        self.rawValue
+    }
+
+    var displayName: String {
+        self.rawValue
+    }
+
+    static func parse(_ value: String?) throws -> Self {
+        guard let value else {
+            return .docker
+        }
+
+        guard let tool = ContainerCLI(rawValue: value.lowercased()) else {
+            throw Errors.invalidArgument("invalid container CLI '\(value)'. Use 'docker' or 'container'.")
+        }
+        return tool
+    }
+
+    func pullArguments(image: String) -> [String] {
+        switch self {
+        case .docker:
+            return ["pull", image]
+        case .container:
+            return ["image", "pull", image]
+        }
+    }
+
+    func runArguments(
+        baseImage: String,
+        workingDirectory: String,
+        mounts: [String],
+        env: [String: String]?,
+        command: String
+    ) -> [String] {
+        var args: [String] = ["run", "--rm"]
+        for mount in mounts {
+            args += ["-v", mount]
+        }
+        if let env {
+            for (key, value) in env.sorted(by: { $0.key < $1.key }) {
+                args += ["--env", "\(key)=\(value)"]
+            }
+        }
+        args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
+        return args
+    }
+
+    var description: String {
+        self.rawValue
     }
 }
 
@@ -347,6 +418,7 @@ private struct Configuration: CustomStringConvertible {
     public let verboseLogging: Bool
     public let baseDockerImage: String
     public let disableDockerImageUpdate: Bool
+    public let containerCLI: ContainerCLI
 
     public init(
         context: PluginContext,
@@ -360,6 +432,7 @@ private struct Configuration: CustomStringConvertible {
         let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
         let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
+        let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
 
         // help required ?
@@ -415,6 +488,9 @@ private struct Configuration: CustomStringConvertible {
             baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
+        self.containerCLI = try ContainerCLI.parse(
+            containerCliArgument.first
+        )
 
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
@@ -432,9 +508,11 @@ private struct Configuration: CustomStringConvertible {
           buildConfiguration: \(self.buildConfiguration)
           baseDockerImage: \(self.baseDockerImage)
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
+          containerCLI: \(self.containerCLI)
         }
         """
     }
+
 }
 
 private enum ProcessLogLevel: Comparable {
