@@ -137,6 +137,12 @@ The runtime comes with a plugin to compile on Amazon Linux and create a ZIP arch
 swift package archive --allow-network-connections docker
 ```
 
+Apple container (requires disabling the SwiftPM sandbox):
+
+```bash
+swift package --disable-sandbox --allow-network-connections docker archive --container-cli container
+```
+
 If there is no error, the ZIP archive is ready to deploy.
 The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip`
 
