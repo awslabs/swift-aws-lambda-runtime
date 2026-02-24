@@ -74,10 +74,10 @@ jobs:
       - name: Cache SPM dependencies
         uses: actions/cache@v4
         with:
-          path: .build
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          path: Examples/${{ matrix.examples }}/.build
+          key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.resolved', matrix.examples)) }}
           restore-keys: |
-            spm-${{ runner.os }}-
+            spm-${{ runner.os }}-${{ matrix.examples }}-
 
       - name: Run matrix job
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
@@ -105,10 +105,10 @@ jobs:
       - name: Cache SPM dependencies
         uses: actions/cache@v4
         with:
-          path: .build
-          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          path: Examples/${{ matrix.examples }}/.build
+          key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.resolved', matrix.examples)) }}
           restore-keys: |
-            spm-${{ runner.os }}-
+            spm-${{ runner.os }}-${{ matrix.examples }}-
 
       - name: Mark the workspace as safe
         # https://github.com/actions/checkout/issues/766
