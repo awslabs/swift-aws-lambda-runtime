@@ -7,7 +7,7 @@
 .swiftpm
 .swift-version
 xcuserdata
-Package.resolved
+Examples/**/Package.resolved
 .serverless
 .vscode
 .devcontainer
