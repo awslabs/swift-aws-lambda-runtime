@@ -79,6 +79,10 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-${{ matrix.examples }}-
 
+      - name: Install dependencies
+        run: |
+          apt-get -qq update && apt-get -qq -y install libssl-dev
+
       - name: Run matrix job
         env:
           COMMAND: ${{ inputs.matrix_linux_command }}
