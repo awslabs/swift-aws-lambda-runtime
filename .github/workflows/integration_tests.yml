@@ -79,11 +79,6 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-
 
-      - name: Mark the workspace as safe
-        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
-        # https://github.com/actions/checkout/issues/766
-        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
-
       - name: Run matrix job
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         env:
