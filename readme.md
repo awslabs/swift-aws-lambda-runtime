@@ -35,7 +35,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 - When developing on macOS, be sure you use macOS 15 (Sequoia) or a more recent macOS version.
 
-- To build and archive your Lambda function, you need to [install docker](https://docs.docker.com/desktop/install/mac-install/).
+- To build and archive your Lambda function, you need to install [docker](https://docs.docker.com/desktop/install/mac-install/) or Apple [container](https://github.com/apple/container).
 
 - To deploy the Lambda function and invoke it, you must have [an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and [install and configure the `aws` command line](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 
@@ -135,6 +135,18 @@ The runtime comes with a plugin to compile on Amazon Linux and create a ZIP arch
 
 ```bash
 swift package archive --allow-network-connections docker
+```
+
+By default, it runs on `docker` but it also allows you to build with [Apple container](https://github.com/apple/container) (it requires disabling the sandbox):
+
+```bash
+# Both --disable-sandbox and 
+# --allow-network-connections are required 
+# until https://github.com/swiftlang/swift-package-manager/issues/9763 is fixed
+swift package --disable-sandbox \
+              --allow-network-connections docker \
+              archive \
+              --container-cli container
 ```
 
 If there is no error, the ZIP archive is ready to deploy.
