@@ -32,10 +32,10 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "2.92.0"),
-        .package(url: "https://github.com/apple/swift-log.git", from: "1.8.0"),
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.95.0"),
+        .package(url: "https://github.com/apple/swift-log.git", from: "1.10.1"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.3.0"),
-        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.9.1"),
+        .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.10.1"),
     ],
     targets: [
         .target(
