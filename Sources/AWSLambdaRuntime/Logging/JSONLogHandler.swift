@@ -84,7 +84,14 @@ public struct JSONLogHandler: LogHandler {
         if let jsonData = Self.encodeLogEntry(logEntry) {
             var output = jsonData
             output.append(contentsOf: "\n".utf8)
-            self.writeToStderr(output)
+            let bytesWritten = self.writeToStderr(output)
+            if bytesWritten != output.count {
+                let warning = Data(
+                    "STDERR_WRITE_INCOMPLETE expected=\(output.count) written=\(bytesWritten) level=\(logEntry.level) message=\(logEntry.message)\n"
+                        .utf8
+                )
+                self.writeToStderr(warning)
+            }
         } else {
             // JSON encoding failed — emit a plain-text fallback to stderr so the log
             // message is not silently lost. This should only happen if metadata contains
@@ -102,17 +109,48 @@ public struct JSONLogHandler: LogHandler {
     }
 
     /// Writes raw bytes to stderr (fd 2) using POSIX write().
-    /// We avoid print() because Swift's stdout is fully buffered on Lambda (no TTY),
-    /// and we avoid the global `stderr` C pointer which is not concurrency-safe on Linux/Swift 6.
-    private func writeToStderr(_ data: Data) {
-        data.withUnsafeBytes { buffer in
+    /// Uses a loop to handle partial writes and EINTR retries, ensuring
+    /// large log lines are not silently truncated.
+    /// - Returns: The number of bytes successfully written.
+    @discardableResult
+    private func writeToStderr(_ data: Data) -> Int {
+        self.writeAll(data) { pointer, count in
             #if canImport(Darwin)
-            _ = Darwin.write(2, buffer.baseAddress!, buffer.count)
+            Darwin.write(2, pointer, count)
             #elseif canImport(Glibc)
-            _ = Glibc.write(2, buffer.baseAddress!, buffer.count)
+            Glibc.write(2, pointer, count)
             #elseif canImport(Musl)
-            _ = Musl.write(2, buffer.baseAddress!, buffer.count)
+            Musl.write(2, pointer, count)
             #endif
+        }
+    }
+
+    /// Write loop that handles partial writes and EINTR retries.
+    /// Accepts an injectable write function so tests can simulate partial writes.
+    /// - Parameters:
+    ///   - data: The bytes to write.
+    ///   - writeFn: A function matching the POSIX `write()` signature — takes a pointer
+    ///     and byte count, returns the number of bytes written or -1 on error.
+    /// - Returns: The total number of bytes successfully written.
+    internal func writeAll(
+        _ data: Data,
+        using writeFn: (_ pointer: UnsafeRawPointer, _ count: Int) -> Int
+    ) -> Int {
+        data.withUnsafeBytes { buffer in
+            guard let baseAddress = buffer.baseAddress else { return 0 }
+            var remaining = buffer.count
+            var offset = 0
+            while remaining > 0 {
+                let written = writeFn(baseAddress + offset, remaining)
+                if written < 0 {
+                    // Retry on EINTR; give up on any other error
+                    if errno == EINTR { continue }
+                    return offset
+                }
+                offset += written
+                remaining -= written
+            }
+            return offset
         }
     }
 

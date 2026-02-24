@@ -18,6 +18,14 @@ import Testing
 
 @testable import AWSLambdaRuntime
 
+#if canImport(Darwin)
+import Darwin.C
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#endif
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -213,5 +221,94 @@ struct JSONLogHandlerTests {
         let data = JSONLogHandler.encodeLogEntry(logEntry)
         #expect(data != nil)
         #expect(data?.isEmpty == false)
+    }
+
+    // MARK: - writeAll (write loop)
+
+    /// Creates a minimal handler instance for testing writeAll.
+    @available(LambdaSwift 2.0, *)
+    private func makeHandler() -> JSONLogHandler {
+        JSONLogHandler(label: "test", requestID: "r", traceID: "t")
+    }
+
+    @Test("writeAll writes all bytes in a single call when write succeeds fully")
+    @available(LambdaSwift 2.0, *)
+    func writeAllSingleCall() {
+        let handler = makeHandler()
+        let data = Data("hello".utf8)
+        var callCount = 0
+        let written = handler.writeAll(data) { _, count in
+            callCount += 1
+            return count  // write everything at once
+        }
+        #expect(written == data.count)
+        #expect(callCount == 1)
+    }
+
+    @Test("writeAll handles partial writes by looping until all bytes are written")
+    @available(LambdaSwift 2.0, *)
+    func writeAllPartialWrites() {
+        let handler = makeHandler()
+        let data = Data("hello world!".utf8)  // 12 bytes
+        var callCount = 0
+        let written = handler.writeAll(data) { _, count in
+            callCount += 1
+            // Simulate writing at most 4 bytes per call
+            return min(count, 4)
+        }
+        #expect(written == data.count)
+        #expect(callCount == 3)  // 4 + 4 + 4
+    }
+
+    @Test("writeAll retries on EINTR and eventually succeeds")
+    @available(LambdaSwift 2.0, *)
+    func writeAllRetriesOnEINTR() {
+        let handler = makeHandler()
+        let data = Data("abc".utf8)
+        var callCount = 0
+        let written = handler.writeAll(data) { _, count in
+            callCount += 1
+            if callCount <= 2 {
+                // Simulate EINTR on first two attempts
+                errno = EINTR
+                return -1
+            }
+            return count
+        }
+        #expect(written == data.count)
+        #expect(callCount == 3)
+    }
+
+    @Test("writeAll stops and returns partial count on non-EINTR error")
+    @available(LambdaSwift 2.0, *)
+    func writeAllStopsOnError() {
+        let handler = makeHandler()
+        let data = Data("hello world!".utf8)  // 12 bytes
+        var callCount = 0
+        let written = handler.writeAll(data) { _, count in
+            callCount += 1
+            if callCount == 1 {
+                return min(count, 4)  // write 4 bytes
+            }
+            // Fail with ENOSPC on second call
+            errno = ENOSPC
+            return -1
+        }
+        #expect(written == 4)
+        #expect(callCount == 2)
+    }
+
+    @Test("writeAll returns 0 for empty data")
+    @available(LambdaSwift 2.0, *)
+    func writeAllEmptyData() {
+        let handler = makeHandler()
+        let data = Data()
+        var callCount = 0
+        let written = handler.writeAll(data) { _, count in
+            callCount += 1
+            return count
+        }
+        #expect(written == 0)
+        #expect(callCount == 0)
     }
 }
