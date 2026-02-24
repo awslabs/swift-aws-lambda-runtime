@@ -75,7 +75,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Examples/${{ matrix.examples }}/.build
-          key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.resolved', matrix.examples)) }}
+          key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.swift', matrix.examples)) }}
           restore-keys: |
             spm-${{ runner.os }}-${{ matrix.examples }}-
 
@@ -111,7 +111,7 @@ jobs:
           path: |
             Examples/${{ matrix.examples }}/.build/checkouts
             Examples/${{ matrix.examples }}/.build/repositories
-          key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.resolved', matrix.examples)) }}
+          key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.swift', matrix.examples)) }}
           restore-keys: |
             spm-${{ runner.os }}-${{ matrix.examples }}-
 
@@ -137,7 +137,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Examples/APIGatewayV2/.build
-          key: spm-foundation-${{ runner.os }}-${{ hashFiles('Examples/APIGatewayV2/Package.resolved') }}
+          key: spm-foundation-${{ runner.os }}-${{ hashFiles('Examples/APIGatewayV2/Package.swift') }}
           restore-keys: |
             spm-foundation-${{ runner.os }}-
 
