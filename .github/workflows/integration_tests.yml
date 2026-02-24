@@ -136,8 +136,8 @@ jobs:
       - name: Cache SPM dependencies
         uses: actions/cache@v4
         with:
-          path: .build
-          key: spm-foundation-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          path: Examples/APIGatewayV2/.build
+          key: spm-foundation-${{ runner.os }}-${{ hashFiles('Examples/APIGatewayV2/Package.resolved') }}
           restore-keys: |
             spm-foundation-${{ runner.os }}-
 
