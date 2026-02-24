@@ -42,8 +42,8 @@ on:
       matrix_linux_swift_container_image:
         type: string
         # Note: we don't use Amazon Linux 2 here because zip is not installed by default.
-        description: "Container image for the matrix test jobs. Defaults to Swift 6.2 on Amazon Linux 2."
-        default: "swift:6.2-amazonlinux2"
+        description: "Container image for the matrix test jobs. Defaults to Swift 6.2"
+        default: "swift:6.2"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -66,27 +66,18 @@ jobs:
     container:
       image: ${{ matrix.swift.image }}
     steps:
-      # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
-      # workaround is to manually checkout the repository
-      # https://github.com/actions/checkout/issues/1487
-      - name: Manually Clone repository and checkout PR
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          # Clone the repository
-          git clone https://github.com/${{ github.repository }}
-          cd ${{ github.event.repository.name }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+            persist-credentials: false
 
-          # Fetch the pull request
-          git fetch origin +refs/pull/$PR_NUMBER/merge:
-
-          # Checkout the pull request
-          git checkout -qf FETCH_HEAD
-
-      # - name: Checkout repository
-      #   uses: actions/checkout@v4
-      #   with:
-      #       persist-credentials: false
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
 
       - name: Mark the workspace as safe
         working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
@@ -115,6 +106,14 @@ jobs:
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            spm-${{ runner.os }}-
 
       - name: Mark the workspace as safe
         # https://github.com/actions/checkout/issues/766
