@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+import Synchronization
 
 #if canImport(Darwin)
 import Darwin
@@ -28,6 +29,13 @@ import FoundationEssentials
 #else
 import Foundation
 #endif
+
+/// Serializes all stderr writes across JSONLogHandler instances so that
+/// concurrent log calls (e.g. from multiple RICs on Lambda Managed Instances)
+/// cannot interleave bytes mid-line. The lock is only held for the duration of
+/// the POSIX write() syscall — JSON encoding happens outside the lock.
+@available(LambdaSwift 2.0, *)
+private let _stderrLock = Mutex<Void>(())
 
 @available(LambdaSwift 2.0, *)
 public struct JSONLogHandler: LogHandler {
@@ -112,19 +120,23 @@ public struct JSONLogHandler: LogHandler {
     }
 
     /// Writes raw bytes to stderr (fd 2) using POSIX write().
+    /// The write is serialized through `_stderrLock` so that concurrent log
+    /// calls from multiple tasks cannot interleave bytes within a single line.
     /// Uses a loop to handle partial writes and EINTR retries, ensuring
     /// large log lines are not silently truncated.
     /// - Returns: The number of bytes successfully written.
     @discardableResult
     private func writeToStderr(_ data: Data) -> Int {
-        self.writeAll(data) { pointer, count in
-            #if canImport(Darwin)
-            Darwin.write(2, pointer, count)
-            #elseif canImport(Glibc)
-            Glibc.write(2, pointer, count)
-            #elseif canImport(Musl)
-            Musl.write(2, pointer, count)
-            #endif
+        _stderrLock.withLock { _ in
+            self.writeAll(data) { pointer, count in
+                #if canImport(Darwin)
+                Darwin.write(2, pointer, count)
+                #elseif canImport(Glibc)
+                Glibc.write(2, pointer, count)
+                #elseif canImport(Musl)
+                Musl.write(2, pointer, count)
+                #endif
+            }
         }
     }
 
