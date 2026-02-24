@@ -16,7 +16,7 @@
 import Logging
 
 #if canImport(Darwin)
-import Darwin.C
+import Darwin
 #elseif canImport(Glibc)
 import Glibc
 #elseif canImport(Musl)
@@ -169,7 +169,10 @@ public struct JSONLogHandler: LogHandler {
     /// Returns nil if encoding fails.
     internal static func encodeLogEntry(_ logEntry: LogEntry) -> Data? {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(date.formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true)))
+        }
         encoder.outputFormatting = []  // Compact output (no pretty printing)
         return try? encoder.encode(logEntry)
     }
