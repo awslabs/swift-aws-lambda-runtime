@@ -122,6 +122,10 @@ jobs:
     container:
       image: ${{ inputs.matrix_linux_swift_container_image }}
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Cache SPM dependencies
         uses: actions/cache@v4
