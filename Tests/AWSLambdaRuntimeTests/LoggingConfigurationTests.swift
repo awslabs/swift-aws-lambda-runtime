@@ -229,13 +229,13 @@ struct LoggingConfigurationTests {
         }
     }
 
-    @Test("Unknown log level string defaults to info")
+    @Test("Unknown log level string defaults to nil")
     @available(LambdaSwift 2.0, *)
-    func unknownLogLevelDefaultsToInfo() {
+    func unknownLogLevelDefaultsToNil() {
         withCleanEnvironment {
             withEnvironment(["AWS_LAMBDA_LOG_LEVEL": "UNKNOWN"]) {
                 let config = LoggingConfiguration(logger: Logger(label: "test"))
-                #expect(config.applicationLogLevel == .info)
+                #expect(config.applicationLogLevel == nil)
             }
         }
     }

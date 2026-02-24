@@ -24,6 +24,9 @@ public struct LoggingConfiguration: Sendable {
 
     public let format: LogFormat
     public let applicationLogLevel: Logger.Level?
+    /// Stores the raw environment variable value when it couldn't be parsed as a valid log level.
+    /// Callers should use `logConfigurationWarnings(logger:)` after obtaining a configured logger.
+    private let unrecognizedLogLevel: String?
     private let baseLogger: Logger
 
     /// Note: No log messages are emitted during initialization because the logging
@@ -49,30 +52,26 @@ public struct LoggingConfiguration: Sendable {
         let awsLambdaLogLevel = Lambda.env("AWS_LAMBDA_LOG_LEVEL")
         let logLevel = Lambda.env("LOG_LEVEL")
 
+        // Determine which raw env var value to parse based on format and precedence
+        let rawLevel: String?
         switch (self.format, awsLambdaLogLevel, logLevel) {
         case (.json, .some(let awsLevel), _):
-            // JSON format: prefer AWS_LAMBDA_LOG_LEVEL
-            self.applicationLogLevel = Self.parseLogLevel(awsLevel)
-
+            rawLevel = awsLevel
         case (.json, .none, .some(let legacyLevel)):
-            // JSON format with LOG_LEVEL only - use it as fallback
-            self.applicationLogLevel = Self.parseLogLevel(legacyLevel)
-
+            rawLevel = legacyLevel
         case (.text, _, .some(let legacyLevel)):
-            // Text format: prefer LOG_LEVEL for backward compatibility
-            self.applicationLogLevel = Self.parseLogLevel(legacyLevel)
-
+            rawLevel = legacyLevel
         case (.text, .some(let awsLevel), .none):
-            // Text format with AWS_LAMBDA_LOG_LEVEL only
-            self.applicationLogLevel = Self.parseLogLevel(awsLevel)
-
+            rawLevel = awsLevel
         case (_, .none, .none):
-            // No log level configured - use default
-            self.applicationLogLevel = nil
+            rawLevel = nil
         }
+
+        self.applicationLogLevel = rawLevel.flatMap { Self.parseLogLevel($0) }
+        self.unrecognizedLogLevel = rawLevel != nil && self.applicationLogLevel == nil ? rawLevel : nil
     }
 
-    private static func parseLogLevel(_ level: String) -> Logger.Level {
+    private static func parseLogLevel(_ level: String) -> Logger.Level? {
         switch level.uppercased() {
         case "TRACE": return .trace
         case "DEBUG": return .debug
@@ -80,7 +79,7 @@ public struct LoggingConfiguration: Sendable {
         case "WARN", "WARNING": return .warning
         case "ERROR": return .error
         case "FATAL", "CRITICAL": return .critical
-        default: return .info
+        default: return nil
         }
     }
 
@@ -121,26 +120,27 @@ public struct LoggingConfiguration: Sendable {
     /// In text mode, this returns the base logger provided by the user.
     /// In JSON mode, this creates a JSON logger using the base logger's label.
     public func makeRuntimeLogger() -> Logger {
+        var logger: Logger
         switch self.format {
         case .text:
-            var logger = self.baseLogger
-            if let level = self.applicationLogLevel {
-                logger.logLevel = level
-            }
-            return logger
-
+            logger = self.baseLogger
         case .json:
-            var logger = Logger(label: self.baseLogger.label) { label in
+            logger = Logger(label: self.baseLogger.label) { label in
                 JSONLogHandler(
                     label: label,
                     requestID: "N/A",
                     traceID: "N/A"
                 )
             }
-            if let level = self.applicationLogLevel {
-                logger.logLevel = level
-            }
-            return logger
         }
+        if let level = self.applicationLogLevel {
+            logger.logLevel = level
+        }
+        if let unrecognized = self.unrecognizedLogLevel {
+            logger.warning(
+                "Unrecognized log level '\(unrecognized)'. Using default log level. Valid values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL."
+            )
+        }
+        return logger
     }
 }
