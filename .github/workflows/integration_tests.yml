@@ -80,7 +80,6 @@ jobs:
             spm-${{ runner.os }}-${{ matrix.examples }}-
 
       - name: Run matrix job
-        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         env:
           COMMAND: ${{ inputs.matrix_linux_command }}
           EXAMPLE: ${{ matrix.examples }}
@@ -110,10 +109,6 @@ jobs:
           restore-keys: |
             spm-${{ runner.os }}-${{ matrix.examples }}-
 
-      - name: Mark the workspace as safe
-        # https://github.com/actions/checkout/issues/766
-        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
-
       - name: Test the archive plugin
         env:
           EXAMPLE: ${{ matrix.examples }}
@@ -127,34 +122,15 @@ jobs:
     container:
       image: ${{ inputs.matrix_linux_swift_container_image }}
     steps:
-      # GitHub checkout action has a dep on NodeJS 20 which is not running on Amazonlinux2
-      # workaround is to manually checkout the repository
-      # https://github.com/actions/checkout/issues/1487
-      - name: Manually Clone repository and checkout PR
-        env:
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          # Clone the repository
-          git clone https://github.com/${{ github.repository }}
-          cd ${{ github.event.repository.name }}
 
-          # Fetch the pull request
-          git fetch origin +refs/pull/$PR_NUMBER/merge:
-
-          # Checkout the pull request
-          git checkout -qf FETCH_HEAD
-
-      # - name: Checkout repository
-      #   uses: actions/checkout@v4
-      #   with:
-      #     persist-credentials: false
-
-      - name: Mark the workspace as safe
-        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
-        # https://github.com/actions/checkout/issues/766
-        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      - name: Cache SPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: .build
+          key: spm-foundation-${{ runner.os }}-${{ hashFiles('Package.resolved') }}
+          restore-keys: |
+            spm-foundation-${{ runner.os }}-
 
       - name: Check for Foundation or ICU dependency
-        working-directory: ${{ github.event.repository.name }}  # until we can use action/checkout@v4
         run: |
           .github/workflows/scripts/check-link-foundation.sh
