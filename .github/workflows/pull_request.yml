@@ -3,7 +3,6 @@ name: swift-aws-lambda-runtime-build
 on:
   pull_request:
     types: [opened, reopened, synchronize]
-  workflow_dispatch:
 
 # As per Checkov CKV2_GHA_1
 permissions: read-all
