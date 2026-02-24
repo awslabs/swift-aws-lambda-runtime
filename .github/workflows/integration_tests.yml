@@ -108,7 +108,9 @@ jobs:
       - name: Cache SPM dependencies
         uses: actions/cache@v4
         with:
-          path: Examples/${{ matrix.examples }}/.build
+          path: |
+            Examples/${{ matrix.examples }}/.build/checkouts
+            Examples/${{ matrix.examples }}/.build/repositories
           key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.resolved', matrix.examples)) }}
           restore-keys: |
             spm-${{ runner.os }}-${{ matrix.examples }}-
