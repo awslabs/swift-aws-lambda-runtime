@@ -213,6 +213,7 @@ struct LoggingConfigurationTests {
             ("TRACE", .trace),
             ("DEBUG", .debug),
             ("INFO", .info),
+            ("NOTICE", .notice),
             ("WARN", .warning),
             ("WARNING", .warning),
             ("ERROR", .error),

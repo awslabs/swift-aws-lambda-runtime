@@ -76,6 +76,7 @@ public struct LoggingConfiguration: Sendable {
         case "TRACE": return .trace
         case "DEBUG": return .debug
         case "INFO": return .info
+        case "NOTICE": return .notice
         case "WARN", "WARNING": return .warning
         case "ERROR": return .error
         case "FATAL", "CRITICAL": return .critical
@@ -138,7 +139,7 @@ public struct LoggingConfiguration: Sendable {
         }
         if let unrecognized = self.unrecognizedLogLevel {
             logger.warning(
-                "Unrecognized log level '\(unrecognized)'. Using default log level. Valid values: TRACE, DEBUG, INFO, WARN, ERROR, FATAL."
+                "Unrecognized log level '\(unrecognized)'. Using default log level. Valid values: TRACE, DEBUG, INFO, NOTICE, WARN, ERROR, FATAL."
             )
         }
         return logger
