@@ -44,6 +44,9 @@ struct JSONLogHandlerTests {
         let message: String
         let requestId: String
         let traceId: String
+        let file: String?
+        let function: String?
+        let line: UInt?
         let metadata: [String: String]?
     }
 
@@ -54,6 +57,9 @@ struct JSONLogHandlerTests {
         message: String = "test",
         requestID: String = "req-1",
         traceID: String = "trace-1",
+        file: String = "TestFile.swift",
+        function: String = "testFunction()",
+        line: UInt = 1,
         handlerMetadata: Logger.Metadata = [:],
         callMetadata: Logger.Metadata? = nil
     ) -> (entry: TestLogEntry?, rawJSON: String?) {
@@ -69,6 +75,9 @@ struct JSONLogHandlerTests {
             message: message,
             requestId: requestID,
             traceId: traceID,
+            file: file,
+            function: function,
+            line: line,
             metadata: allMetadata.isEmpty ? nil : allMetadata.mapValues { $0.description }
         )
 
@@ -174,6 +183,22 @@ struct JSONLogHandlerTests {
         #expect(entry?.traceId == "Root=1-5e1b4151-43a0913a12345678901234567")
     }
 
+    // MARK: - Source Location
+
+    @Test("Log entry includes file, function, and line")
+    @available(LambdaSwift 2.0, *)
+    func sourceLocation() {
+        let (entry, _) = makeAndEncode(
+            file: "Sources/MyLambda/Handler.swift",
+            function: "handle(_:context:)",
+            line: 42
+        )
+
+        #expect(entry?.file == "Sources/MyLambda/Handler.swift")
+        #expect(entry?.function == "handle(_:context:)")
+        #expect(entry?.line == 42)
+    }
+
     // MARK: - Timestamp
 
     @Test("Timestamp is in ISO 8601 format")
@@ -216,6 +241,9 @@ struct JSONLogHandlerTests {
             message: "test",
             requestId: "r",
             traceId: "t",
+            file: "Test.swift",
+            function: "test()",
+            line: 1,
             metadata: nil
         )
         let data = JSONLogHandler.encodeLogEntry(logEntry)

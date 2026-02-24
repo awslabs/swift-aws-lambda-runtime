@@ -67,6 +67,9 @@ public struct JSONLogHandler: LogHandler {
             message: message.description,
             requestId: self.requestID,
             traceId: self.traceID,
+            file: file,
+            function: function,
+            line: line,
             metadata: allMetadata.isEmpty ? nil : allMetadata.mapValues { $0.description }
         )
 
@@ -162,6 +165,9 @@ public struct JSONLogHandler: LogHandler {
         let message: String
         let requestId: String
         let traceId: String
+        let file: String
+        let function: String
+        let line: UInt
         let metadata: [String: String]?
     }
 
