@@ -72,7 +72,7 @@ jobs:
           persist-credentials: false
 
       - name: Cache SPM dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: Examples/${{ matrix.examples }}/.build
           key: spm-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.swift', matrix.examples)) }}
