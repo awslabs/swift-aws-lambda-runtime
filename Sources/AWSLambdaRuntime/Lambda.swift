@@ -53,28 +53,6 @@ public enum Lambda {
         )
     }
 
-    @available(
-        *,
-        deprecated,
-        message:
-            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
-    )
-    @inlinable
-    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
-        runtimeClient: RuntimeClient,
-        handler: Handler,
-        loggingConfiguration: LoggingConfiguration,
-        logger: Logger
-    ) async throws where Handler: StreamingLambdaHandler {
-        try await self.runLoop(
-            runtimeClient: runtimeClient,
-            handler: handler,
-            loggingConfiguration: LoggingConfiguration(logger: logger),
-            logger: logger,
-            isSingleConcurrencyMode: true
-        )
-    }
-
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
@@ -116,26 +94,44 @@ public enum Lambda {
                     metadata: metadata
                 )
 
-                do {
-                    try await handler.handle(
-                        invocation.event,
-                        responseWriter: writer,
-                        context: LambdaContext(
-                            requestID: invocation.metadata.requestID,
-                            traceID: invocation.metadata.traceID,
-                            tenantID: invocation.metadata.tenantID,
-                            invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                            deadline: LambdaClock.Instant(
-                                millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
-                            ),
-                            logger: requestLogger
+                // Wrap handler invocation in a TaskLocal scope so that
+                // LambdaContext.currentTraceID is available to all code
+                // in the handler's async task tree (e.g. OpenTelemetry instrumentation).
+                // In single-concurrency mode, also set the _X_AMZN_TRACE_ID env var
+                // for backward compatibility with legacy tooling.
+                try await LambdaContext.$currentTraceID.withValue(invocation.metadata.traceID) {
+                    if isSingleConcurrencyMode {
+                        setenv("_X_AMZN_TRACE_ID", invocation.metadata.traceID, 1)
+                    }
+                    defer {
+                        if isSingleConcurrencyMode {
+                            unsetenv("_X_AMZN_TRACE_ID")
+                        }
+                    }
+
+                    do {
+                        try await handler.handle(
+                            invocation.event,
+                            responseWriter: writer,
+                            context: LambdaContext(
+                                requestID: invocation.metadata.requestID,
+                                traceID: invocation.metadata.traceID,
+                                tenantID: invocation.metadata.tenantID,
+                                invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                                deadline: LambdaClock.Instant(
+                                    millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                                ),
+                                logger: requestLogger
+                            )
                         )
-                    )
-                    requestLogger.trace("Handler finished processing invocation")
-                } catch {
-                    requestLogger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
-                    try await writer.reportError(error)
-                    continue
+                        requestLogger.trace("Handler finished processing invocation")
+                    } catch {
+                        requestLogger.trace(
+                            "Handler failed processing invocation",
+                            metadata: ["Handler error": "\(error)"]
+                        )
+                        try await writer.reportError(error)
+                    }
                 }
             }
         } catch is CancellationError {
