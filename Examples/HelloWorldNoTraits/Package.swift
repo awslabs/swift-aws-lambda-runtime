@@ -10,10 +10,11 @@ let package = Package(
     ],
     dependencies: [
         // For local development (default)
-        .package(name: "swift-aws-lambda-runtime", path: "../..")
+        // No traits are enabled — this example deliberately avoids Foundation
+        .package(name: "swift-aws-lambda-runtime", path: "../..", traits: [])
 
         // For standalone usage, comment the line above and uncomment below:
-        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0", traits: []),
     ],
     targets: [
         .executableTarget(
