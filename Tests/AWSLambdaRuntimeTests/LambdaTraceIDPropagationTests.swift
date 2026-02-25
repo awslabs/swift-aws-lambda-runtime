@@ -25,7 +25,7 @@ import Glibc
 import Musl
 #endif
 
-@Suite("Trace ID Propagation Tests")
+@Suite("Trace ID Propagation Tests", .serialized)
 struct LambdaTraceIDPropagationTests {
 
     // MARK: - TaskLocal basic behavior
