@@ -17,6 +17,7 @@ import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+import ServiceContextModule
 
 #if os(macOS)
 import Darwin.C
@@ -90,12 +91,13 @@ public enum Lambda {
 
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
+                let traceId = invocation.metadata.traceID
 
                 // Create a per-request logger with request-specific metadata
                 let requestLogger = loggingConfiguration.makeLogger(
                     label: "Lambda",
                     requestID: invocation.metadata.requestID,
-                    traceID: invocation.metadata.traceID
+                    traceID: traceId
                 )
 
                 // when log level is trace or lower, print the first 6 Mb of the payload
@@ -116,26 +118,46 @@ public enum Lambda {
                     metadata: metadata
                 )
 
-                do {
-                    try await handler.handle(
-                        invocation.event,
-                        responseWriter: writer,
-                        context: LambdaContext(
-                            requestID: invocation.metadata.requestID,
-                            traceID: invocation.metadata.traceID,
-                            tenantID: invocation.metadata.tenantID,
-                            invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                            deadline: LambdaClock.Instant(
-                                millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
-                            ),
-                            logger: requestLogger
+                // Wrap handler invocation in a ServiceContext scope so that
+                // downstream libraries can access the trace ID via
+                // ServiceContext.current?.traceID without depending on AWSLambdaRuntime.
+                // In single-concurrency mode, also set the _X_AMZN_TRACE_ID env var
+                // for backward compatibility with legacy tooling.
+                var serviceContext = ServiceContext.current ?? ServiceContext.topLevel
+                serviceContext.traceID = traceId
+                try await ServiceContext.withValue(serviceContext) {
+                    if isSingleConcurrencyMode {
+                        setenv("_X_AMZN_TRACE_ID", traceId, 1)
+                    }
+                    defer {
+                        if isSingleConcurrencyMode {
+                            unsetenv("_X_AMZN_TRACE_ID")
+                        }
+                    }
+
+                    do {
+                        try await handler.handle(
+                            invocation.event,
+                            responseWriter: writer,
+                            context: LambdaContext(
+                                requestID: invocation.metadata.requestID,
+                                traceID: traceId,
+                                tenantID: invocation.metadata.tenantID,
+                                invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                                deadline: LambdaClock.Instant(
+                                    millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                                ),
+                                logger: requestLogger
+                            )
                         )
-                    )
-                    requestLogger.trace("Handler finished processing invocation")
-                } catch {
-                    requestLogger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
-                    try await writer.reportError(error)
-                    continue
+                        requestLogger.trace("Handler finished processing invocation")
+                    } catch {
+                        requestLogger.trace(
+                            "Handler failed processing invocation",
+                            metadata: ["Handler error": "\(error)"]
+                        )
+                        try await writer.reportError(error)
+                    }
                 }
             }
         } catch is CancellationError {

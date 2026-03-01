@@ -36,6 +36,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.10.1"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.3.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.10.1"),
+        .package(url: "https://github.com/apple/swift-service-context.git", from: "1.3.0"),
     ],
     targets: [
         .target(
@@ -44,6 +45,7 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "DequeModule", package: "swift-collections"),
                 .product(name: "Logging", package: "swift-log"),
+                .product(name: "ServiceContextModule", package: "swift-service-context"),
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(
@@ -74,6 +76,7 @@ let package = Package(
             name: "AWSLambdaRuntimeTests",
             dependencies: [
                 .byName(name: "AWSLambdaRuntime"),
+                .product(name: "ServiceContextModule", package: "swift-service-context"),
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
             ],
