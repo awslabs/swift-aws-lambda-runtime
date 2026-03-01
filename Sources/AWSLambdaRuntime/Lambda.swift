@@ -36,7 +36,7 @@ public enum Lambda {
         *,
         deprecated,
         message:
-            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:) instead."
+            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
     )
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
@@ -48,7 +48,30 @@ public enum Lambda {
             runtimeClient: runtimeClient,
             handler: handler,
             loggingConfiguration: LoggingConfiguration(logger: logger),
-            logger: logger
+            logger: logger,
+            isSingleConcurrencyMode: true
+        )
+    }
+
+    @available(
+        *,
+        deprecated,
+        message:
+            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
+    )
+    @inlinable
+    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
+        runtimeClient: RuntimeClient,
+        handler: Handler,
+        loggingConfiguration: LoggingConfiguration,
+        logger: Logger
+    ) async throws where Handler: StreamingLambdaHandler {
+        try await self.runLoop(
+            runtimeClient: runtimeClient,
+            handler: handler,
+            loggingConfiguration: LoggingConfiguration(logger: logger),
+            logger: logger,
+            isSingleConcurrencyMode: true
         )
     }
 
@@ -57,7 +80,8 @@ public enum Lambda {
         runtimeClient: RuntimeClient,
         handler: Handler,
         loggingConfiguration: LoggingConfiguration,
-        logger: Logger
+        logger: Logger,
+        isSingleConcurrencyMode: Bool
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
