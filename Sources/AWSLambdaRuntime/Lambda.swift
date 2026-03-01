@@ -17,6 +17,7 @@ import Dispatch
 import Logging
 import NIOCore
 import NIOPosix
+import ServiceContextModule
 
 #if os(macOS)
 import Darwin.C
@@ -117,12 +118,14 @@ public enum Lambda {
                     metadata: metadata
                 )
 
-                // Wrap handler invocation in a TaskLocal scope so that
-                // LambdaContext.currentTraceID is available to all code
-                // in the handler's async task tree (e.g. OpenTelemetry instrumentation).
+                // Wrap handler invocation in a ServiceContext scope so that
+                // downstream libraries can access the trace ID via
+                // ServiceContext.current?.traceID without depending on AWSLambdaRuntime.
                 // In single-concurrency mode, also set the _X_AMZN_TRACE_ID env var
                 // for backward compatibility with legacy tooling.
-                try await LambdaContext.$currentTraceID.withValue(traceId) {
+                var serviceContext = ServiceContext.current ?? ServiceContext.topLevel
+                serviceContext.traceID = traceId
+                try await ServiceContext.withValue(serviceContext) {
                     if isSingleConcurrencyMode {
                         setenv("_X_AMZN_TRACE_ID", traceId, 1)
                     }

@@ -15,6 +15,7 @@
 
 import Logging
 import NIOCore
+import ServiceContextModule
 
 // MARK: - Client Context
 
@@ -222,26 +223,6 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         "\(Self.self)(requestID: \(self.requestID), traceID: \(self.traceID), invokedFunctionARN: \(self.invokedFunctionARN), cognitoIdentity: \(self.cognitoIdentity ?? "nil"), clientContext: \(String(describing: self.clientContext)), deadline: \(self.deadline))"
     }
 
-    // MARK: - TaskLocal Trace ID
-
-    /// The trace ID for the current Lambda invocation, available via Swift's `TaskLocal` mechanism.
-    ///
-    /// This enables OpenTelemetry instrumentation and other tracing libraries to discover
-    /// the current invocation's trace ID without requiring an explicit `LambdaContext` reference.
-    /// The value is automatically set by the runtime before calling the handler and is available
-    /// to all code running within the handler's async task tree.
-    ///
-    /// Returns `nil` when accessed outside of a Lambda invocation scope.
-    ///
-    /// ```swift
-    /// // Inside a Lambda handler or any code called from it:
-    /// if let traceID = LambdaContext.currentTraceID {
-    ///     // Use traceID for downstream propagation
-    /// }
-    /// ```
-    @TaskLocal
-    public static var currentTraceID: String?
-
     /// This interface is not part of the public API and must not be used by adopters. This API is not part of semver versioning.
     /// The timeout is expressed relative to now
     package static func __forTestsOnly(
@@ -260,5 +241,39 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             deadline: LambdaClock().now.advanced(by: timeout),
             logger: logger
         )
+    }
+}
+
+// MARK: - ServiceContext integration
+
+/// A ``ServiceContextKey`` for the AWS X-Ray trace ID.
+///
+/// This allows downstream libraries that depend on `swift-service-context`
+/// (but not on `AWSLambdaRuntime`) to access the current trace ID via
+/// `ServiceContext.current?.traceID`.
+private enum LambdaTraceIDKey: ServiceContextKey {
+    typealias Value = String
+    static var nameOverride: String? { AmazonHeaders.traceID }
+}
+
+extension ServiceContext {
+    /// The AWS X-Ray trace ID for the current Lambda invocation, if available.
+    ///
+    /// This value is automatically set by the Lambda runtime before calling the handler
+    /// and is available to all code running within the handler's async task tree.
+    ///
+    /// Downstream libraries can read this without depending on `AWSLambdaRuntime`:
+    /// ```swift
+    /// if let traceID = ServiceContext.current?.traceID {
+    ///     // propagate traceID to outgoing HTTP requests, etc.
+    /// }
+    /// ```
+    public var traceID: String? {
+        get {
+            self[LambdaTraceIDKey.self]
+        }
+        set {
+            self[LambdaTraceIDKey.self] = newValue
+        }
     }
 }
