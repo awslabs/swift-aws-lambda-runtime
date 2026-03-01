@@ -96,7 +96,8 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
                         handler: self.handler,
                         eventLoop: self.eventLoop,
                         loggingConfiguration: self.loggingConfiguration,
-                        logger: self.logger
+                        logger: self.logger,
+                        isSingleConcurrencyMode: true
                     )
                 } else {
 
@@ -113,7 +114,8 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
                                     handler: self.handler,
                                     eventLoop: self.eventLoop,
                                     loggingConfiguration: self.loggingConfiguration,
-                                    logger: logger
+                                    logger: logger,
+                                    isSingleConcurrencyMode: false
                                 )
                             }
                         }

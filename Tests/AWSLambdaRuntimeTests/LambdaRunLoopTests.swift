@@ -69,7 +69,8 @@ struct LambdaRunLoopTests {
                     runtimeClient: mockClient,
                     handler: mockEchoHandler,
                     loggingConfiguration: LoggingConfiguration(logger: logger),
-                    logger: logger
+                    logger: logger,
+                    isSingleConcurrencyMode: true
                 )
             }
 
@@ -100,7 +101,8 @@ struct LambdaRunLoopTests {
                     runtimeClient: mockClient,
                     handler: failingHandler,
                     loggingConfiguration: LoggingConfiguration(logger: logger),
-                    logger: logger
+                    logger: logger,
+                    isSingleConcurrencyMode: true
                 )
             }
 

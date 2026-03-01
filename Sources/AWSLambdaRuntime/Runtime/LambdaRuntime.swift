@@ -105,7 +105,8 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                     handler: handler,
                     eventLoop: self.eventLoop,
                     loggingConfiguration: self.loggingConfiguration,
-                    logger: self.logger
+                    logger: self.logger,
+                    isSingleConcurrencyMode: true
                 )
 
             } else {
@@ -126,7 +127,8 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
         handler: Handler,
         eventLoop: EventLoop,
         loggingConfiguration: LoggingConfiguration,
-        logger: Logger
+        logger: Logger,
+        isSingleConcurrencyMode: Bool
     ) async throws {
 
         let ipAndPort = endpoint.split(separator: ":", maxSplits: 1)
@@ -143,7 +145,8 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                     runtimeClient: runtimeClient,
                     handler: handler,
                     loggingConfiguration: loggingConfiguration,
-                    logger: logger
+                    logger: logger,
+                    isSingleConcurrencyMode: isSingleConcurrencyMode
                 )
             }
         } catch {
@@ -193,7 +196,8 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
                     runtimeClient: runtimeClient,
                     handler: handler,
                     loggingConfiguration: loggingConfiguration,
-                    logger: logger
+                    logger: logger,
+                    isSingleConcurrencyMode: true
                 )
             }
         }
