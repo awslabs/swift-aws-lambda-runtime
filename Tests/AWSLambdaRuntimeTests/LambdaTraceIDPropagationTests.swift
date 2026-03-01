@@ -123,7 +123,7 @@ struct LambdaTraceIDPropagationTests {
         var ctx = ServiceContext.topLevel
         ctx.traceID = traceID
 
-        await ServiceContext.withValue(ctx) {
+        ServiceContext.withValue(ctx) {
             setenv("_X_AMZN_TRACE_ID", traceID, 1)
             defer { unsetenv("_X_AMZN_TRACE_ID") }
 
@@ -144,7 +144,7 @@ struct LambdaTraceIDPropagationTests {
         var ctx = ServiceContext.topLevel
         ctx.traceID = traceID
 
-        await ServiceContext.withValue(ctx) {
+        ServiceContext.withValue(ctx) {
             #expect(ServiceContext.current?.traceID == traceID)
             #expect(Lambda.env("_X_AMZN_TRACE_ID") == nil)
         }
@@ -187,7 +187,7 @@ struct LambdaTraceIDPropagationTests {
         var ctx = ServiceContext.topLevel
         ctx.traceID = serviceContextTraceID
 
-        await ServiceContext.withValue(ctx) {
+        ServiceContext.withValue(ctx) {
             let lambdaContext = LambdaContext.__forTestsOnly(
                 requestID: "test-request",
                 traceID: instanceTraceID,
@@ -210,7 +210,7 @@ struct LambdaTraceIDPropagationTests {
         var ctx = ServiceContext.topLevel
         ctx.traceID = traceID
 
-        await ServiceContext.withValue(ctx) {
+        ServiceContext.withValue(ctx) {
             let lambdaContext = LambdaContext.__forTestsOnly(
                 requestID: "test-request",
                 traceID: traceID,
