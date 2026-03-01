@@ -69,7 +69,7 @@ public enum Lambda {
         try await self.runLoop(
             runtimeClient: runtimeClient,
             handler: handler,
-            loggingConfiguration: LoggingConfiguration(logger: logger),
+            loggingConfiguration: loggingConfiguration,
             logger: logger,
             isSingleConcurrencyMode: true
         )
