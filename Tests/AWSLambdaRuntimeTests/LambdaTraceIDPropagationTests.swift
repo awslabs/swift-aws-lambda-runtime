@@ -192,4 +192,24 @@ struct LambdaTraceIDPropagationTests {
             #expect(LambdaContext.currentTraceID == taskLocalTraceID)
         }
     }
+
+    @Test("TaskLocal currentTraceID and instance traceID match when set from the same source")
+    @available(LambdaSwift 2.0, *)
+    func taskLocalAndInstanceTraceIDMatchFromSameSource() async {
+        // Simulates what the run loop does: both are set from invocation.metadata.traceID
+        let traceID = "Root=1-65af3dc0-abc123def456;Sampled=1"
+
+        await LambdaContext.$currentTraceID.withValue(traceID) {
+            let context = LambdaContext.__forTestsOnly(
+                requestID: "test-request",
+                traceID: traceID,
+                tenantID: nil,
+                invokedFunctionARN: "arn:aws:lambda:us-east-1:123456789:function:test",
+                timeout: .seconds(30),
+                logger: .init(label: "test")
+            )
+
+            #expect(context.traceID == LambdaContext.currentTraceID)
+        }
+    }
 }

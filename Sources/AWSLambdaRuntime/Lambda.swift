@@ -68,12 +68,13 @@ public enum Lambda {
 
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
+                let traceId = invocation.metadata.traceID
 
                 // Create a per-request logger with request-specific metadata
                 let requestLogger = loggingConfiguration.makeLogger(
                     label: "Lambda",
                     requestID: invocation.metadata.requestID,
-                    traceID: invocation.metadata.traceID
+                    traceID: traceId
                 )
 
                 // when log level is trace or lower, print the first 6 Mb of the payload
@@ -99,9 +100,9 @@ public enum Lambda {
                 // in the handler's async task tree (e.g. OpenTelemetry instrumentation).
                 // In single-concurrency mode, also set the _X_AMZN_TRACE_ID env var
                 // for backward compatibility with legacy tooling.
-                try await LambdaContext.$currentTraceID.withValue(invocation.metadata.traceID) {
+                try await LambdaContext.$currentTraceID.withValue(traceId) {
                     if isSingleConcurrencyMode {
-                        setenv("_X_AMZN_TRACE_ID", invocation.metadata.traceID, 1)
+                        setenv("_X_AMZN_TRACE_ID", traceId, 1)
                     }
                     defer {
                         if isSingleConcurrencyMode {
@@ -115,7 +116,7 @@ public enum Lambda {
                             responseWriter: writer,
                             context: LambdaContext(
                                 requestID: invocation.metadata.requestID,
-                                traceID: invocation.metadata.traceID,
+                                traceID: traceId,
                                 tenantID: invocation.metadata.tenantID,
                                 invokedFunctionARN: invocation.metadata.invokedFunctionARN,
                                 deadline: LambdaClock.Instant(
