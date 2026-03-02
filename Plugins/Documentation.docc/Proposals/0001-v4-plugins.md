@@ -1,17 +1,29 @@
-# v2 Plugin Proposal for swift-aws-lambda-runtime
+# Plugin Proposal for swift-aws-lambda-runtime
 
-`swift-aws-lambda-runtime` is a library for the Swift on Server ecosystem. The initial version of the library focused on the API, enabling developers to write Lambda functions in the Swift programming language. The library provided developers with basic support for building and packaging their functions.
+`swift-aws-lambda-runtime` is a library allowing developers to write AWS Lambda functions in Swift. The initial version of the library focused on the API exposed to functions developers. The library also provided developers with basic support for building and packaging their functions.
 
 We believe it is time to consider the end-to-end developer experience, from project scaffolding to deployment, taking into account the needs of Swift developers that are new to AWS and Lambda.
 
-This document describes a proposal for the v2 plugins for `swift-aws-lambda-runtime`. The plugins will focus on project scaffolding, building, archiving, and deployment of Lambda functions.
+This document describes a proposal for new Swift plugins for `swift-aws-lambda-runtime`. The plugins will focus on project scaffolding, building, archiving, and deployment of Lambda functions.
 
 ## Overview
 
 Versions:
 
-* v1 (2024-12-25): Initial version
-* v2 (2025-03-13): 
+* v4 (2026-03-02):
+- [build] Clarify that `-Xlinker -s` will be turned on by default
+- [deploy] Replace custom HTTP client and AWS signing implementation with Soto Core dependency
+- [deploy] Use Soto Code Generator for one-time generation of AWS service API clients (not a build-time dependency)
+- [deploy] Leverage Soto's AWS credential provider and configuration file parsing
+- [dependencies] Remove vendored crypto, signer, and HTTP client code
+- [dependencies] Add `soto-core` as dependency
+- [dependencies] Generated AWS service code will be checked into the repository
+
+* v3 (2026-02-17):
+- [build] Add `--container-cli` option to support Apple's `container` CLI as an alternative to Docker (addresses [#644](https://github.com/awslabs/swift-aws-lambda-runtime/issues/644)).
+- [build] Add the section **Container CLI options**
+
+* v2 (2025-03-13):
 - Include [comments from the community](https://forums.swift.org/t/lambda-plugins-for-v2/76859).
 - [init] Add the templates for `main.swift`
 - [build] Add the section **Cross-compiling options**
@@ -19,6 +31,8 @@ Versions:
 - [deploy] Add `--input-path` parameter.
 - [deploy] Add details how the function name is computed.
 - [deploy] Add `--architecture` option and details how the default is computed.
+
+* v1 (2024-12-25): Initial version
 
 ## Motivation
 
@@ -64,7 +78,7 @@ The plugin cannot be invoked without the required dependency on `swift-aws-lambd
 swift package init --type executable --name MyLambda
 
 # Step 2: Add the Swift AWS Lambda Runtime dependency
-swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
+swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --branch main
 swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
 
 # Step 3: Call the lambda-init plugin
@@ -151,16 +165,17 @@ try await runtime.run()
 
 The `lambda-build` plugin will assist developers in building and packaging their Lambda function. It will allow for multiple cross-compilation options. We will retain the current Docker-based cross-compilation but also provide a way to cross-compile without Docker, such as using the Swift Static Linux SDK (with musl) or a custom Swift SDK for Amazon Linux.
 
-We also propose to automatically strip the binary of debug symbols (`-Xlinker -s`) to reduce the size of the ZIP file. Our tests showed that this can reduce the size by up to 50%. An option to disable stripping will be provided.
+We also propose to automatically strip the binary of debug symbols (`-Xlinker -s`) to reduce the size of the ZIP file. Our tests showed that this can reduce the size by up to 50%. Because of the strong impact on cold start time, we propose to strip binaries by default and we will provide developers with a flag to opt-out stripping.
 
 The `lambda-build` plugin is similar to the existing `archive` plugin. We propose to keep the same interface to facilitate migration of existing projects and CI chains. If technically feasible, we will also consider keeping the `archive` plugin as an alias to the `lambda-build` plugin.
 
-The plugin interface is based on the existing `archive` plugin, with the addition of the `--no-strip` and `--cross-compile` options:
+The plugin interface is based on the existing `archive` plugin, with the addition of the `--no-strip`, `--cross-compile`, and `--container-cli` options:
 
 ```text
 OVERVIEW: A SwiftPM plugin to build and package your Lambda function.
 
-REQUIREMENTS: To use this plugin, Docker must be installed and running.
+REQUIREMENTS: To use this plugin, Docker or Apple container must be installed and running
+              (when using docker or container cross-compilation methods).
 
 USAGE: swift package archive
             [--help] [--verbose]
@@ -172,6 +187,7 @@ USAGE: swift package archive
             [--disable-docker-image-update]
             [--no-strip]
             [--cross-compile <value>]
+            [--container-cli <value>]
             [--allow-network-connections docker]
 
 OPTIONS:
@@ -192,6 +208,9 @@ OPTIONS:
 --no-strip                    Do not strip the binary of debug symbols.
 --cross-compile <value>       Cross-compile the binary using the specified method.
                                 (default: docker) Accepted values are: docker, swift-static-sdk, custom-sdk
+--container-cli <value>       Specify the container CLI to use for Docker-based builds.
+                                (default: docker) Accepted values are: docker, container
+                                This parameter is only used when --cross-compile is set to docker.
 ```
 
 #### Cross compiling options
@@ -205,17 +224,38 @@ For an ideal developer experience, we would imagine the following sequence:
 - if not installed or outdated, the plugin downloads a custom SDK from a safe source and installs it [questions : who should maintain such SDK binaries? Where to host them? We must have a kind of signature to ensure the SDK has not been modified. How to manage Swift version and align with the local toolchain?]
 - the plugin build the archive using the custom sdk
 
+#### Container CLI options
+
+The initial version will use Docker as the default container CLI. However, we would like to explore supporting Apple's `container` CLI on macOS as an alternative. This would provide native OCI (Open Container Initiative) image support without requiring Docker Desktop.
+
+We would imagine the following sequence:
+
+- developer runs `swift package lambda-build --container-cli container`
+- the plugin detects the path of the specified container CLI
+- the plugin uses the appropriate commands for pulling images and running containers 
+- the plugin builds the archive using the selected container CLI
+
 ### Deploy (lambda-deploy)
 
 The `lambda-deploy` plugin will assist developers in deploying their Lambda function to AWS. It will handle the deployment process, including creating the IAM role, the Lambda function itself, and optionally configuring a Lambda function URL.
 
-The plugin will not depends on nay third-party library. It will interact directly with the AWS REST API, without using the AWS SDK fro Swift or Soto.
+This proposal v4 introduces a new dependency strategy compared to proposal v3 and earlier. The plugin will depend on Soto Core for AWS API interactions instead of implementing custom HTTP client and AWS signing logic. This provides:
 
-Users will need to provide AWS access key and secret access key credentials. The plugin will attempt to locate these credentials in standard locations. It will first check for the `~/.aws/credentials` file, then the environment variables `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and (optional) `AWS_SESSION_TOKEN`. Finally, it will check the [meta data service v2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html) in case the plugin runs from a virtual machine (Amazon EC2) or a container (Amazon ECS or AMazon EKS).
+- Robust AWS credential provider chain (environment variables, config files, EC2 instance metadata, ECS task roles, etc.)
+- Standard AWS configuration file parsing (`~/.aws/config` and `~/.aws/credentials`)
+- Production-tested AWS request signing (SigV4)
+- Maintained HTTP client implementation via AsyncHTTPClient
+- Generated AWS service clients via Soto Code Generator
 
-The plugin supports deployment through either the REST and Base64 payload or by uploading the code to a temporary S3 bucket. Refer to [the `Function Code` section](https://docs.aws.amazon.com/lambda/latest/api/API_FunctionCode.html) of the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html) API for more details.
+Users will need to provide AWS credentials. The plugin will leverage Soto's credential provider chain, which automatically checks:
+1. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN`)
+2. AWS configuration files (`~/.aws/credentials` and `~/.aws/config`) for hardcoded credentials, SSO, or `aws login` configurations
+3. ECS container credentials 
+4. EC2 instance metadata service (IMDSv2)
 
-The plugin will use teh function name as defined in the `executableTarget` in `Package.swift`. This approach is similar to how the `archive` plugin works today.
+The plugin supports deployment through either the REST API with Base64 payload or by uploading the code to a temporary S3 bucket. Refer to [the `Function Code` section](https://docs.aws.amazon.com/lambda/latest/api/API_FunctionCode.html) of the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/dg/API_CreateFunction.html) API for more details.
+
+The plugin will use the function name as defined in the `executableTarget` in `Package.swift`. This approach is similar to how the `archive` plugin works today.
 
 The plugin can deploy to multiple regions. Users can specify the desired region as a command-line argument.
 
@@ -258,72 +298,46 @@ In a future version, we might consider adding an `--export` option that would ea
 
 ### Dependencies
 
-One of the design objective of the Swift AWS Lambda Runtime is to minimize its dependencies on other libraries.
+One of the design objectives of the Swift AWS Lambda Runtime is to minimize its dependencies on other libraries. However, this proposal shifts awaiy from that initial objectibe. We propose to leverage battle-tested, production-ready libraries for AWS interactions rather than maintaining custom implementations.
 
-Therefore, minimizing dependencies is a key priority for the new plugins. We aim to avoid including unnecessary dependencies, such as the AWS SDK for Swift or Soto, for the `lambda-deploy` plugin.
+#### Dependency Strategy: Soto Core
 
-Four essential dependencies have been identified to implement the plugins:
+We propose adopting Soto Core as a dependency for the `lambda-deploy` plugin. Soto Core provides production-tested AWS credential management, configuration file parsing, request signing, and HTTP client functionality. It is actively maintained by the Swift community and leverages AsyncHTTPClient (built on SwiftNIO) for robust HTTP operations.
 
-* an command line argument parser
-* an HTTP client
-* a library to sign AWS requests
-* a library to calculate HMAC-SHA256 (used in the AWS signing process)
+The Soto Code Generator will be used to generate type-safe Swift APIs from AWS service models, allowing us to include only the specific operations we need rather than depending on the entire Soto SDK.
 
-These functionalities can be incorporated by vending source code from other projects. We will consider the following options:
+#### Using Soto Code Generator
 
-**Argument Parser:**
+Project maintainers will use the Soto Code Generator as a one-time script to generate Swift code for only the AWS service operations needed by the `lambda-deploy` plugin. The generator reads AWS service model JSON files and a configuration file specifying which operations to include, then produces type-safe Swift interfaces.
 
-* We propose to leverage the `ArgumentExtractor` from the `swift-package-manager` project ([https://github.com/swiftlang/swift-package-manager/blob/main/Sources/PackagePlugin/ArgumentExtractor.swift](https://github.com/swiftlang/swift-package-manager/blob/main/Sources/PackagePlugin/ArgumentExtractor.swift)). This is a simple argument parser used by the Swift Package Manager. The relevant files will be copied into the plugin.
+**Required AWS APIs:**
 
-**HTTP Client:**
+For the `lambda-deploy` plugin, we need:
 
-* We will utilize the `URLSession` provided by `FoundationNetworking`. No additional dependencies will be introduced for the HTTP client.
+1. **AWS Lambda APIs:**
+   - CreateFunction
+   - UpdateFunctionCode
+   - DeleteFunction
+   - GetFunction
+   - CreateFunctionUrlConfig
+   - DeleteFunctionUrlConfig
+   - AddPermission
+   - RemovePermission
 
-**AWS Request Signing:**
+2. **AWS IAM APIs:**
+   - CreateRole
+   - DeleteRole
+   - AttachRolePolicy
+   - DetachRolePolicy
+   - GetRole
+   - PutRolePolicy
+   - DeleteRolePolicy
 
-* To interact with the AWS REST API, requests must be signed. We will include the `AWSRequestSigner` from [the `aws-signer-v4` project](https://github.com/adam-fowler/aws-signer-v4). This is a simple library that signs requests using AWS Signature Version 4. The relevant files will be copied into the plugin.
+3. **AWS S3 APIs (optional, for large deployments):**
+   - PutObject
+   - DeleteObject
 
-**HMAC-SHA256 Implementation:**
-
-* The `AWSRequestSigner` has a dependency on the `swift-crypto` library. We will consider two options:
-    * Include the HMAC-SHA256 implementation from the popular `CryptoSwift` library ([https://github.com/krzyzanowskim/CryptoSwift](https://github.com/krzyzanowskim/CryptoSwift)), which provides a wide range of cryptographic functions. The relevant files will be copied into the plugin.
-    * Develop a clean implementation of the HMAC-SHA256 algorithm. This is a relatively simple algorithm used for request signing.
-
-The dependencies will be vendored within the plugin and will not be listed as dependencies in the `Package.swift` file.
-
-If we follow that plan, the following files will be copied into the plugin, without modifications from their original projects:
-
-```text
-Sources/AWSLambdaPluginHelper/Vendored
-├── crypto
-│   ├── Array+Extensions.swift
-│   ├── Authenticator.swift
-│   ├── BatchedCollections.swift
-│   ├── Bit.swift
-│   ├── Collections+Extensions.swift
-│   ├── Digest.swift
-│   ├── DigestType.swift
-│   ├── Generics.swift
-│   ├── HMAC.swift
-│   ├── Int+Extension.swift
-│   ├── NoPadding.swift
-│   ├── Padding.swift
-│   ├── SHA1.swift
-│   ├── SHA2.swift
-│   ├── SHA3.swift
-│   ├── UInt16+Extension.swift
-│   ├── UInt32+Extension.swift
-│   ├── UInt64+Extension.swift
-│   ├── UInt8+Extension.swift
-│   ├── Updatable.swift
-│   ├── Utils.swift
-│   └── ZeroPadding.swift
-├── signer
-│   ├── AWSCredentials.swift
-│   └── AWSSigner.swift
-└── spm
-    └── ArgumentExtractor.swift
-```
+The generated code will provide type-safe Swift interfaces, allowing us to interact with AWS services without depending on the entire Soto SDK.
 
 ### Implementation
 
@@ -362,13 +376,11 @@ let package = Package(
         .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
 
         //
-        // Testing targets
-        //
-        // ... unchanged ...
-    ],
-    dependencies: [ // unchanged
+    dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.76.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.5.4"),
+        // for plugin support
+        .package(url: "https://github.com/soto-project/soto-core.git", from: "7.0.0"),
     ],
     targets: [
 
@@ -394,25 +406,6 @@ let package = Package(
                 .target(name: "AWSLambdaPluginHelper")
             ]
         ),
-        // keep this one (with "archive") to not break workflows
-        // This will be deprecated at some point in the future
-        //        .plugin(
-        //            name: "AWSLambdaPackager",
-        //            capability: .command(
-        //                intent: .custom(
-        //                    verb: "archive",
-        //                    description:
-        //                        "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
-        //                ),
-        //                permissions: [
-        //                    .allowNetworkConnections(
-        //                        scope: .docker,
-        //                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
-        //                    )
-        //                ]
-        //            ),
-        //            path: "Plugins/AWSLambdaBuilder" // same sources as the new "lambda-build" plugin
-        //        ),
         .plugin(
             name: "AWSLambdaBuilder",
             capability: .command(
@@ -452,12 +445,33 @@ let package = Package(
             ]
         ),
 
+        // keep this one (with "archive") to not break workflows
+        // This will be deprecated at some point in the future
+        //        .plugin(
+        //            name: "AWSLambdaPackager",
+        //            capability: .command(
+        //                intent: .custom(
+        //                    verb: "archive",
+        //                    description:
+        //                        "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
+        //                ),
+        //                permissions: [
+        //                    .allowNetworkConnections(
+        //                        scope: .docker,
+        //                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
+        //                    )
+        //                ]
+        //            ),
+        //            path: "Plugins/AWSLambdaBuilder" // same sources as the new "lambda-build" plugin
+        //        ),
+                
         /// The executable target that implements the three plugins functionality
         .executableTarget(
             name: "AWSLambdaPluginHelper",
             dependencies: [
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "SotoCore", package: "soto-core"),
             ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
@@ -512,9 +526,11 @@ And the executable target would dispatch the invocation to a struct implementing
 
 ## Considered Alternatives
 
-In addition to the proposed solution, we evaluated the following alternatives:
+1. **Plugins Dependencies**
 
-1. **VSCode Extension for Project Scaffolding:**
+The primary decision for this proposal v4 was how to handle AWS API interactions. We considered continuing with vendored code to maintain full control and avoid dependencies, but the maintenance burden of tracking security updates and implementing credential providers would be substantial. We also evaluated using the full AWS SDK for Swift or complete Soto SDK, but both would introduce hundreds of unnecessary services and significantly slow compile times. The chosen approach of using Soto Core with code generation provides production-tested infrastructure for credentials and signing while keeping the dependency footprint minimal through selective API generation.
+
+2. **VSCode Extension for Project Scaffolding:**
 
 We considered using a VSCode extension, such as the `vscode-aws-lambda-swift-sam` extension ([https://github.com/swift-server-community/vscode-aws-lambda-swift-sam](https://github.com/swift-server-community/vscode-aws-lambda-swift-sam)), to scaffold new Lambda projects.
 
@@ -522,7 +538,7 @@ This extension creates a new Lambda project from scratch, including the project 
 
 While the extension offers a user-friendly graphical interface, it does not align well with our goals of simplicity for first-time users and minimal dependencies. Users would need to install and configure VSCode, the extension itself, the AWS CLI, and the SAM CLI before getting started.
 
-2. **Deployment DSL with AWS SAM:**
+3. **Deployment DSL with AWS SAM:**
 
 We also considered using a domain-specific language (DSL) to describe deployments, such as the `swift-aws-lambda-sam-dsl` project ([https://github.com/swift-server-community/swift-aws-lambda-sam-dsl](https://github.com/swift-server-community/swift-aws-lambda-sam-dsl)), and leveraging AWS SAM for the actual deployment.
 
