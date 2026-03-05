@@ -397,6 +397,46 @@ try await runtime.run()
 
  You can learn how to deploy and invoke this function in [the API Gateway example README file](Examples/APIGatewayV2/README.md).
 
+### Trace ID Propagation
+
+The runtime automatically propagates the AWS X-Ray trace ID to your handler's async task tree via [ServiceContext](https://github.com/apple/swift-service-context). This is the standard context propagation mechanism in the Swift server ecosystem, allowing any downstream library to access the trace ID without depending on `AWSLambdaRuntime`.
+
+#### Accessing the trace ID from a Lambda handler
+
+```swift
+import AWSLambdaRuntime
+
+let runtime = LambdaRuntime {
+    (event: String, context: LambdaContext) in
+
+    // from the context instance
+    context.logger.info("Trace ID: \(context.traceID)")
+
+    return "OK"
+}
+
+try await runtime.run()
+```
+
+#### Accessing the trace ID from a downstream library
+
+Libraries that don't depend on `AWSLambdaRuntime` can read the trace ID through `ServiceContext`:
+
+```swift
+import ServiceContextModule
+
+func makeHTTPRequest() async throws {
+    if let traceID = ServiceContext.current?.traceID {
+        // Add X-Amzn-Trace-Id header to outgoing requests
+    }
+}
+```
+
+This enables tracing libraries like [swift-distributed-tracing](https://github.com/apple/swift-distributed-tracing) and OpenTelemetry-Swift to discover the trace ID automatically without coupling to the Lambda runtime.
+
+> [!NOTE]
+> In single-concurrency mode, the runtime also sets the `_X_AMZN_TRACE_ID` environment variable for backward compatibility with legacy tooling that reads the trace ID from the process environment. This environment variable is not set in multi-concurrency mode, as environment variables are shared across the process and would be subject to race conditions.
+
 ### Integration with Swift Service LifeCycle
 
 The Swift AWS Lambda Runtime provides built-in support for [Swift Service Lifecycle](https://github.com/swift-server/swift-service-lifecycle), allowing you to manage the lifecycle of your Lambda runtime alongside other services like database clients, HTTP clients, or any other resources that need proper initialization and cleanup.
