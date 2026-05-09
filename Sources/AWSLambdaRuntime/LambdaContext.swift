@@ -99,8 +99,8 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         let cognitoIdentity: String?
         let clientContext: ClientContext?
         let logger: Logger
-        let logGroupName: String
-        let logStreamName: String
+        let logGroupName: String?
+        let logStreamName: String?
 
         init(
             requestID: String,
@@ -111,8 +111,8 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
             cognitoIdentity: String?,
             clientContext: ClientContext?,
             logger: Logger,
-            logGroupName: String,
-            logStreamName: String
+            logGroupName: String?,
+            logStreamName: String?
         ) {
             self.requestID = requestID
             self.traceID = traceID
@@ -206,8 +206,8 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         cognitoIdentity: String? = nil,
         clientContext: ClientContext? = nil,
         logger: Logger,
-        logGroupName: String = "",
-        logStreamName: String = ""
+        logGroupName: String? = nil,
+        logStreamName: String? = nil
     ) {
         self.storage = _Storage(
             requestID: requestID,
@@ -224,12 +224,12 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
     }
 
     /// The name of the Amazon CloudWatch Logs group for the function.
-    public var logGroupName: String {
+    public var logGroupName: String? {
         self.storage.logGroupName
     }
 
     /// The name of the Amazon CloudWatch Logs stream for the current invocation of the function.
-    public var logStreamName: String {
+    public var logStreamName: String? {
         self.storage.logStreamName
     }
 
@@ -251,8 +251,8 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         invokedFunctionARN: String,
         timeout: Duration,
         logger: Logger,
-        logGroupName: String = "",
-        logStreamName: String = ""
+        logGroupName: String? = nil,
+        logStreamName: String? = nil
     ) -> LambdaContext {
         LambdaContext(
             requestID: requestID,

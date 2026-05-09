@@ -169,9 +169,9 @@ struct LambdaContextTests {
         #expect(context.logStreamName == "2024/01/01/[$LATEST]abcdef1234567890")
     }
 
-    @Test("logGroupName defaults to empty string")
+    @Test("logGroupName defaults to nil")
     @available(LambdaSwift 2.0, *)
-    func logGroupNameDefaultsToEmptyString() {
+    func logGroupNameDefaultsToNil() {
         let context = LambdaContext.__forTestsOnly(
             requestID: "test-request",
             traceID: "test-trace",
@@ -181,12 +181,12 @@ struct LambdaContextTests {
             logger: Logger(label: "test")
         )
 
-        #expect(context.logGroupName == "")
+        #expect(context.logGroupName == nil)
     }
 
-    @Test("logStreamName defaults to empty string")
+    @Test("logStreamName defaults to nil")
     @available(LambdaSwift 2.0, *)
-    func logStreamNameDefaultsToEmptyString() {
+    func logStreamNameDefaultsToNil() {
         let context = LambdaContext.__forTestsOnly(
             requestID: "test-request",
             traceID: "test-trace",
@@ -196,6 +196,6 @@ struct LambdaContextTests {
             logger: Logger(label: "test")
         )
 
-        #expect(context.logStreamName == "")
+        #expect(context.logStreamName == nil)
     }
 }
