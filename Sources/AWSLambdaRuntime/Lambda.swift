@@ -85,6 +85,9 @@ public enum Lambda {
     ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
+        let logGroupName = Lambda.env("AWS_LAMBDA_LOG_GROUP_NAME") ?? ""
+        let logStreamName = Lambda.env("AWS_LAMBDA_LOG_STREAM_NAME") ?? ""
+
         do {
             while !Task.isCancelled {
 
@@ -128,7 +131,9 @@ public enum Lambda {
                             deadline: LambdaClock.Instant(
                                 millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
                             ),
-                            logger: requestLogger
+                            logger: requestLogger,
+                            logGroupName: logGroupName,
+                            logStreamName: logStreamName
                         )
                     )
                     requestLogger.trace("Handler finished processing invocation")

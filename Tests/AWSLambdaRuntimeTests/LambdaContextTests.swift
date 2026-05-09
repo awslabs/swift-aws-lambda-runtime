@@ -136,4 +136,66 @@ struct LambdaContextTests {
         #expect(remainingTime <= Duration.seconds(31), "Remaining time should be approximately 30 seconds")
         #expect(remainingTime >= Duration.seconds(-29), "Remaining time should be approximately -30 seconds")
     }
+
+    @Test("logGroupName returns the value passed at initialization")
+    @available(LambdaSwift 2.0, *)
+    func logGroupNameReturnsInitializedValue() {
+        let context = LambdaContext.__forTestsOnly(
+            requestID: "test-request",
+            traceID: "test-trace",
+            tenantID: nil,
+            invokedFunctionARN: "test-arn",
+            timeout: .seconds(30),
+            logger: Logger(label: "test"),
+            logGroupName: "/aws/lambda/my-function"
+        )
+
+        #expect(context.logGroupName == "/aws/lambda/my-function")
+    }
+
+    @Test("logStreamName returns the value passed at initialization")
+    @available(LambdaSwift 2.0, *)
+    func logStreamNameReturnsInitializedValue() {
+        let context = LambdaContext.__forTestsOnly(
+            requestID: "test-request",
+            traceID: "test-trace",
+            tenantID: nil,
+            invokedFunctionARN: "test-arn",
+            timeout: .seconds(30),
+            logger: Logger(label: "test"),
+            logStreamName: "2024/01/01/[$LATEST]abcdef1234567890"
+        )
+
+        #expect(context.logStreamName == "2024/01/01/[$LATEST]abcdef1234567890")
+    }
+
+    @Test("logGroupName defaults to empty string")
+    @available(LambdaSwift 2.0, *)
+    func logGroupNameDefaultsToEmptyString() {
+        let context = LambdaContext.__forTestsOnly(
+            requestID: "test-request",
+            traceID: "test-trace",
+            tenantID: nil,
+            invokedFunctionARN: "test-arn",
+            timeout: .seconds(30),
+            logger: Logger(label: "test")
+        )
+
+        #expect(context.logGroupName == "")
+    }
+
+    @Test("logStreamName defaults to empty string")
+    @available(LambdaSwift 2.0, *)
+    func logStreamNameDefaultsToEmptyString() {
+        let context = LambdaContext.__forTestsOnly(
+            requestID: "test-request",
+            traceID: "test-trace",
+            tenantID: nil,
+            invokedFunctionARN: "test-arn",
+            timeout: .seconds(30),
+            logger: Logger(label: "test")
+        )
+
+        #expect(context.logStreamName == "")
+    }
 }
