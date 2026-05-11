@@ -13,17 +13,19 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# Rewrites Package.swift in the current directory to use the local path dependency
-# instead of the remote URL. This ensures CI tests against the current branch.
+# Rewrites a Package.swift to use the local path dependency instead of the remote URL.
+# This ensures CI tests against the current branch.
 #
-# Usage: source this file or call it from the example directory.
+# Usage: .github/workflows/scripts/use-local-deps.sh <path-to-Package.swift>
 
 set -euo pipefail
 
 log() { printf -- "** %s\n" "$*" >&2; }
 
-log "Switching swift-aws-lambda-runtime dependency to local path"
+PACKAGE_FILE="${1:?Usage: use-local-deps.sh <path-to-Package.swift>}"
+
+log "Switching swift-aws-lambda-runtime dependency to local path in $PACKAGE_FILE"
 sed -i \
   -e 's|// *\.package(name: "swift-aws-lambda-runtime", path: "\.\./\.\.")|.package(name: "swift-aws-lambda-runtime", path: "../..")|' \
   -e 's|\.package(url: "https://github.com/awslabs/swift-aws-lambda-runtime\.git", from: "[^"]*")|// .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "0.0.0")|' \
-  Package.swift
+  "$PACKAGE_FILE"
