@@ -27,11 +27,8 @@ arn:aws:lambda:us-west-2:486652066693:capacity-provider:TestEC2
 ## Deployment
 
 ```bash
-# Build the Swift packages
-# when compiling a standalone or new project
+# Build and package the Swift Lambda function
 swift package archive --allow-network-connections docker 
-# When compiling the example in this repository 
-# LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker 
 
 # Change the values below to match your setup 
 REGION=us-west-2
