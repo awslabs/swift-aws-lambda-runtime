@@ -26,6 +26,9 @@ test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 
 pushd Examples/"$EXAMPLE" > /dev/null
 
+# Use the local checkout of swift-aws-lambda-runtime instead of the published release
+source "$(dirname "$0")/use-local-deps.sh"
+
 log "Running command with Swift $SWIFT_VERSION"
 eval "$COMMAND"
 
