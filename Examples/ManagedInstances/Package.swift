@@ -11,13 +11,10 @@ let package = Package(
         .executable(name: "BackgroundTasks", targets: ["BackgroundTasks"]),
     ],
     dependencies: [
-        // For local development (default)
-        // When using the below line, use LAMBDA_USE_LOCAL_DEPS=../.. for swift package archive command, e.g.
-        // `LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker`
-        .package(name: "swift-aws-lambda-runtime", path: "../.."),
+        // For local development, uncomment the line below and comment the remote dependency:
+        // .package(name: "swift-aws-lambda-runtime", path: "../.."),
 
-        // For standalone usage, comment the line above and uncomment below:
-        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.9.0"),
 
         .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.0.0"),
     ],

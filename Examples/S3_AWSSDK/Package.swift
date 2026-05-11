@@ -9,11 +9,10 @@ let package = Package(
         .executable(name: "AWSSDKExample", targets: ["AWSSDKExample"])
     ],
     dependencies: [
-        // For local development (default)
-        .package(name: "swift-aws-lambda-runtime", path: "../.."),
+        // For local development, uncomment the line below and comment the remote dependency:
+        // .package(name: "swift-aws-lambda-runtime", path: "../.."),
 
-        // For standalone usage, comment the line above and uncomment below:
-        // .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.9.0"),
 
         .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.0.0"),
         .package(url: "https://github.com/awslabs/aws-sdk-swift", from: "1.0.0"),
