@@ -181,7 +181,7 @@ struct LambdaContextTests {
             logger: Logger(label: "test")
         )
 
-        #expect(context.logGroupName == nil)
+        #expect(context.logGroupName == "")
     }
 
     @Test("logStreamName defaults to nil")
@@ -196,6 +196,6 @@ struct LambdaContextTests {
             logger: Logger(label: "test")
         )
 
-        #expect(context.logStreamName == nil)
+        #expect(context.logStreamName == "")
     }
 }
