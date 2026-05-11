@@ -19,6 +19,8 @@ fatal() { error "$@"; exit 1; }
 
 test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 
+SCRIPT_DIR="$(dirname "$0")"
+
 OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
 OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
 ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
@@ -26,7 +28,7 @@ ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
 pushd "Examples/${EXAMPLE}" || exit 1
 
 # Use the local checkout of swift-aws-lambda-runtime instead of the published release
-source "$(dirname "$0")/use-local-deps.sh"
+source "$SCRIPT_DIR/use-local-deps.sh"
 
 # package the example (docker and swift toolchain are installed on the GH runner)
 LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker || exit 1
