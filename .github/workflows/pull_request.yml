@@ -15,9 +15,9 @@ jobs:
       license_header_check_project_name: "SwiftAWSLambdaRuntime"
       shell_check_enabled: true
       python_lint_check_enabled: true
-      api_breakage_check_container_image: "swift:6.2-noble"
-      docs_check_container_image: "swift:6.2-noble"
-      format_check_container_image: "swift:6.2-noble"
+      api_breakage_check_container_image: "swift:6.3-noble"
+      docs_check_container_image: "swift:6.3-noble"
+      format_check_container_image: "swift:6.3-noble"
       yamllint_check_enabled: true
 
   unit-tests:
