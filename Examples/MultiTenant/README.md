@@ -157,7 +157,7 @@ requestParameters:
 
 ### Prerequisites
 
-- Swift (>=6.2)
+- Swift (>=6.3)
 - Docker (for cross-compilation to Amazon Linux)
 - AWS SAM CLI (>=1.147.1)
 - AWS CLI configured with appropriate credentials
