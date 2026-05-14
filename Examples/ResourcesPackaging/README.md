@@ -6,7 +6,7 @@ This example demonstrates how to include static resources (such as text files, c
 
 ## Code 
 
-The code creates a `LambdaRuntime` struct with a handler that reads a bundled text file and returns its content.
+The code creates a `LambdaRuntime` with a handler that reads a bundled text file and returns its content.
 
 The handler is `(event: String, context: LambdaContext)`. The function takes two arguments:
 - the event argument is a `String`. It is the parameter passed when invoking the function.
@@ -42,7 +42,7 @@ curl -d '"hello"' http://127.0.0.1:7000/invoke
 ```
 
 > [!IMPORTANT]
-> The local server is only available in `DEBUG` mode. It will not start with `swift -c release run`.
+> The local server is only available in `DEBUG` mode. It will not start with `swift run -c release`.
 
 ## Build & Package 
 
@@ -69,7 +69,7 @@ aws lambda create-function \
 --role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution
 ```
 
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
+The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x86_64`.
 
 Be sure to replace <YOUR_ACCOUNT_ID> with your actual AWS account ID (for example: 012345678901).
 
