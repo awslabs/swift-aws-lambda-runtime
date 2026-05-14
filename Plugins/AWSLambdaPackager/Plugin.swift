@@ -509,7 +509,9 @@ private struct Configuration: CustomStringConvertible {
             baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")\(amazonLinuxVersion)"
 
         if verboseArgument {
-            print("swift version: \(swiftVersion ?? "latest"), amazon linux version: \(amazonLinuxVersion), base docker image: \(self.baseDockerImage)")
+            print(
+                "swift version: \(swiftVersion ?? "latest"), amazon linux version: \(amazonLinuxVersion), base docker image: \(self.baseDockerImage)"
+            )
         }
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
