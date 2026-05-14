@@ -88,6 +88,8 @@ public struct JSONLogHandler: LogHandler {
             timestamp: Date(),
             level: Self.mapLogLevel(event.level),
             message: event.message.description,
+            source: event.source,
+            error: event.error.map { String(describing: $0) },
             requestId: self.requestID,
             traceId: self.traceID,
             file: event.file,
@@ -190,6 +192,8 @@ public struct JSONLogHandler: LogHandler {
         let timestamp: Date
         let level: String
         let message: String
+        let source: String
+        let error: String?
         let requestId: String
         let traceId: String
         let file: String

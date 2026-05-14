@@ -42,6 +42,8 @@ struct JSONLogHandlerTests {
         let timestamp: String
         let level: String
         let message: String
+        let source: String
+        let error: String?
         let requestId: String
         let traceId: String
         let file: String?
@@ -73,6 +75,8 @@ struct JSONLogHandlerTests {
             timestamp: Date(),
             level: JSONLogHandler.mapLogLevel(level),
             message: message,
+            source: "TestSource",
+            error: nil,
             requestId: requestID,
             traceId: traceID,
             file: file,
@@ -239,6 +243,8 @@ struct JSONLogHandlerTests {
             timestamp: Date(),
             level: "INFO",
             message: "test",
+            source: "TestSource",
+            error: nil,
             requestId: "r",
             traceId: "t",
             file: "Test.swift",
