@@ -1,5 +1,8 @@
 
-This package makes it easy to run AWS Lambda Functions written in Swift.
+This package allows you to develop and deploy AWS Lambda Functions written in Swift.
+
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fawslabs%2Fswift-aws-lambda-runtime%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fawslabs%2Fswift-aws-lambda-runtime%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime)
 
 You can read [the Swift AWS Lambda Runtime documentation](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/2.3.0/documentation/awslambdaruntime) on the Swift Package Index.
 
