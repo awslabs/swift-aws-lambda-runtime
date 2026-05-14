@@ -12,7 +12,7 @@ This example demonstrates deploying Swift Lambda functions to Lambda Managed Ins
 
 - AWS CLI configured with appropriate permissions
 - SAM CLI installed
-- Swift 6.1+ installed
+- Swift 6.3+ installed
 - An existing [Lambda Managed Instances capacity provider](https://docs.aws.amazon.com/lambda/latest/dg/lambda-managed-instances-capacity-providers.html)
 
 ## Capacity Provider Configuration
