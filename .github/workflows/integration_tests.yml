@@ -42,8 +42,8 @@ on:
       matrix_linux_swift_container_image:
         type: string
         # Note: we don't use Amazon Linux 2 here because zip is not installed by default.
-        description: "Container image for the matrix test jobs. Defaults to Swift 6.2"
-        default: "swift:6.2"
+        description: "Container image for the matrix test jobs. Defaults to Swift 6.3"
+        default: "swift:6.3"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
