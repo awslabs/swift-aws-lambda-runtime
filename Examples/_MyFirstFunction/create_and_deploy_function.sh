@@ -85,7 +85,7 @@ create_swift_project() {
     # swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
     # swift package add-target-dependency AWSLambdaEvents MyLambda --package swift-aws-lambda-events
     cat <<EOF > Package.swift
-// swift-tools-version:6.3
+// swift-tools-version:6.1
 
 import PackageDescription
 

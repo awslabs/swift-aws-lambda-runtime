@@ -88,7 +88,7 @@ swift package init --type executable --name MyLambda
     2.3 Your `Package.swift` file must look like this
 
     ```swift
-    // swift-tools-version: 6.3
+    // swift-tools-version: 6.1
 
     import PackageDescription
 
