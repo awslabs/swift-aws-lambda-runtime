@@ -137,7 +137,9 @@ try await runtime.run()
 The runtime comes with a plugin to compile on Amazon Linux and create a ZIP archive:
 
 ```bash
-swift package archive --allow-network-connections docker
+swift package archive \
+      --allow-network-connections docker \
+      --base-docker-image swift:6.3-amazonlinux2023
 ```
 
 By default, it runs on `docker` but it also allows you to build with [Apple container](https://github.com/apple/container) (it requires disabling the sandbox):
@@ -148,6 +150,7 @@ By default, it runs on `docker` but it also allows you to build with [Apple cont
 # until https://github.com/swiftlang/swift-package-manager/issues/9763 is fixed
 swift package --disable-sandbox \
               --allow-network-connections docker \
+              --base-docker-image swift:6.3-amazonlinux2023 \
               archive \
               --container-cli container
 ```
@@ -157,6 +160,15 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 
  >[!NOTE]
    > If you encounter Docker credential store errors during the build, remove the `credsStore` entry from your `~/.docker/config.json` file or disable the plugin sandbox with `--disable-sandbox`. See [issue #609](https://github.com/awslabs/swift-aws-lambda-runtime/issues/609) for details.
+
+> [!NOTE]
+> The archive plugin currently defaults to Amazon Linux 2 as the build environment. After June 30, 2026, the default will change to Amazon Linux 2023. To migrate early, add the `--base-docker-image swift:6.3-amazonlinux2023` flag to the archive command:
+> ```bash
+> swift package archive \
+>       --allow-network-connections docker \
+>       --base-docker-image swift:6.3-amazonlinux2023
+> ```
+> When deploying functions built on Amazon Linux 2023, you must use the `provided.al2023` runtime instead of `provided.al2` in the `aws lambda create-function` command.
 
 5. Deploy to AWS
 
@@ -168,7 +180,7 @@ Here is how to deploy using the `aws` command line.
 aws lambda create-function \
 --function-name MyLambda \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
---runtime provided.al2 \
+--runtime provided.al2023 \
 --handler provided  \
 --architectures arm64 \
 --role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution

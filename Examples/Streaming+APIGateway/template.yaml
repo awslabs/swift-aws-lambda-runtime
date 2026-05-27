@@ -26,7 +26,7 @@ Resources:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip
       Timeout: 60  # Must be bigger than the time it takes to stream the output
       Handler: swift.bootstrap  # ignored by the Swift runtime
-      Runtime: provided.al2
+      Runtime: provided.al2023
       MemorySize: 128
       Architectures:
         - arm64

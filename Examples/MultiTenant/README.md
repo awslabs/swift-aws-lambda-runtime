@@ -166,7 +166,7 @@ requestParameters:
 
 1. **Build the Lambda function**:
    ```bash
-   swift package archive --allow-network-connections docker
+   swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
    ```
 
 2. **Deploy using SAM**:

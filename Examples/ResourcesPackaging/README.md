@@ -49,7 +49,7 @@ curl -d '"hello"' http://127.0.0.1:7000/invoke
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
@@ -63,7 +63,7 @@ Here is how to deploy using the `aws` command line.
 aws lambda create-function \
 --function-name MyLambda \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
---runtime provided.al2 \
+--runtime provided.al2023 \
 --handler provided  \
 --architectures arm64 \
 --role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution

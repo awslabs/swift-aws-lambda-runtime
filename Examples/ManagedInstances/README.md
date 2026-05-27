@@ -28,7 +28,7 @@ arn:aws:lambda:us-west-2:486652066693:capacity-provider:TestEC2
 
 ```bash
 # Build and package the Swift Lambda function
-swift package archive --allow-network-connections docker 
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
 
 # Change the values below to match your setup 
 REGION=us-west-2

@@ -38,9 +38,14 @@ struct AWSLambdaPackager: CommandPlugin {
             )
         }
 
+        // display deprecation warning when building on or for Amazon Linux 2
+        if self.isAmazonLinux(.al2) || configuration.baseDockerImage.hasSuffix("amazonlinux2") {
+            self.displayDeprecationWarning()
+        }
+
         let builtProducts: [LambdaProduct: URL]
-        if self.isAmazonLinux() {
-            // build directly on the machine
+        if self.isAmazonLinux(.al2) || self.isAmazonLinux(.al2023) {
+            // native build on Amazon Linux
             builtProducts = try self.build(
                 packageIdentity: context.package.id,
                 products: configuration.products,
@@ -299,14 +304,44 @@ struct AWSLambdaPackager: CommandPlugin {
         return archives
     }
 
-    private func isAmazonLinux() -> Bool {
-        if let data = FileManager.default.contents(atPath: "/etc/system-release"),
+    private enum AmazonLinuxVersion {
+        case al2
+        case al2023
+    }
+
+    private func isAmazonLinux(_ version: AmazonLinuxVersion) -> Bool {
+        guard let data = FileManager.default.contents(atPath: "/etc/system-release"),
             let release = String(data: data, encoding: .utf8)
-        {
-            return release.hasPrefix("Amazon Linux")
-        } else {
+        else {
             return false
         }
+        switch version {
+        case .al2023:
+            return release.hasPrefix("Amazon Linux release 2023")
+        case .al2:
+            return release.hasPrefix("Amazon Linux release 2")
+                && !release.hasPrefix("Amazon Linux release 2023")
+        }
+    }
+
+    private func displayDeprecationWarning() {
+        let separator = String(repeating: "=", count: 68)
+        print("")
+        print(separator)
+        print("WARNING: Amazon Linux 2 reaches End of Life on June 30, 2026.")
+        print("")
+        print("You must migrate to Amazon Linux 2023.")
+        print("Amazon Linux 2023 will become the default after June 30, 2026.")
+        print("")
+        print("To switch now, re-run with:")
+        print("  --base-docker-image swift:6.3-amazonlinux2023")
+        print("")
+        print("When using Amazon Linux 2023, you must also update your Lambda")
+        print("deployment to use the provided.al2023 runtime.")
+        print("")
+        print("For more information: https://aws.amazon.com/amazon-linux-2")
+        print(separator)
+        print("")
     }
 
     private func displayHelpMessage() {
@@ -339,8 +374,8 @@ struct AWSLambdaPackager: CommandPlugin {
                                           (default is latest)
                                           This parameter cannot be used when --base-docker-image  is specified.
             --base-docker-image <name>    The name of the base docker image to use for the build.
-                                          (default: swift:<version>-amazonlinux2023 for Swift >= 6.3,
-                                           swift:<version>-amazonlinux2 for earlier versions)
+                                          (default: swift:<version>-amazonlinux2)
+                                          Note: Amazon Linux 2023 will become the default after June 30, 2026.
                                           This parameter cannot be used when --swift-version is specified.
             --disable-docker-image-update Do not attempt to update the docker image
             --container-cli <name>        The container CLI to use (docker or container)
@@ -486,37 +521,8 @@ private struct Configuration: CustomStringConvertible {
 
         let swiftVersion = swiftVersionArgument.first ?? .none  // undefined version will yield the latest docker image
 
-        // Swift 6.3+ uses amazonlinux2023, earlier versions use amazonlinux2
-        let amazonLinuxVersion: String
-        if let version = swiftVersion {
-            let components = version.split(separator: ".").compactMap { Int($0) }
-            if components.count >= 2 {
-                let major = components[0]
-                let minor = components[1]
-                amazonLinuxVersion = (major > 6 || (major == 6 && minor >= 3)) ? "amazonlinux2023" : "amazonlinux2"
-            } else if let major = components.first {
-                // treat "6" (no minor) as possibly 6.0, hence amazonlinux2
-                amazonLinuxVersion = major > 6 ? "amazonlinux2023" : "amazonlinux2"
-            } else {
-                amazonLinuxVersion = "amazonlinux2023"
-            }
-        } else {
-            // no version specified means "latest", which is >= 6.3
-            amazonLinuxVersion = "amazonlinux2023"
-        }
-
         self.baseDockerImage =
-            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")\(amazonLinuxVersion)"
-
-        if verboseArgument {
-            if baseDockerImageArgument.isEmpty {
-                print(
-                    "swift version: \(swiftVersion ?? "latest"), amazon linux version: \(amazonLinuxVersion), base docker image: \(self.baseDockerImage)"
-                )
-            } else {
-                print("base docker image (user provided): \(self.baseDockerImage)")
-            }
-        }
+            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
         self.containerCLI = try ContainerCLI.parse(

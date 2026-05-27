@@ -25,7 +25,7 @@ Once the struct is created and the `handle(...)` method is defined, the sample c
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
@@ -42,7 +42,7 @@ AWS_ACCOUNT_ID=012345678901
 aws lambda create-function \
 --function-name BackgroundTasks \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/BackgroundTasks/BackgroundTasks.zip \
---runtime provided.al2 \
+--runtime provided.al2023 \
 --handler provided  \
 --architectures arm64 \
 --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution \

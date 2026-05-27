@@ -70,7 +70,9 @@ Here is the content of this guide:
    Compile and package the function using the following command
 
    ```sh
-   swift package archive --allow-network-connections docker
+   swift package archive \
+         --allow-network-connections docker \
+         --base-docker-image swift:6.3-amazonlinux2023
    ```
 
    This command creates a ZIP file with the compiled Swift code. The ZIP file is located in the `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip` folder.
@@ -113,7 +115,7 @@ Select **Create a function** to create a function.
 
 ![Console - Lambda dashboard when there is no function](console-20-dashboard)
 
-Select **Author function from scratch**. Enter a **Function name** (`HelloWorld`) and select `Amazon Linux 2` as **Runtime**.
+Select **Author function from scratch**. Enter a **Function name** (`HelloWorld`) and select `Amazon Linux 2023` as **Runtime**.
 Select the architecture. When you compile your Swift code on a x84_64 machine, such as an Intel Mac, select `x86_64`. When you compile your Swift code on an Arm machine, such as the Apple Silicon M1 or more recent, select `arm64`.
 
 Select **Create function**
@@ -124,7 +126,7 @@ On the right side, select **Upload from** and select **.zip file**.
 
 ![Console - select zip file](console-40-select-zip-file)
 
-Select the zip file created with the `swift package archive --allow-network-connections docker` command as described in the [Prerequisites](#prerequisites) section.
+Select the zip file created with the `swift package archive` command as described in the [Prerequisites](#prerequisites) section.
 
 Select **Save**
 
@@ -188,7 +190,7 @@ In this example, we're building the HelloWorld example from the [Examples](https
 
 To create a function, you must first create the function execution role and define the permission. Then, you create the function with the `create-function` command.
 
-The command assumes you've already created the ZIP file with the `swift package archive --allow-network-connections docker` command, as described in the [Prerequisites](#prerequisites) section.
+The command assumes you've already created the ZIP file with the `swift package archive` command, as described in the [Prerequisites](#prerequisites) section.
  
 ```sh
 # enter your AWS Account ID 
@@ -243,7 +245,7 @@ aws iam put-role-policy \
 aws lambda create-function \
 --function-name MyLambda \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
---runtime provided.al2 \
+--runtime provided.al2023 \
 --handler provided  \
 --architectures arm64 \
 --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution
@@ -510,7 +512,7 @@ export class LambdaApiStack extends cdk.Stack {
  }
 }    
 ```
-The code assumes you already built and packaged the APIGateway Lambda function with the `swift package archive --allow-network-connections docker` command, as described in the [Prerequisites](#prerequisites) section.
+The code assumes you already built and packaged the APIGateway Lambda function with the `swift package archive` command, as described in the [Prerequisites](#prerequisites) section.
 
 You can write code to add an API Gateway to invoke your Lambda function. The following code creates an HTTP API Gateway that triggers the Lambda function.
 

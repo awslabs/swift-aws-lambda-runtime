@@ -113,7 +113,7 @@ AWS Lambda runtime runs on Amazon Linux. You must compile your code for Amazon L
 > Be sure to have [Docker](https://docs.docker.com/desktop/install/mac-install/) installed for this step.
 
 ```sh
-swift package --allow-network-connections docker archive
+swift package archive --allow-network-connections docker --base-docker-image swift:6.3-amazonlinux2023
 
 -------------------------------------------------------------------------
 building "MyFirstLambdaFunction" in docker
@@ -121,8 +121,8 @@ building "MyFirstLambdaFunction" in docker
 updating "swift:amazonlinux2" docker image
   amazonlinux2: Pulling from library/swift
   Digest: sha256:5b0cbe56e35210fa90365ba3a4db9cd2b284a5b74d959fc1ee56a13e9c35b378
-  Status: Image is up to date for swift:amazonlinux2
-  docker.io/library/swift:amazonlinux2
+  Status: Image is up to date for swift:amazonlinux2023
+  docker.io/library/swift:amazonlinux2023
 building "MyFirstLambdaFunction"
   Building for production...
 ...
@@ -135,6 +135,8 @@ archiving "MyFirstLambdaFunction"
 
 cp .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip ~/Desktop
 ```
+
+> Note: The archive command currently defaults to Amazon Linux 2 (`swift:amazonlinux2`) as the build environment. Amazon Linux 2 reaches End of Life on June 30, 2026 and the default will change to Amazon Linux 2023 after that date. To migrate early, re-run the archive command with `--base-docker-image swift:6.3-amazonlinux2023`. When deploying a function built on Amazon Linux 2023, you must use the `provided.al2023` Lambda runtime instead of `provided.al2`.
 
 6. Deploy on AWS Lambda
 

@@ -19,7 +19,7 @@ To build the package, type the following commands.
 
 ```bash
 swift build
-swift package archive --allow-network-connections docker
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
 ```
 
 If there is no error, there are two ZIP files ready to deploy, one for the authorizer function and one for the business function.

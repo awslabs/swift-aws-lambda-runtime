@@ -23,7 +23,7 @@ To build & archive the package you can use the following commands:
 
 ```bash
 swift build
-swift package archive --allow-network-connections docker
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
 ```
 
 If there are no errors, a ZIP file should be ready to deploy, located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip`.
@@ -41,7 +41,7 @@ aws lambda create-function \
     --region "${REGION}" \
     --function-name S3EventNotifier \
     --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip \
-    --runtime provided.al2 \
+    --runtime provided.al2023 \
     --handler provided  \
     --architectures arm64 \
     --role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution
