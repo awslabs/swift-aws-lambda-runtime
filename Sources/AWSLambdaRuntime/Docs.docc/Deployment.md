@@ -72,7 +72,7 @@ Here is the content of this guide:
    ```sh
    swift package archive \
          --allow-network-connections docker \
-         --base-docker-image swift:6.3-amazonlinux2023
+         --base-docker-image swift:amazonlinux2023
    ```
 
    This command creates a ZIP file with the compiled Swift code. The ZIP file is located in the `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip` folder.

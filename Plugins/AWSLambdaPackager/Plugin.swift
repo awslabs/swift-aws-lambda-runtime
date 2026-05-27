@@ -334,7 +334,7 @@ struct AWSLambdaPackager: CommandPlugin {
         print("Amazon Linux 2023 will become the default after June 30, 2026.")
         print("")
         print("To switch now, re-run with:")
-        print("  --base-docker-image swift:6.3-amazonlinux2023")
+        print("  --base-docker-image swift:amazonlinux2023")
         print("")
         print("When using Amazon Linux 2023, you must also update your Lambda")
         print("deployment to use the provided.al2023 runtime.")
