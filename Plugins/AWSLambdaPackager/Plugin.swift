@@ -39,7 +39,10 @@ struct AWSLambdaPackager: CommandPlugin {
         }
 
         // display deprecation warning when building on or for Amazon Linux 2
-        if self.isAmazonLinux(.al2) || configuration.baseDockerImage.hasSuffix("amazonlinux2") {
+        if self.isAmazonLinux(.al2)
+            || (configuration.baseDockerImage.contains("amazonlinux2")
+                && !configuration.baseDockerImage.contains("amazonlinux2023"))
+        {
             self.displayDeprecationWarning()
         }
 
@@ -326,8 +329,10 @@ struct AWSLambdaPackager: CommandPlugin {
 
     private func displayDeprecationWarning() {
         let separator = String(repeating: "=", count: 68)
+        let red = "\u{001b}[38;2;255;66;69m"
+        let reset = "\u{001b}[0m"
         print("")
-        print(separator)
+        print("\(red)\(separator)")
         print("WARNING: Amazon Linux 2 reaches End of Life on June 30, 2026.")
         print("")
         print("You must migrate to Amazon Linux 2023.")
@@ -340,7 +345,8 @@ struct AWSLambdaPackager: CommandPlugin {
         print("deployment to use the provided.al2023 runtime.")
         print("")
         print("For more information: https://aws.amazon.com/amazon-linux-2")
-        print(separator)
+        print("Available images: https://hub.docker.com/_/swift/tags?name=amazonlinux")
+        print("\(separator)\(reset)")
         print("")
     }
 
@@ -376,6 +382,8 @@ struct AWSLambdaPackager: CommandPlugin {
             --base-docker-image <name>    The name of the base docker image to use for the build.
                                           (default: swift:<version>-amazonlinux2)
                                           Note: Amazon Linux 2023 will become the default after June 30, 2026.
+                                          Visit Docker Hub for all available swift tags:
+                                          https://hub.docker.com/_/swift/tags?name=amazonlinux
                                           This parameter cannot be used when --swift-version is specified.
             --disable-docker-image-update Do not attempt to update the docker image
             --container-cli <name>        The container CLI to use (docker or container)

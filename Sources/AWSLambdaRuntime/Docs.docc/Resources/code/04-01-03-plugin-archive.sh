@@ -3,8 +3,8 @@ swift package archive --allow-network-connections docker --base-docker-image swi
 -------------------------------------------------------------------------
 building "palindrome" in docker
 -------------------------------------------------------------------------
-updating "swift:amazonlinux2" docker image
-  amazonlinux2: Pulling from library/swift
+updating "swift:amazonlinux2023" docker image
+  amazonlinux2023: Pulling from library/swift
   Digest: sha256:df06a50f70e2e87f237bd904d2fc48195742ebda9f40b4a821c4d39766434009
 Status: Image is up to date for swift:amazonlinux2023
   docker.io/library/swift:amazonlinux2023
