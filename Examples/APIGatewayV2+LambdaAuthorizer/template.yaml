@@ -50,7 +50,7 @@ Resources:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
-      Runtime: provided.al2
+      Runtime: provided.al2023
       MemorySize: 128
       Architectures:
         - arm64
@@ -75,7 +75,7 @@ Resources:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/AuthorizerLambda/AuthorizerLambda.zip
       Timeout: 29  # max 29 seconds for Lambda authorizers
       Handler: swift.bootstrap  # ignored by the Swift runtime
-      Runtime: provided.al2
+      Runtime: provided.al2023
       MemorySize: 128
       Architectures:
         - arm64

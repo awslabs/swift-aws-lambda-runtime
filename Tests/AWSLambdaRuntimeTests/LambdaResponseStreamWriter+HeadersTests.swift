@@ -542,22 +542,6 @@ final class MockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var isFinished = false
     private(set) var hasCustomHeaders = false
 
-    // Add a JSON string with separator for writeStatusAndHeaders
-    func writeStatusAndHeaders<Response: Encodable>(
-        _ response: Response,
-        encoder: (any LambdaOutputEncoder)? = nil
-    ) async throws {
-        var buffer = ByteBuffer()
-        let jsonString = "{\"statusCode\":200,\"headers\":{\"Content-Type\":\"text/plain\"}}"
-        buffer.writeString(jsonString)
-
-        // Add null byte separator
-        let nullBytes: [UInt8] = [0, 0, 0, 0, 0, 0, 0, 0]
-        buffer.writeBytes(nullBytes)
-
-        try await self.write(buffer, hasCustomHeaders: true)
-    }
-
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         writtenBuffers.append(buffer)
         self.hasCustomHeaders = hasCustomHeaders
@@ -585,15 +569,6 @@ final class FailingMockLambdaResponseStreamWriter: LambdaResponseStreamWriter {
 
     init(failOnWriteCall: Int) {
         self.failOnWriteCall = failOnWriteCall
-    }
-
-    func writeStatusAndHeaders<Response: Encodable>(
-        _ response: Response,
-        encoder: (any LambdaOutputEncoder)? = nil
-    ) async throws {
-        var buffer = ByteBuffer()
-        buffer.writeString("{\"statusCode\":200}")
-        try await write(buffer, hasCustomHeaders: true)
     }
 
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
@@ -698,15 +673,6 @@ final class TrackingLambdaResponseStreamWriter: LambdaResponseStreamWriter {
     private(set) var isFinished = false
     private(set) var hasCustomHeaders = false
 
-    func writeStatusAndHeaders<Response: Encodable>(
-        _ response: Response,
-        encoder: (any LambdaOutputEncoder)? = nil
-    ) async throws {
-        var buffer = ByteBuffer()
-        buffer.writeString("{\"statusCode\":200}")
-        try await write(buffer, hasCustomHeaders: true)
-    }
-
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         writeCallCount += 1
         self.hasCustomHeaders = hasCustomHeaders
@@ -732,16 +698,6 @@ final class CustomBehaviorLambdaResponseStreamWriter: LambdaResponseStreamWriter
     private(set) var customBehaviorTriggered = false
     private(set) var isFinished = false
     private(set) var hasCustomHeaders = false
-
-    func writeStatusAndHeaders<Response: Encodable>(
-        _ response: Response,
-        encoder: (any LambdaOutputEncoder)? = nil
-    ) async throws {
-        customBehaviorTriggered = true
-        var buffer = ByteBuffer()
-        buffer.writeString("{\"statusCode\":200}")
-        try await write(buffer, hasCustomHeaders: true)
-    }
 
     func write(_ buffer: ByteBuffer, hasCustomHeaders: Bool = false) async throws {
         // Trigger custom behavior on any write

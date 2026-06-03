@@ -32,27 +32,80 @@ import ucrt
 
 @available(LambdaSwift 2.0, *)
 public enum Lambda {
+    @available(
+        *,
+        deprecated,
+        message:
+            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
+    )
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,
         handler: Handler,
         logger: Logger
     ) async throws where Handler: StreamingLambdaHandler {
+        try await self.runLoop(
+            runtimeClient: runtimeClient,
+            handler: handler,
+            loggingConfiguration: LoggingConfiguration(logger: logger),
+            logger: logger,
+            isSingleConcurrencyMode: true
+        )
+    }
+
+    @available(
+        *,
+        deprecated,
+        message:
+            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
+    )
+    @inlinable
+    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
+        runtimeClient: RuntimeClient,
+        handler: Handler,
+        loggingConfiguration: LoggingConfiguration,
+        logger: Logger
+    ) async throws where Handler: StreamingLambdaHandler {
+        try await self.runLoop(
+            runtimeClient: runtimeClient,
+            handler: handler,
+            loggingConfiguration: loggingConfiguration,
+            logger: logger,
+            isSingleConcurrencyMode: true
+        )
+    }
+
+    @inlinable
+    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
+        runtimeClient: RuntimeClient,
+        handler: Handler,
+        loggingConfiguration: LoggingConfiguration,
+        logger: Logger,
+        isSingleConcurrencyMode: Bool
+    ) async throws where Handler: StreamingLambdaHandler {
         var handler = handler
 
-        var logger = logger
+        let logGroupName = Lambda.env("AWS_LAMBDA_LOG_GROUP_NAME")
+        let logStreamName = Lambda.env("AWS_LAMBDA_LOG_STREAM_NAME")
+
         do {
             while !Task.isCancelled {
 
                 logger.trace("Waiting for next invocation")
                 let (invocation, writer) = try await runtimeClient.nextInvocation()
-                logger[metadataKey: "aws-request-id"] = "\(invocation.metadata.requestID)"
+
+                // Create a per-request logger with request-specific metadata
+                let requestLogger = loggingConfiguration.makeLogger(
+                    label: "Lambda",
+                    requestID: invocation.metadata.requestID,
+                    traceID: invocation.metadata.traceID
+                )
 
                 // when log level is trace or lower, print the first 6 Mb of the payload
                 let bytes = invocation.event
                 let maxPayloadPreviewSize = 6 * 1024 * 1024
                 var metadata: Logger.Metadata? = nil
-                if logger.logLevel <= .trace,
+                if requestLogger.logLevel <= .trace,
                     let buffer = bytes.getSlice(at: 0, length: min(bytes.readableBytes, maxPayloadPreviewSize))
                 {
                     metadata = [
@@ -61,7 +114,7 @@ public enum Lambda {
                         )
                     ]
                 }
-                logger.trace(
+                requestLogger.trace(
                     "Sending invocation event to lambda handler",
                     metadata: metadata
                 )
@@ -78,16 +131,17 @@ public enum Lambda {
                             deadline: LambdaClock.Instant(
                                 millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
                             ),
-                            logger: logger
+                            logger: requestLogger,
+                            logGroupName: logGroupName,
+                            logStreamName: logStreamName
                         )
                     )
-                    logger.trace("Handler finished processing invocation")
+                    requestLogger.trace("Handler finished processing invocation")
                 } catch {
-                    logger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
+                    requestLogger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
                     try await writer.reportError(error)
                     continue
                 }
-                logger.handler.metadata.removeValue(forKey: "aws-request-id")
             }
         } catch is CancellationError {
             // don't allow cancellation error to propagate further

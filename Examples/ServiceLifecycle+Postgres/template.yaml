@@ -158,7 +158,7 @@ Resources:
       CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/LambdaWithServiceLifecycle/LambdaWithServiceLifecycle.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
-      Runtime: provided.al2
+      Runtime: provided.al2023
       MemorySize: 128
       Architectures:
         - arm64

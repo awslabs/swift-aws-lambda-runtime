@@ -19,6 +19,9 @@ fatal() { error "$@"; exit 1; }
 
 test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 
+# Use the local checkout of swift-aws-lambda-runtime instead of the published release
+.github/workflows/scripts/use-local-deps.sh "Examples/${EXAMPLE}/Package.swift"
+
 OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
 OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
 ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
@@ -26,7 +29,7 @@ ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
 pushd "Examples/${EXAMPLE}" || exit 1
 
 # package the example (docker and swift toolchain are installed on the GH runner)
-LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker || exit 1
+LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023 || exit 1
 
 # did the plugin generated a Linux binary?
 [ -f "${OUTPUT_FILE}" ]

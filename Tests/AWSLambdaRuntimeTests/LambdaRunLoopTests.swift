@@ -60,14 +60,17 @@ struct LambdaRunLoopTests {
 
         try await withThrowingTaskGroup(of: Void.self) { group in
             let logStore = CollectEverythingLogHandler.LogStore()
+            let logger = Logger(
+                label: "RunLoopTest",
+                factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
+            )
             group.addTask {
                 try await Lambda.runLoop(
                     runtimeClient: mockClient,
                     handler: mockEchoHandler,
-                    logger: Logger(
-                        label: "RunLoopTest",
-                        factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
-                    )
+                    loggingConfiguration: LoggingConfiguration(logger: logger),
+                    logger: logger,
+                    isSingleConcurrencyMode: true
                 )
             }
 
@@ -89,14 +92,17 @@ struct LambdaRunLoopTests {
 
         await withThrowingTaskGroup(of: Void.self) { group in
             let logStore = CollectEverythingLogHandler.LogStore()
+            let logger = Logger(
+                label: "RunLoopTest",
+                factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
+            )
             group.addTask {
                 try await Lambda.runLoop(
                     runtimeClient: mockClient,
                     handler: failingHandler,
-                    logger: Logger(
-                        label: "RunLoopTest",
-                        factory: { _ in CollectEverythingLogHandler(logStore: logStore) }
-                    )
+                    loggingConfiguration: LoggingConfiguration(logger: logger),
+                    logger: logger,
+                    isSingleConcurrencyMode: true
                 )
             }
 

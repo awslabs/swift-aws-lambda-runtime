@@ -21,7 +21,7 @@ The function return value will be encoded to a `HelloResponse` as your Lambda fu
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
@@ -38,7 +38,7 @@ AWS_ACCOUNT_ID=012345678901
 aws lambda create-function \
 --function-name HelloJSON \
 --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HelloJSON/HelloJSON.zip \
---runtime provided.al2 \
+--runtime provided.al2023 \
 --handler provided  \
 --architectures arm64 \
 --role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution

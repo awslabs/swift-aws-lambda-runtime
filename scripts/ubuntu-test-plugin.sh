@@ -26,4 +26,4 @@ git clone https://github.com/awslabs/swift-aws-lambda-runtime.git
 
 # build the project
 cd swift-aws-lambda-runtime/Examples/ResourcesPackaging/ || exit 1
-swift package archive --allow-network-connections docker                                      
+swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023

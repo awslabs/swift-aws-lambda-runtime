@@ -86,7 +86,7 @@ create_swift_project() {
     # swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
     # swift package add-target-dependency AWSLambdaEvents MyLambda --package swift-aws-lambda-events
     cat <<EOF > Package.swift
-// swift-tools-version:6.2
+// swift-tools-version:6.3
 
 import PackageDescription
 
@@ -126,7 +126,7 @@ try await runtime.run()
 EOF
 
     echo "📦 Compile and package the function for deployment (this might take a while)"
-    swift package archive --allow-network-connections docker > /dev/null 2>&1
+    swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023 > /dev/null 2>&1
 }
 
 deploy_lambda_function() {
@@ -146,7 +146,7 @@ deploy_lambda_function() {
     aws lambda create-function \
     --function-name MyLambda \
     --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
-    --runtime provided.al2 \
+    --runtime provided.al2023 \
     --handler provided  \
     --architectures "$(uname -m)" \
     --role arn:aws:iam::"${AWS_ACCOUNT_ID}":role/lambda_basic_execution > /dev/null 2>&1

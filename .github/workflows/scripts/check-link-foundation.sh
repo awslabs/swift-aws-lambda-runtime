@@ -22,6 +22,9 @@ OUTPUT_DIR=.build/release
 OUTPUT_FILE=${OUTPUT_DIR}/APIGatewayLambda
 LIBS_TO_CHECK="libFoundation.so libFoundationInternationalization.so lib_FoundationICU.so"
 
+# Use the local checkout of swift-aws-lambda-runtime instead of the published release
+.github/workflows/scripts/use-local-deps.sh "Examples/${EXAMPLE}/Package.swift"
+
 pushd Examples/${EXAMPLE} || fatal "Failed to change directory to Examples/${EXAMPLE}."
 
 # recompile the example without the --static-swift-stdlib flag

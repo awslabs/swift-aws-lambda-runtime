@@ -67,7 +67,7 @@ The plugin cannot be invoked without the required dependency on `swift-aws-lambd
 swift package init --type executable --name MyLambda
 
 # Step 2: Add the Swift AWS Lambda Runtime dependency
-swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --branch main
+swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
 swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
 
 # Step 3: Call the lambda-init plugin
@@ -190,7 +190,7 @@ OPTIONS:
                                 (default: latest)
                                 This parameter cannot be used with --base-docker-image.
 --base-docker-image <name>    The name of the base Docker image to use for the build.
-                                (default: swift-<version>:amazonlinux2)
+                                (default: swift-<version>:amazonlinux2023)
                                 This parameter cannot be used with --swift-version.
                                 This parameter cannot be used with a value other than Docker provided to --cross-compile.
 --disable-docker-image-update Do not update the Docker image before building.

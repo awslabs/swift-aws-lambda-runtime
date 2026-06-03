@@ -34,7 +34,6 @@ struct LocalServerPoolCancellationTests {
     @Test("Cancelling one task should not affect other waiting tasks")
     @available(LambdaSwift 2.0, *)
     func testCancellationOnlyAffectsOwnTask() async throws {
-        #if compiler(>=6.0)
         let pool = LambdaHTTPServer.Pool<TestItem>(name: "Test Pool")
 
         let cancelledFlags = Mutex<[Bool]>([false, false, false])
@@ -95,9 +94,6 @@ struct LocalServerPoolCancellationTests {
         _ = await task2.result
         _ = await task3.result
 
-        #else
-        throw XCTSkip("This test requires Swift 6.0 or later")
-        #endif
     }
 
     /// Test concurrent invocations with one being cancelled
@@ -107,8 +103,6 @@ struct LocalServerPoolCancellationTests {
     @Test("Multiple concurrent invocations with one cancellation")
     @available(LambdaSwift 2.0, *)
     func testConcurrentInvocationsWithCancellation() async throws {
-        #if compiler(>=6.0)
-
         try await withThrowingTaskGroup(of: Void.self) { group in
             // Timeout task
             group.addTask {
@@ -169,10 +163,6 @@ struct LocalServerPoolCancellationTests {
             try await group.next()
             group.cancelAll()
         }
-
-        #else
-        throw XCTSkip("This test requires Swift 6.0 or later")
-        #endif
     }
 
     /// Test that FIFO mode doesn't have the same issue
@@ -181,7 +171,6 @@ struct LocalServerPoolCancellationTests {
     @Test("FIFO mode cancellation works correctly")
     @available(LambdaSwift 2.0, *)
     func testFIFOModeCancellation() async throws {
-        #if compiler(>=6.0)
         let pool = LambdaHTTPServer.Pool<TestItem>(name: "FIFO Test Pool")
 
         try await withThrowingTaskGroup(of: Void.self) { group in
@@ -222,9 +211,6 @@ struct LocalServerPoolCancellationTests {
             try await group.next()
             group.cancelAll()
         }
-        #else
-        throw XCTSkip("This test requires Swift 6.0 or later")
-        #endif
     }
 }
 

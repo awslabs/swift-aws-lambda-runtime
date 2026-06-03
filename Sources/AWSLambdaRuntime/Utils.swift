@@ -13,10 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOConcurrencyHelpers
 import NIOPosix
-
-// import Synchronization
+import Synchronization
 
 enum Consts {
     static let apiPrefix = "/2018-06-01"
@@ -108,9 +106,8 @@ extension AmazonHeaders {
 }
 
 /// Temporary storage for value being sent from one isolation domain to another
-// use NIOLockedValueBox instead of Mutex to avoid compiler crashes on 6.0
-// see https://github.com/swiftlang/swift/issues/78048
 @usableFromInline
+@available(LambdaSwift 2.0, *)
 struct SendingStorage<Value>: ~Copyable, @unchecked Sendable {
     @usableFromInline
     struct ValueAlreadySentError: Error {
@@ -119,18 +116,16 @@ struct SendingStorage<Value>: ~Copyable, @unchecked Sendable {
     }
 
     @usableFromInline
-    // let storage: Mutex<Value?>
-    let storage: NIOLockedValueBox<Value?>
+    let storage: Mutex<Value?>
 
     @inlinable
     init(_ value: sending Value) {
-        self.storage = .init(value)
+        self.storage = Mutex(value)
     }
 
     @inlinable
     func get() throws -> Value {
-        // try self.storage.withLock {
-        try self.storage.withLockedValue {
+        try self.storage.withLock {
             guard let value = $0 else { throw ValueAlreadySentError() }
             $0 = nil
             return value

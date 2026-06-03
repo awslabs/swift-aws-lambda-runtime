@@ -26,6 +26,9 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
     let logger: Logger
 
     @usableFromInline
+    let loggingConfiguration: LoggingConfiguration
+
+    @usableFromInline
     let eventLoop: EventLoop
 
     @usableFromInline
@@ -39,17 +42,21 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
         self.handler = handler
         self.eventLoop = eventLoop
 
+        // Initialize logging configuration
+        self.loggingConfiguration = LoggingConfiguration(logger: logger)
+
         // by setting the log level here, we understand it can not be changed dynamically at runtime
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change
         // this approach is less flexible but more performant than reading the value of the environment variable at each invocation
-        var log = logger
-
-        // use the LOG_LEVEL environment variable to set the log level.
-        // if the environment variable is not set, use the default log level from the logger provided
-        log.logLevel = Lambda.env("LOG_LEVEL").flatMap { .init(rawValue: $0) } ?? logger.logLevel
-
+        let log = self.loggingConfiguration.makeRuntimeLogger()
         self.logger = log
-        self.logger.debug("LambdaManagedRuntime initialized")
+        self.logger.debug(
+            "LambdaManagedRuntime initialized",
+            metadata: [
+                "logFormat": "\(self.loggingConfiguration.format)",
+                "logLevel": "\(log.logLevel)",
+            ]
+        )
     }
 
     #if !ServiceLifecycleSupport
@@ -88,7 +95,9 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
                         endpoint: runtimeEndpoint,
                         handler: self.handler,
                         eventLoop: self.eventLoop,
-                        logger: self.logger
+                        loggingConfiguration: self.loggingConfiguration,
+                        logger: self.logger,
+                        isSingleConcurrencyMode: true
                     )
                 } else {
 
@@ -104,7 +113,9 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
                                     endpoint: runtimeEndpoint,
                                     handler: self.handler,
                                     eventLoop: self.eventLoop,
-                                    logger: logger
+                                    loggingConfiguration: self.loggingConfiguration,
+                                    logger: logger,
+                                    isSingleConcurrencyMode: false
                                 )
                             }
                         }
@@ -119,6 +130,7 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
                 try await LambdaRuntime.startLocalServer(
                     handler: self.handler,
                     eventLoop: self.eventLoop,
+                    loggingConfiguration: self.loggingConfiguration,
                     logger: self.logger
                 )
             }

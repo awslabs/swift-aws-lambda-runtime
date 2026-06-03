@@ -181,11 +181,62 @@ struct LambdaLocalServerTest {
         }
     }
 
-    private func makeInvokeRequest(host: String, port: Int, payload: String) async throws -> (Data, HTTPURLResponse) {
+    @Test("Local server forwards invocation headers to LambdaContext")
+    @available(LambdaSwift 2.0, *)
+    func testLocalServerForwardsInvocationHeaders() async throws {
+        let customPort = 8082
+
+        setenv("LOCAL_LAMBDA_PORT", "\(customPort)", 1)
+        defer { unsetenv("LOCAL_LAMBDA_PORT") }
+
+        let logger = Logger(label: "test", factory: { _ in SwiftLogNoOpLogHandler() })
+
+        let tenantId = try await withTimeout(deadline: .seconds(5)) {
+            async let serverTask: String? = LambdaHTTPServer.withLocalServer(
+                host: "127.0.0.1",
+                port: customPort,
+                invocationEndpoint: nil,
+                logger: logger
+            ) {
+                try await LambdaRuntimeClient.withRuntimeClient(
+                    configuration: .init(ip: "127.0.0.1", port: customPort),
+                    eventLoop: Lambda.defaultEventLoop,
+                    logger: logger
+                ) { runtimeClient in
+                    let (invocation, writer) = try await runtimeClient.nextInvocation()
+                    try await writer.writeAndFinish(ByteBuffer(string: "\"ok\""))
+                    return invocation.metadata.tenantID
+                }
+            }
+
+            try await Task.sleep(for: .milliseconds(200))
+
+            _ = try await self.makeInvokeRequest(
+                host: "127.0.0.1",
+                port: customPort,
+                payload: "\"ping\"",
+                headers: ["Lambda-Runtime-Aws-Tenant-Id": "123"]
+            )
+
+            return try await serverTask
+        }
+
+        #expect(tenantId == "123")
+    }
+
+    private func makeInvokeRequest(
+        host: String,
+        port: Int,
+        payload: String,
+        headers: [String: String] = [:]
+    ) async throws -> (Data, HTTPURLResponse) {
         let url = URL(string: "http://\(host):\(port)/invoke")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        for (key, value) in headers {
+            request.setValue(value, forHTTPHeaderField: key)
+        }
         request.httpBody = payload.data(using: .utf8)
         request.timeoutInterval = 10.0
 
