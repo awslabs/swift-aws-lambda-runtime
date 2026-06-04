@@ -60,7 +60,7 @@ sleep 5
 echo "🔗 Invoke the Lambda function"
 aws lambda invoke \
     --function-name MyLambda \
-    --payload $(echo '{"name":"World","age":30}' | base64) \
+    --payload "$(echo '{"name":"World","age":30}' | base64)" \
     /tmp/out.json > /dev/null && cat /tmp/out.json
 
 echo ""

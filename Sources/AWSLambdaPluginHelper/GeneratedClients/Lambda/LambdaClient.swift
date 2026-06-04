@@ -1,12 +1,13 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift AWS Lambda Runtime open source project
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift AWS Lambda Runtime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
-// See CONTRIBUTORS.txt for the list of Swift AWS Lambda Runtime project authors
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -60,7 +61,10 @@ public struct LambdaClient: AWSService, Sendable {
     /// - Parameter input: The request parameters.
     /// - Returns: The function configuration and code location.
     @discardableResult
-    public func getFunction(_ input: GetFunctionRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> GetFunctionResponse {
+    public func getFunction(
+        _ input: GetFunctionRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> GetFunctionResponse {
         try await self.client.execute(
             operation: "GetFunction",
             path: "/2015-03-31/functions/{FunctionName}",
@@ -75,7 +79,10 @@ public struct LambdaClient: AWSService, Sendable {
     /// - Parameter input: The request parameters.
     /// - Returns: The function configuration.
     @discardableResult
-    public func createFunction(_ input: CreateFunctionRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> CreateFunctionResponse {
+    public func createFunction(
+        _ input: CreateFunctionRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> CreateFunctionResponse {
         try await self.client.execute(
             operation: "CreateFunction",
             path: "/2015-03-31/functions",
@@ -90,7 +97,10 @@ public struct LambdaClient: AWSService, Sendable {
     /// - Parameter input: The request parameters.
     /// - Returns: The updated function configuration.
     @discardableResult
-    public func updateFunctionCode(_ input: UpdateFunctionCodeRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> UpdateFunctionCodeResponse {
+    public func updateFunctionCode(
+        _ input: UpdateFunctionCodeRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> UpdateFunctionCodeResponse {
         try await self.client.execute(
             operation: "UpdateFunctionCode",
             path: "/2015-03-31/functions/{FunctionName}/code",
@@ -103,7 +113,8 @@ public struct LambdaClient: AWSService, Sendable {
 
     /// Deletes a Lambda function.
     /// - Parameter input: The request parameters.
-    public func deleteFunction(_ input: DeleteFunctionRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func deleteFunction(_ input: DeleteFunctionRequest, logger: Logger = AWSClient.loggingDisabled) async throws
+    {
         try await self.client.execute(
             operation: "DeleteFunction",
             path: "/2015-03-31/functions/{FunctionName}",
@@ -118,7 +129,10 @@ public struct LambdaClient: AWSService, Sendable {
     /// - Parameter input: The request parameters.
     /// - Returns: The function URL configuration.
     @discardableResult
-    public func createFunctionUrlConfig(_ input: CreateFunctionUrlConfigRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> CreateFunctionUrlConfigResponse {
+    public func createFunctionUrlConfig(
+        _ input: CreateFunctionUrlConfigRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> CreateFunctionUrlConfigResponse {
         try await self.client.execute(
             operation: "CreateFunctionUrlConfig",
             path: "/2021-10-31/functions/{FunctionName}/url",
@@ -131,7 +145,10 @@ public struct LambdaClient: AWSService, Sendable {
 
     /// Deletes a Lambda function URL.
     /// - Parameter input: The request parameters.
-    public func deleteFunctionUrlConfig(_ input: DeleteFunctionUrlConfigRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func deleteFunctionUrlConfig(
+        _ input: DeleteFunctionUrlConfigRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws {
         try await self.client.execute(
             operation: "DeleteFunctionUrlConfig",
             path: "/2021-10-31/functions/{FunctionName}/url",
@@ -146,7 +163,10 @@ public struct LambdaClient: AWSService, Sendable {
     /// - Parameter input: The request parameters.
     /// - Returns: The Function URL configuration including the URL endpoint.
     @discardableResult
-    public func getFunctionUrlConfig(_ input: GetFunctionUrlConfigRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> GetFunctionUrlConfigResponse {
+    public func getFunctionUrlConfig(
+        _ input: GetFunctionUrlConfigRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> GetFunctionUrlConfigResponse {
         try await self.client.execute(
             operation: "GetFunctionUrlConfig",
             path: "/2021-10-31/functions/{FunctionName}/url",
@@ -161,7 +181,10 @@ public struct LambdaClient: AWSService, Sendable {
     /// - Parameter input: The request parameters.
     /// - Returns: The permission statement added to the function policy.
     @discardableResult
-    public func addPermission(_ input: AddPermissionRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> AddPermissionResponse {
+    public func addPermission(
+        _ input: AddPermissionRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> AddPermissionResponse {
         try await self.client.execute(
             operation: "AddPermission",
             path: "/2015-03-31/functions/{FunctionName}/policy",
@@ -174,7 +197,10 @@ public struct LambdaClient: AWSService, Sendable {
 
     /// Revokes function-use permission from an AWS service or another AWS account.
     /// - Parameter input: The request parameters.
-    public func removePermission(_ input: RemovePermissionRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func removePermission(
+        _ input: RemovePermissionRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws {
         try await self.client.execute(
             operation: "RemovePermission",
             path: "/2015-03-31/functions/{FunctionName}/policy/{StatementId}",

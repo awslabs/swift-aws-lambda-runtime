@@ -37,3 +37,4 @@ Package.resolved
 **/*.json
 **/*.txt
 *.toml
+.kiro/*

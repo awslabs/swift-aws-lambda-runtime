@@ -1,12 +1,13 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift AWS Lambda Runtime open source project
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift AWS Lambda Runtime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
-// See CONTRIBUTORS.txt for the list of Swift AWS Lambda Runtime project authors
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 //
 // SPDX-License-Identifier: Apache-2.0
 //

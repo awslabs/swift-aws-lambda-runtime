@@ -13,14 +13,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Testing
+
+@testable import AWSLambdaPluginHelper
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-import Testing
-
-@testable import AWSLambdaPluginHelper
 
 // MARK: - Property 2: Deprecated option alias equivalence
 

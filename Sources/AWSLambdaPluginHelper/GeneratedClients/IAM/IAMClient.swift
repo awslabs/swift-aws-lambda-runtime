@@ -1,12 +1,13 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift AWS Lambda Runtime open source project
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift AWS Lambda Runtime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
-// See CONTRIBUTORS.txt for the list of Swift AWS Lambda Runtime project authors
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -65,7 +66,10 @@ public struct IAMClient: AWSService {
     /// - Parameter input: The request parameters.
     /// - Returns: The newly created role.
     @discardableResult
-    public func createRole(_ input: IAMCreateRoleRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> IAMCreateRoleResponse {
+    public func createRole(
+        _ input: IAMCreateRoleRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> IAMCreateRoleResponse {
         try await self.client.execute(
             operation: "CreateRole",
             path: "/",
@@ -93,7 +97,10 @@ public struct IAMClient: AWSService {
     /// - Parameter input: The request parameters.
     /// - Returns: The role details.
     @discardableResult
-    public func getRole(_ input: IAMGetRoleRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> IAMGetRoleResponse {
+    public func getRole(
+        _ input: IAMGetRoleRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> IAMGetRoleResponse {
         try await self.client.execute(
             operation: "GetRole",
             path: "/",
@@ -106,7 +113,10 @@ public struct IAMClient: AWSService {
 
     /// Attaches the specified managed policy to the specified IAM role.
     /// - Parameter input: The request parameters.
-    public func attachRolePolicy(_ input: IAMAttachRolePolicyRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func attachRolePolicy(
+        _ input: IAMAttachRolePolicyRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws {
         try await self.client.execute(
             operation: "AttachRolePolicy",
             path: "/",
@@ -119,7 +129,10 @@ public struct IAMClient: AWSService {
 
     /// Removes the specified managed policy from the specified IAM role.
     /// - Parameter input: The request parameters.
-    public func detachRolePolicy(_ input: IAMDetachRolePolicyRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func detachRolePolicy(
+        _ input: IAMDetachRolePolicyRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws {
         try await self.client.execute(
             operation: "DetachRolePolicy",
             path: "/",
@@ -132,7 +145,8 @@ public struct IAMClient: AWSService {
 
     /// Adds or updates an inline policy document that is embedded in the specified IAM role.
     /// - Parameter input: The request parameters.
-    public func putRolePolicy(_ input: IAMPutRolePolicyRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func putRolePolicy(_ input: IAMPutRolePolicyRequest, logger: Logger = AWSClient.loggingDisabled) async throws
+    {
         try await self.client.execute(
             operation: "PutRolePolicy",
             path: "/",
@@ -145,7 +159,10 @@ public struct IAMClient: AWSService {
 
     /// Deletes the specified inline policy from the specified IAM role.
     /// - Parameter input: The request parameters.
-    public func deleteRolePolicy(_ input: IAMDeleteRolePolicyRequest, logger: Logger = AWSClient.loggingDisabled) async throws {
+    public func deleteRolePolicy(
+        _ input: IAMDeleteRolePolicyRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws {
         try await self.client.execute(
             operation: "DeleteRolePolicy",
             path: "/",

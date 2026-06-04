@@ -596,7 +596,8 @@ struct BuilderConfiguration: CustomStringConvertible {
 
         // detect when user explicitly provides an AL2 (not AL2023) base image
         if let explicitImage = baseDockerImageArgument.first {
-            self.explicitAL2Image = explicitImage.contains("amazonlinux2")
+            self.explicitAL2Image =
+                explicitImage.contains("amazonlinux2")
                 && !explicitImage.contains("amazonlinux2023")
         } else {
             self.explicitAL2Image = false

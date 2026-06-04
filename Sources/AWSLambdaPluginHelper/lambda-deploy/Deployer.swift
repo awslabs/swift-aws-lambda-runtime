@@ -12,14 +12,14 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 //===----------------------------------------------------------------------===//
+import Logging
+import SotoCore
+
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
 import Foundation
 #endif
-
-import Logging
-import SotoCore
 
 @available(LambdaSwift 2.0, *)
 enum DeploymentAction: Equatable {
@@ -274,9 +274,13 @@ struct Deployer {
         if verbose {
             if zipData != nil {
                 let sizeMB = Double(zipData!.count) / (1024 * 1024)
-                print("[verbose] Creating Lambda function '\(name)' with direct upload (\(String(format: "%.1f", sizeMB)) MB)...")
+                print(
+                    "[verbose] Creating Lambda function '\(name)' with direct upload (\(String(format: "%.1f", sizeMB)) MB)..."
+                )
             } else {
-                print("[verbose] Creating Lambda function '\(name)' with S3 reference s3://\(bucket ?? "")/\(key ?? "")...")
+                print(
+                    "[verbose] Creating Lambda function '\(name)' with S3 reference s3://\(bucket ?? "")/\(key ?? "")..."
+                )
             }
         }
 
@@ -341,9 +345,13 @@ struct Deployer {
         if verbose {
             if zipData != nil {
                 let sizeMB = Double(zipData!.count) / (1024 * 1024)
-                print("[verbose] Updating function code for '\(name)' with direct upload (\(String(format: "%.1f", sizeMB)) MB)...")
+                print(
+                    "[verbose] Updating function code for '\(name)' with direct upload (\(String(format: "%.1f", sizeMB)) MB)..."
+                )
             } else {
-                print("[verbose] Updating function code for '\(name)' with S3 reference s3://\(bucket ?? "")/\(key ?? "")...")
+                print(
+                    "[verbose] Updating function code for '\(name)' with S3 reference s3://\(bucket ?? "")/\(key ?? "")..."
+                )
             }
         }
 
@@ -511,11 +519,13 @@ struct Deployer {
     /// This allows `lambda-deploy` to auto-detect the need for `--with-url`.
     private func detectFunctionURLUsage() -> Bool {
         let sourcesDir = URL(fileURLWithPath: "Sources")
-        guard let enumerator = FileManager.default.enumerator(
-            at: sourcesDir,
-            includingPropertiesForKeys: nil,
-            options: [.skipsHiddenFiles]
-        ) else {
+        guard
+            let enumerator = FileManager.default.enumerator(
+                at: sourcesDir,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            )
+        else {
             return false
         }
 
@@ -658,8 +668,14 @@ struct Deployer {
                     // Default build output path.
                     // Check both the current Builder plugin path and the legacy Packager plugin path.
                     // The legacy AWSLambdaPackager path can be removed when the archive plugin is retired.
-                    let builderPath = URL(fileURLWithPath: ".build/plugins/AWSLambdaBuilder/outputs/AWSLambdaPackager/\(functionName)/\(functionName).zip")
-                    let packagerPath = URL(fileURLWithPath: ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(functionName)/\(functionName).zip")
+                    let builderPath = URL(
+                        fileURLWithPath:
+                            ".build/plugins/AWSLambdaBuilder/outputs/AWSLambdaPackager/\(functionName)/\(functionName).zip"
+                    )
+                    let packagerPath = URL(
+                        fileURLWithPath:
+                            ".build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/\(functionName)/\(functionName).zip"
+                    )
 
                     if FileManager.default.fileExists(atPath: builderPath.path) {
                         archiveURL = builderPath
@@ -680,7 +696,9 @@ struct Deployer {
                 if configuration.verboseLogging {
                     let sizeMB = Double(archiveSize) / (1024 * 1024)
                     print("[verbose] Archive: \(archiveURL.path) (\(String(format: "%.1f", sizeMB)) MB)")
-                    print("[verbose] Upload strategy: \(Self.shouldUploadDirectly(archiveSize: archiveSize) ? "direct" : "S3 staging")")
+                    print(
+                        "[verbose] Upload strategy: \(Self.shouldUploadDirectly(archiveSize: archiveSize) ? "direct" : "S3 staging")"
+                    )
                 }
 
                 // Determine upload strategy
@@ -692,8 +710,19 @@ struct Deployer {
                     print("Archive exceeds 50 MB, staging to S3...")
                     let bucketName = Self.deploymentBucketName(region: region.rawValue, accountId: accountId)
                     s3Key = "\(functionName)/\(functionName).zip"
-                    try await ensureBucketExists(bucket: bucketName, region: region, using: s3Client, verbose: configuration.verboseLogging)
-                    try await uploadToS3(bucket: bucketName, key: s3Key!, data: zipData, using: s3Client, verbose: configuration.verboseLogging)
+                    try await ensureBucketExists(
+                        bucket: bucketName,
+                        region: region,
+                        using: s3Client,
+                        verbose: configuration.verboseLogging
+                    )
+                    try await uploadToS3(
+                        bucket: bucketName,
+                        key: s3Key!,
+                        data: zipData,
+                        using: s3Client,
+                        verbose: configuration.verboseLogging
+                    )
                     s3Bucket = bucketName
                 }
 
@@ -758,7 +787,12 @@ struct Deployer {
 
                 // Clean up S3 staged object
                 if let bucket = s3Bucket, let key = s3Key {
-                    try await deleteFromS3(bucket: bucket, key: key, using: s3Client, verbose: configuration.verboseLogging)
+                    try await deleteFromS3(
+                        bucket: bucket,
+                        key: key,
+                        using: s3Client,
+                        verbose: configuration.verboseLogging
+                    )
                 }
 
                 // Set up Function URL if requested (or auto-detected from source code)
@@ -796,7 +830,8 @@ struct Deployer {
                 // Report success
                 reportDeploymentSuccess(
                     functionName: functionName,
-                    functionArn: functionArn ?? "arn:aws:lambda:\(region.rawValue):\(accountId):function:\(functionName)",
+                    functionArn: functionArn
+                        ?? "arn:aws:lambda:\(region.rawValue):\(accountId):function:\(functionName)",
                     region: region.rawValue,
                     functionURL: functionURL
                 )
@@ -883,7 +918,8 @@ struct Deployer {
             roleName: roleName,
             assumeRolePolicyDocument: Self.lambdaTrustPolicy,
             path: "/",
-            description: "Execution role for Lambda function '\(functionName)' created by swift-aws-lambda-runtime deploy plugin"
+            description:
+                "Execution role for Lambda function '\(functionName)' created by swift-aws-lambda-runtime deploy plugin"
         )
 
         let createRoleResponse: IAMCreateRoleResponse
@@ -1081,7 +1117,9 @@ struct Deployer {
             print("")
             print("Invoke your function with:")
             print("")
-            print("   (eval $(aws configure export-credentials --format env) && curl --aws-sigv4 \"aws:amz:\(region):lambda\" --user \"$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY\" -H \"x-amz-security-token: $AWS_SESSION_TOKEN\" \"\(functionURL)?name=World\" )")
+            print(
+                "   (eval $(aws configure export-credentials --format env) && curl --aws-sigv4 \"aws:amz:\(region):lambda\" --user \"$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY\" -H \"x-amz-security-token: $AWS_SESSION_TOKEN\" \"\(functionURL)?name=World\" )"
+            )
         } else {
             print("")
             print("Invoke your function with:")

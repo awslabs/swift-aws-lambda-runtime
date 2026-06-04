@@ -36,5 +36,3 @@ extension String {
         Array(self.utf8)
     }
 }
-
-

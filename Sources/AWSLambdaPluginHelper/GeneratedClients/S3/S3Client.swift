@@ -1,12 +1,13 @@
 //===----------------------------------------------------------------------===//
 //
-// This source file is part of the Swift AWS Lambda Runtime open source project
+// This source file is part of the SwiftAWSLambdaRuntime open source project
 //
-// Copyright (c) 2024 Apple Inc. and the Swift AWS Lambda Runtime project authors
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
-// See CONTRIBUTORS.txt for the list of Swift AWS Lambda Runtime project authors
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
 //
 // SPDX-License-Identifier: Apache-2.0
 //
@@ -61,7 +62,10 @@ struct S3Client: AWSService {
     /// - Parameter input: The request parameters.
     /// - Returns: The response containing the bucket location.
     @discardableResult
-    func createBucket(_ input: CreateBucketRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> CreateBucketResponse {
+    func createBucket(
+        _ input: CreateBucketRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> CreateBucketResponse {
         try await self.client.execute(
             operation: "CreateBucket",
             path: "/{Bucket}",
@@ -98,7 +102,10 @@ struct S3Client: AWSService {
     /// - Parameter input: The request parameters including the object body data.
     /// - Returns: The response containing ETag and version information.
     @discardableResult
-    func putObject(_ input: PutObjectRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> PutObjectResponse {
+    func putObject(
+        _ input: PutObjectRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> PutObjectResponse {
         try await self.client.execute(
             operation: "PutObject",
             path: "/{Bucket}/{Key+}",
@@ -116,7 +123,10 @@ struct S3Client: AWSService {
     /// - Parameter input: The request parameters.
     /// - Returns: The response containing delete marker and version information.
     @discardableResult
-    func deleteObject(_ input: DeleteObjectRequest, logger: Logger = AWSClient.loggingDisabled) async throws -> DeleteObjectResponse {
+    func deleteObject(
+        _ input: DeleteObjectRequest,
+        logger: Logger = AWSClient.loggingDisabled
+    ) async throws -> DeleteObjectResponse {
         try await self.client.execute(
             operation: "DeleteObject",
             path: "/{Bucket}/{Key+}",
