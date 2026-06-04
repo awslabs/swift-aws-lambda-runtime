@@ -37,8 +37,10 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 
 FUNCTION_NAME="swift-lambda-e2e-test-$(date +%s)"
+AWS_REGION="us-east-1"
 CLEANUP_NEEDED=false
 WORK_DIR=""
+FIXED_WORK_DIR=""
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -61,11 +63,11 @@ cleanup() {
             cd "${WORK_DIR}" && \
             swift package --allow-network-connections all:443 \
                 lambda-deploy --allow-writing-to-package-directory \
-                --delete --products "${FUNCTION_NAME}" 2>&1
+                --region "${AWS_REGION}" --delete --products "${FUNCTION_NAME}" 2>&1
         ) || log "Warning: cleanup of AWS resources may have been incomplete."
     fi
 
-    if [ -n "${WORK_DIR}" ] && [ -d "${WORK_DIR}" ]; then
+    if [ -n "${WORK_DIR}" ] && [ -d "${WORK_DIR}" ] && [ -z "${FIXED_WORK_DIR}" ]; then
         log "Removing temporary directory: ${WORK_DIR}"
         rm -rf "${WORK_DIR}"
     fi
@@ -117,16 +119,32 @@ check_prerequisites() {
 scaffold_project() {
     log "Step 1: Creating temporary project directory..."
 
-    WORK_DIR=$(mktemp -d -t "swift-lambda-e2e-XXXXXX")
-    log "  Working directory: ${WORK_DIR}"
+    if [ -n "${FIXED_WORK_DIR}" ]; then
+        WORK_DIR="${FIXED_WORK_DIR}"
+        mkdir -p "${WORK_DIR}"
+        log "  Using fixed working directory: ${WORK_DIR}"
+
+        # If Package.swift already exists, skip scaffolding
+        if [ -f "${WORK_DIR}/Package.swift" ]; then
+            log "  Package.swift already exists, skipping scaffold."
+            cd "${WORK_DIR}"
+            return
+        fi
+    else
+        WORK_DIR=$(mktemp -d -t "swift-lambda-e2e-XXXXXX")
+        log "  Working directory: ${WORK_DIR}"
+    fi
 
     cd "${WORK_DIR}"
 
     # Initialize a Swift package with the function name as the executable target
     swift package init --type executable --name "${FUNCTION_NAME}"
 
+    # Add macOS 15 platform requirement (needed by AWSLambdaRuntime)
+    sed -i '' 's/name: "'"${FUNCTION_NAME}"'",/name: "'"${FUNCTION_NAME}"'",\n    platforms: [.macOS(.v15)],/' Package.swift
+
     # Add the lambda runtime dependency
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
+    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch sebsto/new-plugins
     swift package add-target-dependency AWSLambdaRuntime "${FUNCTION_NAME}" --package swift-aws-lambda-runtime
 
     # Also add AWSLambdaEvents for the URL template
@@ -144,6 +162,13 @@ scaffold_function() {
     log "Step 2: Scaffolding Lambda function with URL template..."
 
     cd "${WORK_DIR}"
+
+    # Skip if already scaffolded (for --work-dir reuse)
+    if [ -n "${FIXED_WORK_DIR}" ] && grep -q "LambdaRuntime" Sources/main.swift 2>/dev/null; then
+        log "  Function already scaffolded, skipping."
+        return
+    fi
+
     swift package --allow-writing-to-package-directory lambda-init --with-url
 
     log "  Function scaffolded with URL template."
@@ -157,6 +182,13 @@ build_function() {
     log "Step 3: Building and packaging the Lambda function..."
 
     cd "${WORK_DIR}"
+
+    # Skip build if archive already exists (for --work-dir reuse)
+    if [ -n "${FIXED_WORK_DIR}" ] && [ -d ".build/plugins/AWSLambdaBuilder/outputs" ]; then
+        log "  Build artifacts found, skipping build."
+        return
+    fi
+
     swift package --allow-network-connections docker lambda-build --products "${FUNCTION_NAME}"
 
     log "  Build and packaging complete."
@@ -174,7 +206,7 @@ deploy_function() {
     # Capture deploy output to extract the Function URL
     DEPLOY_OUTPUT=$(swift package --allow-network-connections all:443 \
         lambda-deploy --allow-writing-to-package-directory \
-        --with-url --products "${FUNCTION_NAME}" 2>&1) || {
+        --region "${AWS_REGION}" --with-url --products "${FUNCTION_NAME}" 2>&1) || {
         error "Deployment failed."
         echo "${DEPLOY_OUTPUT}" >&2
         exit 1
@@ -212,9 +244,25 @@ extract_function_url() {
 validate_function() {
     log "Step 6: Validating deployed function via Function URL..."
 
-    # Resolve the AWS region for signing
-    local region
-    region=$(aws configure get region 2>/dev/null || echo "${AWS_REGION:-${AWS_DEFAULT_REGION:-us-east-1}}")
+    # Use the hardcoded region for SigV4 signing
+    local region="${AWS_REGION}"
+    log "  Region for SigV4 signing: ${region}"
+
+    # Resolve AWS credentials for curl (supports SSO, assumed roles, config files, etc.)
+    log "  Resolving AWS credentials for curl..."
+    eval "$(aws configure export-credentials --format env-no-export 2>/dev/null)" || \
+        fatal "Could not resolve AWS credentials. Ensure 'aws configure export-credentials' works."
+
+    local access_key_id="${AWS_ACCESS_KEY_ID:-}"
+    local secret_access_key="${AWS_SECRET_ACCESS_KEY:-}"
+    local session_token="${AWS_SESSION_TOKEN:-}"
+
+    if [ -z "${access_key_id}" ] || [ -z "${secret_access_key}" ]; then
+        fatal "Could not resolve AWS credentials for curl signing."
+    fi
+
+    log "  AWS_ACCESS_KEY_ID: ${access_key_id:0:8}..."
+    log "  AWS_SESSION_TOKEN: ${session_token:+present}"
 
     # Wait for the function to become active (cold start may take a moment)
     log "  Waiting for function to become active..."
@@ -224,14 +272,14 @@ validate_function() {
 
     while [ $retry_count -lt $max_retries ]; do
         # Use curl with AWS SigV4 to call the Function URL
-        response=$(curl --silent --show-error --max-time 30 \
+        response=$(curl --silent --show-error --max-time 60 \
             --aws-sigv4 "aws:amz:${region}:lambda" \
-            --user "${AWS_ACCESS_KEY_ID:-$(aws configure get aws_access_key_id)}:${AWS_SECRET_ACCESS_KEY:-$(aws configure get aws_secret_access_key)}" \
-            ${AWS_SESSION_TOKEN:+-H "x-amz-security-token: ${AWS_SESSION_TOKEN}"} \
+            --user "${access_key_id}:${secret_access_key}" \
+            ${session_token:+-H "x-amz-security-token: ${session_token}"} \
             "${FUNCTION_URL}?name=World" 2>&1) || true
 
-        # Check if we got a valid response (not a 5xx or connection error)
-        if echo "${response}" | grep -q '"message"'; then
+        # Check if we got the expected successful response
+        if echo "${response}" | grep -q '"Hello'; then
             break
         fi
 
@@ -282,7 +330,7 @@ delete_function() {
     cd "${WORK_DIR}"
     swift package --allow-network-connections all:443 \
         lambda-deploy --allow-writing-to-package-directory \
-        --delete --products "${FUNCTION_NAME}"
+        --region "${AWS_REGION}" --delete --products "${FUNCTION_NAME}"
 
     CLEANUP_NEEDED=false
 
@@ -294,11 +342,28 @@ delete_function() {
 # ---------------------------------------------------------------------------
 
 main() {
+    # Parse arguments
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --work-dir)
+                FIXED_WORK_DIR="$2"
+                shift 2
+                ;;
+            *)
+                fatal "Unknown argument: $1. Usage: $0 [--work-dir <path>]"
+                ;;
+        esac
+    done
+
     log "=========================================="
     log "Lambda Plugin End-to-End Integration Test"
     log "=========================================="
     log ""
     log "Function name: ${FUNCTION_NAME}"
+    log "Region: ${AWS_REGION}"
+    if [ -n "${FIXED_WORK_DIR}" ]; then
+        log "Fixed work dir: ${FIXED_WORK_DIR} (temp dir will NOT be deleted)"
+    fi
     log ""
 
     check_prerequisites
