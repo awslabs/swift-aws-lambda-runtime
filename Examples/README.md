@@ -6,9 +6,9 @@ This directory contains example code for Lambda functions.
 
 - When developing on macOS, be sure you use macOS 15 (Sequoia) or a more recent macOS version.
 
-- To build and archive your Lambda functions, you need to [install docker](https://docs.docker.com/desktop/install/mac-install/).
+- To build and archive your Lambda functions, you need to [install docker](https://docs.docker.com/desktop/install/mac-install/) or Apple [container](https://github.com/apple/container).
 
-- To deploy your Lambda functions and invoke them, you must have [an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and [install and configure the `aws` command line](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+- To deploy your Lambda functions and invoke them, you must have [an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and [install and configure the `aws` command line](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) (run `aws configure` to set up your credentials).
 
 - Some examples are using [AWS SAM](https://aws.amazon.com/serverless/sam/). Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) before deploying these examples.
 

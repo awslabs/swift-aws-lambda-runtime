@@ -78,7 +78,7 @@ Key features demonstrated:
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 ```
 
 If there is no error, there is a ZIP file ready to deploy.
@@ -107,65 +107,17 @@ curl -v \
   http://127.0.0.1:7000/invoke
   ```
 
-## Deploy with the AWS CLI
+## Deploy with the lambda-deploy plugin
 
-Here is how to deploy using the `aws` command line.
+Here is how to deploy using the `lambda-deploy` plugin with a Function URL.
 
-### Step 1: Create the function
-
-```bash
-# Replace with your AWS Account ID
-AWS_ACCOUNT_ID=012345678901
-aws lambda create-function \
---function-name StreamingFromEvent \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingFromEvent/StreamingFromEvent.zip \
---runtime provided.al2023 \
---handler provided \
---architectures arm64 \
---role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution
-```
-
-> [!IMPORTANT] 
-> The timeout value must be bigger than the time it takes for your function to stream its output. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish writing the stream. Here, the sample function stream responses during 10 seconds and we set the timeout for 15 seconds.
-
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
-
-Be sure to set `AWS_ACCOUNT_ID` with your actual AWS account ID (for example: 012345678901).
-
-### Step 2: Give permission to invoke that function through a URL
-
-Anyone with a valid signature from your AWS account will have permission to invoke the function through its URL.
+### Step 1: Deploy the function with a URL
 
 ```bash
-aws lambda add-permission \
-  --function-name StreamingFromEvent \
-  --action lambda:InvokeFunctionUrl \
-  --principal ${AWS_ACCOUNT_ID} \
-  --function-url-auth-type AWS_IAM \
-  --statement-id allowURL
-```  
-
-### Step 3: Create the URL 
-
-This creates [a URL with IAM authentication](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html). Only calls with a valid signature will be authorized.
-
-```bash
-aws lambda create-function-url-config \
-  --function-name StreamingFromEvent \
-  --auth-type AWS_IAM \
-  --invoke-mode RESPONSE_STREAM 
+swift package --allow-network-connections all:443 lambda-deploy --with-url
 ```
-This call returns various information, including the URL to invoke your function.
 
-```json
-{
-    "FunctionUrl": "https://ul3nf4dogmgyr7ffl5r5rs22640fwocc.lambda-url.us-east-1.on.aws/",
-    "FunctionArn": "arn:aws:lambda:us-east-1:012345678901:function:StreamingFromEvent",
-    "AuthType": "AWS_IAM",
-    "CreationTime": "2024-10-22T07:57:23.112599Z",
-    "InvokeMode": "RESPONSE_STREAM"
-}
-```
+This creates the Lambda function, provisions the necessary IAM role, configures a Function URL with IAM authentication, and uploads the deployment package. The output will include the Function URL and a ready-to-use `curl` command.
 
 ### Invoke your Lambda function
 
@@ -205,7 +157,7 @@ This should output the following result, with configurable delays between each m
 When done testing, you can delete the Lambda function with this command.
 
 ```bash
-aws lambda delete-function --function-name StreamingFromEvent
+swift package --allow-network-connections all:443 lambda-deploy --delete
 ```
 
 ## Deploy with AWS SAM 

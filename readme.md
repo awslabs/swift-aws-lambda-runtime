@@ -40,7 +40,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 
 - To build and archive your Lambda function, you need to install [docker](https://docs.docker.com/desktop/install/mac-install/) or Apple [container](https://github.com/apple/container).
 
-- To deploy the Lambda function and invoke it, you must have [an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and [install and configure the `aws` command line](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
+- To deploy the Lambda function and invoke it, you must have [an AWS account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and [install and configure the `aws` command line](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) (run `aws configure` to set up your credentials in `~/.aws/`).
 
 - Some examples are using [AWS SAM](https://aws.amazon.com/serverless/sam/). Install the [SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html) before deploying these examples.
 
@@ -58,7 +58,7 @@ For the fastest path, just type:
 
 ```bash
 cd Examples/_MyFirstFunction
-./create_and_deploy_function.sh
+./create_function.sh
 ```
 
 Otherwise, continue reading.
@@ -117,19 +117,35 @@ The runtime comes with a plugin to generate the code of a simple AWS Lambda func
 swift package lambda-init --allow-writing-to-package-directory
 ```
 
-Your `Sources/main.swift` file should look like this.
+Your `Sources/MyLambda/MyLambda.swift` file should look like this.
 
 ```swift
 import AWSLambdaRuntime
 
-// in this example we are receiving and responding with strings
-
-let runtime = LambdaRuntime {
-    (event: String, context: LambdaContext) in
-        return String(event.reversed())
+// the data structure to represent the input parameter
+struct HelloRequest: Decodable {
+    let name: String
+    let age: Int
 }
 
-try await runtime.run()
+// the data structure to represent the output response
+struct HelloResponse: Encodable {
+    let greetings: String
+}
+
+// in this example we receive a HelloRequest JSON and we return a HelloResponse JSON    
+
+// the Lambda runtime
+let runtime = LambdaRuntime {
+    (event: HelloRequest, context: LambdaContext) in
+
+    HelloResponse(
+        greetings: "Hello \(event.name). You look \(event.age > 30 ? "younger" : "older") than your age."
+    )
+}
+
+// start the loop
+try await runtime.run()    
 ```
 
 4. Build & archive the package
@@ -137,9 +153,7 @@ try await runtime.run()
 The runtime comes with a plugin to compile on Amazon Linux and create a ZIP archive:
 
 ```bash
-swift package archive \
-      --allow-network-connections docker \
-      --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 ```
 
 By default, it runs on `docker` but it also allows you to build with [Apple container](https://github.com/apple/container) (it requires disabling the sandbox):
@@ -150,9 +164,8 @@ By default, it runs on `docker` but it also allows you to build with [Apple cont
 # until https://github.com/swiftlang/swift-package-manager/issues/9763 is fixed
 swift package --disable-sandbox \
               --allow-network-connections docker \
-              --base-docker-image swift:amazonlinux2023 \
-              archive \
-              --container-cli container
+              lambda-build \
+              --cross-compile container
 ```
 
 If there is no error, the ZIP archive is ready to deploy.
@@ -161,59 +174,38 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 > [!NOTE]
 > If you encounter Docker credential store errors during the build, remove the `credsStore` entry from your `~/.docker/config.json` file or disable the plugin sandbox with `--disable-sandbox`. See [issue #609](https://github.com/awslabs/swift-aws-lambda-runtime/issues/609) for details.
 
-> [!NOTE]
-> The archive plugin currently defaults to Amazon Linux 2 as the build environment. After June 30, 2026, the default will change to Amazon Linux 2023. To migrate early, add the `--base-docker-image swift:amazonlinux2023` flag to the archive command:
-> ```bash
-> swift package archive \
->       --allow-network-connections docker \
->       --base-docker-image swift:amazonlinux2023
-> ```
-> When deploying functions built on Amazon Linux 2023, you must use the `provided.al2023` runtime instead of `provided.al2` in the `aws lambda create-function` command.
-
 5. Deploy to AWS
 
 There are multiple ways to deploy to AWS ([SAM](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/what-is-sam.html), [Terraform](https://developer.hashicorp.com/terraform/tutorials/aws-get-started), [AWS Cloud Development Kit (CDK)](https://docs.aws.amazon.com/cdk/v2/guide/getting_started.html), [AWS Console](https://docs.aws.amazon.com/lambda/latest/dg/getting-started.html)) that are covered later in this doc.
 
-Here is how to deploy using the `aws` command line.
+The fastest way to deploy is using the `lambda-deploy` plugin. It handles IAM role creation, function creation, and code upload automatically.
+
+> [!IMPORTANT]
+> Before deploying, ensure you have the AWS CLI installed and have run `aws configure` to set up your credentials in `~/.aws/`. On EC2, ECS, or EKS, credentials are typically provided automatically by the instance or task role, so running `aws configure` is not required in those environments.
 
 ```bash
-aws lambda create-function \
---function-name MyLambda \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
---runtime provided.al2023 \
---handler provided  \
---architectures arm64 \
---role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution
+swift package --allow-network-connections all:443 lambda-deploy
 ```
 
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
-
-Replace `<YOUR_ACCOUNT_ID>` with your actual AWS account ID (for example: 012345678901).
-
-> [!IMPORTANT] 
-> Before creating a function, you need to have a `lambda_basic_execution` IAM role in your AWS account.
->
-> You can create this role in two ways:
-> 1. Using AWS Console
-> 2. Running the commands in the `create_lambda_execution_role()` function in [`Examples/_MyFirstFunction/create_iam_role.sh`](https://github.com/awslabs/swift-aws-lambda-runtime/blob/8dff649920ab0c66bb039d15ae48d9d5764db71a/Examples/_MyFirstFunction/create_and_deploy_function.sh#L40C1-L40C31)
+This creates the Lambda function, provisions the necessary IAM role, and uploads the deployment package.
 
 6. Invoke your Lambda function
 
 ```bash
 aws lambda invoke \
 --function-name MyLambda \
---payload $(echo \"Hello World\" | base64)  \
-out.txt && cat out.txt && rm out.txt
+--payload $(echo '{"name":"World","age":30}' | base64) \
+/dev/stdout
 ```
 
 This should print
 
 ```
+{"greetings":"Hello World. You look older than your age."}
 {
     "StatusCode": 200,
     "ExecutedVersion": "$LATEST"
 }
-"dlroW olleH"
 ```
 
 ## Developing your Swift Lambda functions

@@ -24,9 +24,12 @@ struct AWSLambdaPackager: CommandPlugin {
 
         let args = ["init", "--dest-dir", context.package.directoryURL.path()] + arguments
 
-        // Invoke the plugin helper on the target directory, passing a configuration
-        // file from the package directory.
-        let process = try Process.run(tool.url, arguments: args)
+        // Invoke the plugin helper, passing the current environment.
+        let process = Process()
+        process.executableURL = tool.url
+        process.arguments = args
+        process.environment = ProcessInfo.processInfo.environment
+        try process.run()
         process.waitUntilExit()
 
         // Check whether the subprocess invocation was successful.

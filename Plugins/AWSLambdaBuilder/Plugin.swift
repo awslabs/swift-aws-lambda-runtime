@@ -94,9 +94,13 @@ struct AWSLambdaPackager: CommandPlugin {
                 "--zip-tool-path", zipToolPath.path,
             ] + arguments
 
-        // Invoke the plugin helper on the target directory, passing a configuration
-        // file from the package directory.
-        let process = try Process.run(tool.url, arguments: args)
+        // Invoke the plugin helper, passing the current environment so that
+        // AWS credentials and HOME are available to the subprocess.
+        let process = Process()
+        process.executableURL = tool.url
+        process.arguments = args
+        process.environment = ProcessInfo.processInfo.environment
+        try process.run()
         process.waitUntilExit()
 
         // Check whether the subprocess invocation was successful.

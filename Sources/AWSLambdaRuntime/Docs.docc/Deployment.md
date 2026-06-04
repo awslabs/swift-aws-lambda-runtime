@@ -11,9 +11,7 @@ Learn how to deploy your Swift Lambda functions to AWS.
 
 ### Overview
 
-There are multiple ways to deploy your Swift code to AWS Lambda. The very first time, you'll probably use the AWS Console to create a new Lambda function and upload your code as a zip file. However, as you iterate on your code, you'll want to automate the deployment process.
-
-To take full advantage of the cloud, we recommend using Infrastructure as Code (IaC) tools like the [AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/) or [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/). These tools allow you to define your infrastructure and deployment process as code, which can be version-controlled and automated.
+There are multiple ways to deploy your Swift code to AWS Lambda. The simplest way is to use the `lambda-deploy` plugin that handles IAM role creation, code upload, and function management automatically. For more complex deployments, we recommend using Infrastructure as Code (IaC) tools like the [AWS Serverless Application Model (SAM)](https://aws.amazon.com/serverless/sam/) or [AWS Cloud Development Kit (CDK)](https://aws.amazon.com/cdk/). These tools allow you to define your infrastructure and deployment process as code, which can be version-controlled and automated.
 
 In this section, we show you how to deploy your Swift Lambda functions using different AWS Tools. Alternatively, you might also consider using popular third-party tools like [Serverless Framework](https://www.serverless.com/), [Terraform](https://www.terraform.io/), or [Pulumi](https://www.pulumi.com/) to deploy Lambda functions and create and manage AWS infrastructure.
 
@@ -22,8 +20,8 @@ Here is the content of this guide:
   * [Prerequisites](#prerequisites)
   * [Choosing the AWS Region where to deploy](#choosing-the-aws-region-where-to-deploy)
   * [The Lambda execution IAM role](#the-lambda-execution-iam-role)
+  * [Deploy your Lambda function with the lambda-deploy plugin](#deploy-your-lambda-function-with-the-lambda-deploy-plugin)
   * [Deploy your Lambda function with the AWS Console](#deploy-your-lambda-function-with-the-aws-console)
-  * [Deploy your Lambda function with the AWS Command Line Interface (CLI)](#deploy-your-lambda-function-with-the-aws-command-line-interface-cli)
   * [Deploy your Lambda function with AWS Serverless Application Model (SAM)](#deploy-your-lambda-function-with-aws-serverless-application-model-sam)
   * [Deploy your Lambda function with AWS Cloud Development Kit (CDK)](#deploy-your-lambda-function-with-aws-cloud-development-kit-cdk)
   * [Third-party tools](#third-party-tools)
@@ -63,16 +61,30 @@ Here is the content of this guide:
    }
    ```
 
-3. A Swift Lambda function to deploy.
+3. AWS CLI and credentials configuration.
 
-   You need a Swift Lambda function to deploy. If you don't have one yet, you can use one of the examples in the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.
-
-   Compile and package the function using the following command
+   To deploy with the `lambda-deploy` plugin from your local machine, install the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and run `aws configure` to create the AWS configuration files (`~/.aws/config` and `~/.aws/credentials`). This stores your default region and credentials so the deploy plugin can access AWS.
 
    ```sh
-   swift package archive \
-         --allow-network-connections docker \
-         --base-docker-image swift:amazonlinux2023
+   aws configure
+   ```
+
+   > On EC2, ECS, or EKS, credentials are typically provided automatically by the instance or task role, so running `aws configure` is not required in those environments.
+
+4. A Swift Lambda function to deploy.
+
+   You need a Swift Lambda function to deploy. If you don't have one yet, you can scaffold one using the `lambda-init` plugin:
+
+   ```sh
+   swift package lambda-init --allow-writing-to-package-directory
+   ```
+
+   Or use one of the examples in the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.
+
+   Compile and package the function using the following command:
+
+   ```sh
+   swift package --allow-network-connections docker lambda-build
    ```
 
    This command creates a ZIP file with the compiled Swift code. The ZIP file is located in the `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip` folder.
@@ -101,6 +113,75 @@ A Lambda execution role is an AWS Identity and Access Management (IAM) role that
 
 When you create a Lambda function, you must specify an execution role. This role contains two main components: a trust policy that allows the Lambda service itself to assume the role, and permission policies that determine what AWS resources the function can access. By default, Lambda functions get basic permissions to write logs to CloudWatch Logs, but any additional permissions (like accessing S3 buckets or sending messages to SQS queues) must be explicitly added to the role's policies. Following the principle of least privilege, it's recommended to grant only the minimum permissions necessary for your function to operate, helping maintain the security of your serverless applications.
 
+### Deploy your Lambda function with the lambda-deploy plugin
+
+The `lambda-deploy` plugin provides the simplest way to deploy your Lambda function from the command line. It handles IAM role creation, code upload, and function creation or update automatically.
+
+In this example, we're building the HelloWorld example from the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.
+
+#### Prerequisites
+
+Ensure you have configured your AWS credentials by running `aws configure`. This creates the `~/.aws/config` and `~/.aws/credentials` files that the deploy plugin reads to authenticate with AWS.
+
+```sh
+aws configure
+```
+
+#### Create or update the function 
+
+The `lambda-deploy` plugin automatically detects whether the function exists. If the function does not exist, it creates a new one (including the IAM role). If the function already exists, it updates the code.
+
+The command assumes you've already built the ZIP file with `swift package lambda-build`, as described in the [Prerequisites](#prerequisites) section.
+ 
+```sh
+swift package --allow-network-connections all:443 lambda-deploy
+```
+
+When the deployment succeeds, the plugin reports the function ARN, region, and a ready-to-use invocation command.
+
+#### Invoke the function 
+
+Use the command displayed by the plugin after deployment:
+
+```sh
+aws lambda invoke \
+  --function-name MyLambda \
+  --payload $(echo '{"name":"World","age":30}' | base64) \
+  /dev/stdout
+```
+
+#### Deploy with a Function URL
+
+To expose the function as an HTTPS endpoint, add the `--with-url` option:
+
+```sh
+swift package --allow-network-connections all:443 lambda-deploy --with-url
+```
+
+> **Security:** The Function URL uses IAM authentication (`AWS_IAM`) and the resource policy restricts access to authenticated IAM principals in your AWS account only. Unauthenticated requests and requests from other accounts are rejected. Callers must sign requests with AWS Signature Version 4. See [Lambda Function URL security and auth model](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html) for details.
+
+> **Note:** Function URLs deliver a `FunctionURLRequest` and expect a `FunctionURLResponse`. Your Lambda function code must use these types (from `AWSLambdaEvents`) instead of plain JSON structs. Use `swift package lambda-init --with-url` to scaffold a function with the correct request/response pattern, or see the [Streaming+FunctionUrl](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples/Streaming+FunctionUrl) example.
+
+The plugin reports the Function URL and a ready-to-use `curl` command. Invoke it with:
+
+```sh
+(eval $(aws configure export-credentials --format env) && \
+  curl --aws-sigv4 "aws:amz:us-east-1:lambda" \
+       --user "$AWS_ACCESS_KEY_ID:$AWS_SECRET_ACCESS_KEY" \
+       -H "x-amz-security-token: $AWS_SESSION_TOKEN" \
+       "https://<your-function-url>.lambda-url.<region>.on.aws/")
+```
+
+> The `eval $(aws configure export-credentials --format env)` command exports your AWS credentials as environment variables from whatever credential source you have configured (SSO, config file, assumed role, etc.).
+
+#### Delete the function
+
+Remove the Lambda function and its associated IAM role:
+
+```sh
+swift package --allow-network-connections all:443 lambda-deploy --delete
+```
+
 ### Deploy your Lambda function with the AWS Console
 
 In this section, we deploy the HelloWorld example function using the AWS Console. The HelloWorld function is a simple function that takes a `String` as input and returns a `String`.
@@ -126,7 +207,7 @@ On the right side, select **Upload from** and select **.zip file**.
 
 ![Console - select zip file](console-40-select-zip-file)
 
-Select the zip file created with the `swift package archive` command as described in the [Prerequisites](#prerequisites) section.
+Select the zip file created with the `swift package lambda-build` command as described in the [Prerequisites](#prerequisites) section.
 
 Select **Save**
 
@@ -179,120 +260,6 @@ Then, navigate to the IAM section of the AWS console. Select **Roles** on the ri
 Select the `HelloWorld-role-xxxx` role and select **Delete**. Confirm the deletion by entering the role name again, and select **Delete** on the confirmation box.
 
 ![Console - delete IAM role](console-80-delete-role)
-
-### Deploy your Lambda function with the AWS Command Line Interface (CLI)
-
-You can deploy your Lambda function using the AWS Command Line Interface (CLI). The CLI is a unified tool to manage your AWS services from the command line and automate your operations through scripts. The CLI is available for Windows, macOS, and Linux. Follow the [installation](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) and [configuration](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html) instructions in the AWS CLI User Guide.
-
-In this example, we're building the HelloWorld example from the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.
-
-#### Create the function 
-
-To create a function, you must first create the function execution role and define the permission. Then, you create the function with the `create-function` command.
-
-The command assumes you've already created the ZIP file with the `swift package archive` command, as described in the [Prerequisites](#prerequisites) section.
- 
-```sh
-# enter your AWS Account ID 
-export AWS_ACCOUNT_ID=123456789012
-
-# Allow the Lambda service to assume the execution role
-cat <<EOF > assume-role-policy.json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "Service": "lambda.amazonaws.com"
-            },
-            "Action": "sts:AssumeRole"
-        }
-    ]
-}
-EOF
-
-# Create the execution role
-aws iam create-role \
---role-name lambda_basic_execution \
---assume-role-policy-document file://assume-role-policy.json
-
-# create permissions to associate with the role
-cat <<EOF > permissions.json
-{
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Action": [
-                "logs:CreateLogGroup",
-                "logs:CreateLogStream",
-                "logs:PutLogEvents"
-            ],
-            "Resource": "arn:aws:logs:*:*:*"
-        }
-    ]
-}
-EOF
-
-# Attach the permissions to the role
-aws iam put-role-policy \
---role-name lambda_basic_execution \
---policy-name lambda_basic_execution_policy \
---policy-document file://permissions.json
-
-# Create the Lambda function
-aws lambda create-function \
---function-name MyLambda \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip \
---runtime provided.al2023 \
---handler provided  \
---architectures arm64 \
---role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution
-```
-
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
-
-To update the function, use the `update-function-code` command after you've recompiled and archived your code again with the `swift package archive` command.
-
-```sh
-aws lambda update-function-code \
---function-name MyLambda \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip
-```
-
-#### Invoke the function 
-
-Use the `invoke-function` command to invoke the function. You can pass a well-formed JSON payload as input to the function. The payload must be encoded in base64. The CLI returns the status code and stores the response in a file.
-
-```sh
-# invoke the function
-aws lambda invoke \
---function-name MyLambda \
---payload $(echo \"Swift Lambda function\" | base64)  \
-out.txt
-
-# show the response
-cat out.txt
-
-# delete the response file
-rm out.txt
-```
-
-#### Delete the function
-
-To cleanup, first delete the Lambda funtion, then delete the IAM role.
-
-```sh
-# delete the Lambda function
-aws lambda delete-function --function-name MyLambda
-
-# delete the IAM policy attached to the role
-aws iam delete-role-policy --role-name lambda_basic_execution --policy-name lambda_basic_execution_policy
-
-# delete the IAM role
-aws iam delete-role --role-name lambda_basic_execution
-```
 
 ### Deploy your Lambda function with AWS Serverless Application Model (SAM)
 
@@ -512,7 +479,7 @@ export class LambdaApiStack extends cdk.Stack {
  }
 }    
 ```
-The code assumes you already built and packaged the APIGateway Lambda function with the `swift package archive` command, as described in the [Prerequisites](#prerequisites) section.
+The code assumes you already built and packaged the APIGateway Lambda function with the `swift package lambda-build` command, as described in the [Prerequisites](#prerequisites) section.
 
 You can write code to add an API Gateway to invoke your Lambda function. The following code creates an HTTP API Gateway that triggers the Lambda function.
 

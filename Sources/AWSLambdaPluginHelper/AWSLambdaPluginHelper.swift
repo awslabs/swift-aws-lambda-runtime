@@ -26,7 +26,12 @@ struct AWSLambdaPluginHelper {
     public static func main() async throws {
         let args = CommandLine.arguments
         let helper = AWSLambdaPluginHelper()
-        let command = try helper.command(from: args)
+
+        guard let command = helper.command(from: args) else {
+            helper.displayHelpMessage()
+            return
+        }
+
         switch command {
         case .`init`:
             try await Initializer().initialize(arguments: args)
@@ -37,22 +42,46 @@ struct AWSLambdaPluginHelper {
         }
     }
 
-    private func command(from arguments: [String]) throws -> Command {
+    /// Returns nil when help should be displayed (no args, "help", "--help", or invalid command).
+    private func command(from arguments: [String]) -> Command? {
         let args = CommandLine.arguments
 
-        guard args.count > 2 else {
-            throw AWSLambdaPluginHelperError.noCommand
+        guard args.count > 1 else {
+            return nil
         }
+
         let commandName = args[1]
-        guard let command = Command(rawValue: commandName) else {
-            throw AWSLambdaPluginHelperError.invalidCommand(commandName)
+
+        if commandName == "help" || commandName == "--help" || commandName == "-h" {
+            return nil
         }
 
-        return command
+        return Command(rawValue: commandName)
     }
-}
 
-private enum AWSLambdaPluginHelperError: Error {
-    case noCommand
-    case invalidCommand(String)
+    private func displayHelpMessage() {
+        print(
+            """
+            OVERVIEW: AWS Lambda Plugin Helper
+
+            A shared helper executable for the Swift AWS Lambda Runtime plugins.
+            This tool is normally invoked by SwiftPM plugins (lambda-init, lambda-build,
+            lambda-deploy) and not called directly.
+
+            USAGE: AWSLambdaPluginHelper <command> [options]
+
+            COMMANDS:
+              init      Scaffold a new Lambda function from a template.
+              build     Compile and package the Lambda function for deployment.
+              deploy    Deploy the packaged Lambda function to AWS.
+
+            Use 'AWSLambdaPluginHelper <command> --help' for more information about a command.
+
+            SWIFTPM PLUGIN USAGE:
+              swift package lambda-init --allow-writing-to-package-directory [--with-url]
+              swift package --allow-network-connections docker lambda-build [options]
+              swift package --allow-network-connections all:443 lambda-deploy [options]
+            """
+        )
+    }
 }

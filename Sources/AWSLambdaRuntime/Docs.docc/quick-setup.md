@@ -113,7 +113,7 @@ AWS Lambda runtime runs on Amazon Linux. You must compile your code for Amazon L
 > Be sure to have [Docker](https://docs.docker.com/desktop/install/mac-install/) installed for this step.
 
 ```sh
-swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 
 -------------------------------------------------------------------------
 building "MyFirstLambdaFunction" in docker
@@ -130,27 +130,34 @@ building "MyFirstLambdaFunction"
 archiving "MyFirstLambdaFunction"
 -------------------------------------------------------------------------
 1 archive created
-  * MyFirstLambdaFunction at /Users/YourUserName/MyFirstLambdaFunction/.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip
-
-
-cp .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip ~/Desktop
+  * MyFirstLambdaFunction at /Users/YourUserName/MyFirstLambdaFunction/.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip
 ```
-
-> Note: The archive command currently defaults to Amazon Linux 2 (`swift:amazonlinux2`) as the build environment. Amazon Linux 2 reaches End of Life on June 30, 2026 and the default will change to Amazon Linux 2023 after that date. To migrate early, re-run the archive command with `--base-docker-image swift:amazonlinux2023`. When deploying a function built on Amazon Linux 2023, you must use the `provided.al2023` Lambda runtime instead of `provided.al2`.
 
 6. Deploy on AWS Lambda
 
-> Be sure [to have an AWS Account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) to follow these steps.
+> Be sure [to have an AWS Account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html) and the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) installed and configured (`aws configure`) to follow these steps.
 
-- Connect to the [AWS Console](https://console.aws.amazon.com)
-- Navigate to Lambda 
-- Create a function
-- Select **Provide your own bootstrap on Amazon Linux 2** as **Runtime**
-- Select an **Architecture** that matches the one of the machine where you build the code. Select **x86_64** when you build on Intel-based Macs or **arm64** for Apple Silicon-based Macs.
-- Upload the ZIP create during step 5
-- Select the **Test** tab, enter a test event such as `{"name": "Seb", "age": 50}` and select **Test**
+Deploy your function using the `lambda-deploy` plugin:
 
-If the test succeeds, you will see the result: `{"greetings":"Hello Seb. You look younger than your age."}`.
+```sh
+swift package --allow-network-connections all:443 lambda-deploy
+```
 
+The plugin creates the IAM role, uploads the code, and creates the Lambda function automatically. When the deployment succeeds, it reports the function ARN and a ready-to-use `aws lambda invoke` command.
 
-Congratulations 🎉! You just wrote, test, build, and deployed a Lambda function written in Swift.
+Invoke your function:
+
+```sh
+aws lambda invoke \
+  --function-name MyFirstLambdaFunction \
+  --payload $(echo '{"name":"World","age":30}' | base64) \
+  /dev/stdout
+```
+
+When you're done, clean up the function and its IAM role:
+
+```sh
+swift package --allow-network-connections all:443 lambda-deploy --delete
+```
+
+Congratulations 🎉! You just wrote, tested, built, and deployed a Lambda function written in Swift.

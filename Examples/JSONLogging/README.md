@@ -84,7 +84,7 @@ AWS_LAMBDA_LOG_FORMAT=JSON swift run
 
 ```bash
 swift build
-swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 ```
 
 The deployment package will be at:
@@ -128,17 +128,19 @@ sam deploy --guided
 
 ## Deploy with AWS CLI
 
-As an alternative to SAM, you can use the AWS CLI:
+As an alternative to SAM, you can use the `lambda-deploy` plugin:
 
 ```bash
-ACCOUNT_ID=$(aws sts get-caller-identity --query 'Account' --output text)
-aws lambda create-function \
-  --function-name JSONLoggingExample \
-  --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip \
-  --runtime provided.al2023 \
-  --handler swift.bootstrap \
-  --architectures arm64 \
-  --role arn:aws:iam::${ACCOUNT_ID}:role/lambda_basic_execution \
+swift package --allow-network-connections all:443 lambda-deploy
+```
+
+This creates the Lambda function, provisions the necessary IAM role, and uploads the deployment package.
+
+After deploying, configure logging format:
+
+```bash
+aws lambda update-function-configuration \
+  --function-name JSONLogging \
   --logging-config LogFormat=JSON,ApplicationLogLevel=DEBUG,SystemLogLevel=INFO
 ```
 
@@ -256,8 +258,8 @@ The runtime maps Swift's `Logger.Level` to AWS Lambda log levels:
 # SAM deployment
 sam delete
 
-# AWS CLI deployment
-aws lambda delete-function --function-name JSONLoggingExample
+# Plugin deployment
+swift package --allow-network-connections all:443 lambda-deploy --delete
 ```
 
 ## ⚠️ Important Notes

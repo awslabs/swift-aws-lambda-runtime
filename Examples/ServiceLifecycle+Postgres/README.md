@@ -80,7 +80,7 @@ The Lambda function uses the following environment variables for database connec
 
 1. **Build the Lambda function:**
    ```bash
-   swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+   swift package --allow-network-connections docker lambda-build
    ```
 
 2. **Deploy with SAM:**

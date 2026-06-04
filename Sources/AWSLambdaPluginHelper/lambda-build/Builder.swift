@@ -19,7 +19,7 @@ import FoundationEssentials
 import Foundation
 #endif
 
-@available(macOS 15.0, *)
+@available(LambdaSwift 2.0, *)
 struct Builder {
     func build(arguments: [String]) async throws {
         let configuration = try BuilderConfiguration(arguments: arguments)
@@ -29,12 +29,9 @@ struct Builder {
             return
         }
 
-        // display deprecation warning when building on or for Amazon Linux 2
-        if self.isAmazonLinux(.al2)
-            || (configuration.baseDockerImage.contains("amazonlinux2")
-                && !configuration.baseDockerImage.contains("amazonlinux2023"))
-        {
-            self.displayDeprecationWarning()
+        // display informational warning only when user explicitly selects an AL2 image
+        if configuration.explicitAL2Image {
+            self.displayAL2Warning()
         }
 
         let builtProducts: [String: URL]
@@ -45,6 +42,7 @@ struct Builder {
                 packageIdentity: configuration.packageID,
                 products: configuration.products,
                 buildConfiguration: configuration.buildConfiguration,
+                noStrip: configuration.noStrip,
                 verboseLogging: configuration.verboseLogging
             )
         } else {
@@ -54,11 +52,12 @@ struct Builder {
                 packageDirectory: configuration.packageDirectory,
                 products: configuration.products,
                 containerCLIPath: configuration.dockerToolPath,
-                containerCLI: configuration.containerCLI,
+                containerCLI: configuration.crossCompileMethod,
                 outputDirectory: configuration.outputDirectory,
                 baseImage: configuration.baseDockerImage,
                 disableDockerImageUpdate: configuration.disableDockerImageUpdate,
                 buildConfiguration: configuration.buildConfiguration,
+                noStrip: configuration.noStrip,
                 verboseLogging: configuration.verboseLogging
             )
         }
@@ -84,6 +83,7 @@ struct Builder {
         packageIdentity: String,
         products: [String],
         buildConfiguration: BuildConfiguration,
+        noStrip: Bool,
         verboseLogging: Bool
     ) throws -> [String: URL] {
         print("-------------------------------------------------------------------------")
@@ -93,11 +93,14 @@ struct Builder {
         var results = [String: URL]()
         for product in products {
             print("building \"\(product)\"")
-            let buildArguments = [
+            var buildArguments = [
                 "build", "-c", buildConfiguration.rawValue,
                 "--product", product,
                 "--static-swift-stdlib",
             ]
+            if !noStrip {
+                buildArguments += ["-Xlinker", "-s"]
+            }
             try Utils.execute(
                 executable: URL(fileURLWithPath: "/usr/bin/swift"),
                 arguments: buildArguments,
@@ -127,16 +130,22 @@ struct Builder {
         packageDirectory: URL,
         products: [String],
         containerCLIPath: URL,
-        containerCLI: ContainerCLI,
+        containerCLI: CrossCompileMethod,
         outputDirectory: URL,
         baseImage: String,
         disableDockerImageUpdate: Bool,
         buildConfiguration: BuildConfiguration,
+        noStrip: Bool,
         verboseLogging: Bool
     ) throws -> [String: URL] {
 
+        // verify the container CLI binary exists at the resolved path
+        guard FileManager.default.fileExists(atPath: containerCLIPath.path()) else {
+            throw BuilderErrors.containerCLINotFound(containerCLI)
+        }
+
         print("-------------------------------------------------------------------------")
-        print("building \"\(packageIdentity)\" in \(containerCLI.displayName)")
+        print("building \"\(packageIdentity)\" in \(containerCLI)")
         print("-------------------------------------------------------------------------")
 
         if !disableDockerImageUpdate {
@@ -173,8 +182,11 @@ struct Builder {
         var builtProducts = [String: URL]()
         for product in products {
             print("building \"\(product)\"")
-            let buildCommand =
+            var buildCommand =
                 "swift build -c \(buildConfiguration.rawValue) --product \(product) --static-swift-stdlib"
+            if !noStrip {
+                buildCommand += " -Xlinker -s"
+            }
             if let localPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] {
                 // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
                 // because Examples' Package.swift have a dependency on ../..
@@ -329,27 +341,13 @@ struct Builder {
         }
     }
 
-    private func displayDeprecationWarning() {
-        let separator = String(repeating: "=", count: 68)
-        let red = "\u{001b}[38;2;255;66;69m"
+    private func displayAL2Warning() {
+        let yellow = "\u{001b}[33m"
         let reset = "\u{001b}[0m"
-        print("")
-        print("\(red)\(separator)")
-        print("WARNING: Amazon Linux 2 reaches End of Life on June 30, 2026.")
-        print("")
-        print("You must migrate to Amazon Linux 2023.")
-        print("Amazon Linux 2023 will become the default after June 30, 2026.")
-        print("")
-        print("To switch now, re-run with:")
-        print("  --base-docker-image swift:amazonlinux2023")
-        print("")
-        print("When using Amazon Linux 2023, you must also update your Lambda")
-        print("deployment to use the provided.al2023 runtime.")
-        print("")
-        print("For more information: https://aws.amazon.com/amazon-linux-2")
-        print("Available images: https://hub.docker.com/_/swift/tags?name=amazonlinux")
-        print("\(separator)\(reset)")
-        print("")
+        print(
+            "\(yellow)warning: Amazon Linux 2 is deprecated. "
+                + "Consider migrating to Amazon Linux 2023 (--base-docker-image swift:<version>-amazonlinux2023).\(reset)"
+        )
     }
 
     private func displayHelpMessage() {
@@ -367,7 +365,8 @@ struct Builder {
                                                        [--swift-version <version>]
                                                        [--base-docker-image <docker_image_name>]
                                                        [--disable-docker-image-update]
-                                                       [--container-cli <docker | container>]
+                                                       [--cross-compile <docker | container | swift-static-sdk | custom-sdk>]
+                                                       [--no-strip]
 
 
             OPTIONS:
@@ -380,33 +379,36 @@ struct Builder {
                                           (default is release)
             --swift-version               The swift version to use for building.
                                           (default is latest)
-                                          This parameter cannot be used when --base-docker-image  is specified.
+                                          This parameter cannot be used when --base-docker-image is specified.
             --base-docker-image <name>    The name of the base docker image to use for the build.
-                                          (default: swift:<version>-amazonlinux2)
-                                          Note: Amazon Linux 2023 will become the default after June 30, 2026.
+                                          (default: swift:<version>-amazonlinux2023)
                                           Visit Docker Hub for all available swift tags:
                                           https://hub.docker.com/_/swift/tags?name=amazonlinux
                                           This parameter cannot be used when --swift-version is specified.
-            --disable-docker-image-update Do not attempt to update the docker image
-            --container-cli <name>        The container CLI to use (docker or container)
+            --disable-docker-image-update Do not attempt to update the docker image.
+            --cross-compile <method>      The cross-compilation method to use.
+                                          Values: docker, container, swift-static-sdk, custom-sdk
                                           (default is docker)
+                                          Note: swift-static-sdk and custom-sdk are not yet supported.
+            --no-strip                    Do not strip debug symbols from the binary.
             --help                        Show help information.
             """
         )
     }
 }
 
-@available(macOS 15.0, *)
-private enum ContainerCLI: String, CustomStringConvertible {
+@available(LambdaSwift 2.0, *)
+enum CrossCompileMethod: String, CustomStringConvertible {
     case docker
     case container
+    case swiftStaticSdk = "swift-static-sdk"
+    case customSdk = "custom-sdk"
 
-    var executableName: String {
-        self.rawValue
-    }
-
-    var displayName: String {
-        self.rawValue
+    var isSupported: Bool {
+        switch self {
+        case .docker, .container: return true
+        case .swiftStaticSdk, .customSdk: return false
+        }
     }
 
     static func parse(_ value: String?) throws -> Self {
@@ -414,21 +416,32 @@ private enum ContainerCLI: String, CustomStringConvertible {
             return .docker
         }
 
-        guard let tool = ContainerCLI(rawValue: value.lowercased()) else {
-            throw BuilderErrors.invalidArgument("invalid container CLI '\(value)'. Use 'docker' or 'container'.")
+        guard let method = CrossCompileMethod(rawValue: value.lowercased()) else {
+            throw BuilderErrors.invalidArgument(
+                "invalid cross-compile method '\(value)'. Use 'docker', 'container', 'swift-static-sdk', or 'custom-sdk'."
+            )
         }
-        return tool
+
+        guard method.isSupported else {
+            throw BuilderErrors.unsupportedCrossCompileMethod(method)
+        }
+
+        return method
     }
 
+    /// Returns the container CLI pull arguments for the given image.
     func pullArguments(image: String) -> [String] {
         switch self {
         case .docker:
             return ["pull", image]
         case .container:
             return ["image", "pull", image]
+        case .swiftStaticSdk, .customSdk:
+            fatalError("pullArguments should not be called for unsupported cross-compile methods")
         }
     }
 
+    /// Returns the container CLI run arguments for the given configuration.
     func runArguments(
         baseImage: String,
         workingDirectory: String,
@@ -436,17 +449,22 @@ private enum ContainerCLI: String, CustomStringConvertible {
         env: [String: String]?,
         command: String
     ) -> [String] {
-        var args: [String] = ["run", "--rm"]
-        for mount in mounts {
-            args += ["-v", mount]
-        }
-        if let env {
-            for (key, value) in env.sorted(by: { $0.key < $1.key }) {
-                args += ["--env", "\(key)=\(value)"]
+        switch self {
+        case .docker, .container:
+            var args: [String] = ["run", "--rm"]
+            for mount in mounts {
+                args += ["-v", mount]
             }
+            if let env {
+                for (key, value) in env.sorted(by: { $0.key < $1.key }) {
+                    args += ["--env", "\(key)=\(value)"]
+                }
+            }
+            args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
+            return args
+        case .swiftStaticSdk, .customSdk:
+            fatalError("runArguments should not be called for unsupported cross-compile methods")
         }
-        args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
-        return args
     }
 
     var description: String {
@@ -454,8 +472,8 @@ private enum ContainerCLI: String, CustomStringConvertible {
     }
 }
 
-@available(macOS 15.0, *)
-private struct BuilderConfiguration: CustomStringConvertible {
+@available(LambdaSwift 2.0, *)
+struct BuilderConfiguration: CustomStringConvertible {
 
     // passed by the user
     public let help: Bool
@@ -465,7 +483,9 @@ private struct BuilderConfiguration: CustomStringConvertible {
     public let verboseLogging: Bool
     public let baseDockerImage: String
     public let disableDockerImageUpdate: Bool
-    public let containerCLI: ContainerCLI
+    public let crossCompileMethod: CrossCompileMethod
+    public let noStrip: Bool
+    public let explicitAL2Image: Bool
 
     // passed by the plugin
     public let packageID: String
@@ -479,6 +499,7 @@ private struct BuilderConfiguration: CustomStringConvertible {
 
         let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
         let outputPathArgument = argumentExtractor.extractOption(named: "output-path")
+        let outputDirectoryArgument = argumentExtractor.extractOption(named: "output-directory")
         let packageIDArgument = argumentExtractor.extractOption(named: "package-id")
         let packageDisplayNameArgument = argumentExtractor.extractOption(named: "package-display-name")
         let packageDirectoryArgument = argumentExtractor.extractOption(named: "package-directory")
@@ -489,7 +510,9 @@ private struct BuilderConfiguration: CustomStringConvertible {
         let swiftVersionArgument = argumentExtractor.extractOption(named: "swift-version")
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
         let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
-        let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")
+        let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
+        let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")  // deprecated alias
+        let noStripArgument = argumentExtractor.extractFlag(named: "no-strip") > 0
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
 
         // help required ?
@@ -529,10 +552,17 @@ private struct BuilderConfiguration: CustomStringConvertible {
         self.zipToolPath = URL(fileURLWithPath: zipToolPathArgument.first!)
 
         // output directory
-        guard !outputPathArgument.isEmpty else {
+        // --output-directory is a deprecated alias for --output-path (backward compatibility)
+        let resolvedOutputPath: String
+        if let outputPath = outputPathArgument.first {
+            resolvedOutputPath = outputPath
+        } else if let outputDirectory = outputDirectoryArgument.first {
+            print("warning: '--output-directory' is deprecated, use '--output-path' instead.")
+            resolvedOutputPath = outputDirectory
+        } else {
             throw BuilderErrors.invalidArgument("--output-path is required")
         }
-        self.outputDirectory = URL(fileURLWithPath: outputPathArgument.first!)
+        self.outputDirectory = URL(fileURLWithPath: resolvedOutputPath)
 
         // products
         guard !productsArgument.isEmpty else {
@@ -556,12 +586,21 @@ private struct BuilderConfiguration: CustomStringConvertible {
         let swiftVersion = swiftVersionArgument.first ?? .none  // undefined version will yield the latest docker image
 
         self.baseDockerImage =
-            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
+            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2023"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
-        self.containerCLI = try ContainerCLI.parse(
-            containerCliArgument.first
-        )
+        // --container-cli is a deprecated alias for --cross-compile (backward compatibility)
+        let resolvedCrossCompile = crossCompileArgument.first ?? containerCliArgument.first
+        self.crossCompileMethod = try CrossCompileMethod.parse(resolvedCrossCompile)
+        self.noStrip = noStripArgument
+
+        // detect when user explicitly provides an AL2 (not AL2023) base image
+        if let explicitImage = baseDockerImageArgument.first {
+            self.explicitAL2Image = explicitImage.contains("amazonlinux2")
+                && !explicitImage.contains("amazonlinux2023")
+        } else {
+            self.explicitAL2Image = false
+        }
 
         if self.verboseLogging {
             print("-------------------------------------------------------------------------")
@@ -580,7 +619,7 @@ private struct BuilderConfiguration: CustomStringConvertible {
           dockerToolPath: \(self.dockerToolPath)
           baseDockerImage: \(self.baseDockerImage)
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
-          containerCLI: \(self.containerCLI)
+          crossCompileMethod: \(self.crossCompileMethod)
           zipToolPath: \(self.zipToolPath)
           packageID: \(self.packageID)
           packageDisplayName: \(self.packageDisplayName)
@@ -590,11 +629,14 @@ private struct BuilderConfiguration: CustomStringConvertible {
     }
 }
 
-private enum BuilderErrors: Error, CustomStringConvertible {
+@available(LambdaSwift 2.0, *)
+enum BuilderErrors: Error, CustomStringConvertible {
     case invalidArgument(String)
     case unsupportedPlatform(String)
     case unknownProduct(String)
     case productExecutableNotFound(String)
+    case unsupportedCrossCompileMethod(CrossCompileMethod)
+    case containerCLINotFound(CrossCompileMethod)
     case failedWritingDockerfile
     case failedParsingDockerOutput(String)
     case processFailed([String], Int32)
@@ -609,6 +651,27 @@ private enum BuilderErrors: Error, CustomStringConvertible {
             return description
         case .productExecutableNotFound(let product):
             return "product executable not found '\(product)'"
+        case .unsupportedCrossCompileMethod(let method):
+            return
+                "The '\(method)' cross-compilation method is not yet supported. "
+                + "For information on how to install and use Swift cross-compilation SDKs, visit: "
+                + "https://www.swift.org/documentation/articles/static-linux-getting-started.html"
+        case .containerCLINotFound(let method):
+            switch method {
+            case .docker:
+                return
+                    "Docker is not installed or not found at the expected path. "
+                    + "Install Docker from https://docs.docker.com/get-docker/"
+            case .container:
+                return
+                    "Apple's 'container' CLI is not installed or not found at the expected path. "
+                    + "Install it from https://github.com/apple/container"
+            case .swiftStaticSdk, .customSdk:
+                return
+                    "The '\(method)' cross-compilation method is not yet supported. "
+                    + "For information on how to install and use Swift cross-compilation SDKs, visit: "
+                    + "https://www.swift.org/documentation/articles/static-linux-getting-started.html"
+            }
         case .failedWritingDockerfile:
             return "failed writing dockerfile"
         case .failedParsingDockerOutput(let output):
@@ -619,7 +682,8 @@ private enum BuilderErrors: Error, CustomStringConvertible {
     }
 }
 
-private enum BuildConfiguration: String {
+@available(LambdaSwift 2.0, *)
+enum BuildConfiguration: String {
     case debug
     case release
 }

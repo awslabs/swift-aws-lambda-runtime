@@ -25,39 +25,34 @@ Once the struct is created and the `handle(...)` method is defined, the sample c
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
 The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/BackgroundTasks/BackgroundTasks.zip`
 
-## Deploy with the AWS CLI
+## Deploy with the lambda-deploy plugin
 
-Here is how to deploy using the `aws` command line.
+Here is how to deploy using the `lambda-deploy` plugin.
 
 ### Create the function
 
 ```bash
-AWS_ACCOUNT_ID=012345678901
-aws lambda create-function \
---function-name BackgroundTasks \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/BackgroundTasks/BackgroundTasks.zip \
---runtime provided.al2023 \
---handler provided  \
---architectures arm64 \
---role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution \
---environment "Variables={LOG_LEVEL=debug}" \
---timeout 15
+swift package --allow-network-connections all:443 lambda-deploy
 ```
 
+This creates the Lambda function, provisions the necessary IAM role, and uploads the deployment package.
+
 > [!IMPORTANT] 
-> The timeout value must be bigger than the time it takes for your function to complete its background tasks. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish the tasks. Here, the sample function waits for 10 seconds and we set the timeout for 15 seconds.
+> After deploying, update the function timeout to be bigger than the time it takes for your function to complete its background tasks. Otherwise, the Lambda control plane will terminate the execution environment before your code has a chance to finish the tasks. Here, the sample function waits for 10 seconds so the timeout should be at least 15 seconds:
+> ```bash
+> aws lambda update-function-configuration \
+>   --function-name BackgroundTasks \
+>   --timeout 15 \
+>   --environment "Variables={LOG_LEVEL=debug}"
+> ```
 
-The `--environment` arguments sets the `LOG_LEVEL` environment variable to `debug`. This will ensure the debugging statements in the handler `context.logger.debug("...")` are printed in the Lambda function logs.
-
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
-
-Be sure to set `AWS_ACCOUNT_ID` with your actual AWS account ID (for example: 012345678901).
+The `--environment` argument sets the `LOG_LEVEL` environment variable to `debug`. This will ensure the debugging statements in the handler `context.logger.debug("...")` are printed in the Lambda function logs.
 
 ### Invoke your Lambda function
 
@@ -115,7 +110,7 @@ Type CTRL-C to stop tailing the logs.
 When done testing, you can delete the Lambda function with this command.
 
 ```bash
-aws lambda delete-function --function-name BackgroundTasks
+swift package --allow-network-connections all:443 lambda-deploy --delete
 ```
 
 ## ⚠️ Security and Reliability Notice

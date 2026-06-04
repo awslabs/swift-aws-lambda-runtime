@@ -11,6 +11,10 @@ let defaultSwiftSettings: [SwiftSetting] =
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
+    // Required because soto-core declares platforms: [.macOS(.v10_15)] in its Package.swift.
+    // SwiftPM rejects executable targets whose platform minimum is below their dependencies'.
+    // Without this declaration the package defaults to macOS 10.13, causing a planning error.
+    platforms: [.macOS(.v15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
 
@@ -28,6 +32,9 @@ let package = Package(
 
         // plugin to package the lambda, creating an archive that can be uploaded to AWS
         .plugin(name: "AWSLambdaBuilder", targets: ["AWSLambdaBuilder"]),
+
+        // legacy 'archive' command — deprecated passthrough to lambda-build
+        .plugin(name: "AWSLambdaPackager", targets: ["AWSLambdaPackager"]),
 
         // plugin to deploy a Lambda function
         .plugin(name: "AWSLambdaDeployer", targets: ["AWSLambdaDeployer"]),
@@ -51,6 +58,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.12.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.5.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.11.0"),
+        .package(url: "https://github.com/soto-project/soto-core.git", from: "7.13.0"),
     ],
     targets: [
         .target(
@@ -86,24 +94,26 @@ let package = Package(
             ]
         ),
         // keep this one (with "archive") to not break workflows
-        // This will be deprecated at some point in the future
-        //        .plugin(
-        //            name: "AWSLambdaPackager",
-        //            capability: .command(
-        //                intent: .custom(
-        //                    verb: "archive",
-        //                    description:
-        //                        "Archive the Lambda binary and prepare it for uploading to AWS. Requires docker on macOS or non Amazonlinux 2 distributions."
-        //                ),
-        //                permissions: [
-        //                    .allowNetworkConnections(
-        //                        scope: .docker,
-        //                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
-        //                    )
-        //                ]
-        //            ),
-        //            path: "Plugins/AWSLambdaBuilder" // same sources as the new "lambda-build" plugin
-        //        ),
+        // Uses its own Plugin.swift that emits a deprecation warning then delegates to the helper
+        .plugin(
+            name: "AWSLambdaPackager",
+            capability: .command(
+                intent: .custom(
+                    verb: "archive",
+                    description:
+                        "Archive the Lambda binary and prepare it for uploading to AWS. (Deprecated: use lambda-build instead)"
+                ),
+                permissions: [
+                    .allowNetworkConnections(
+                        scope: .docker,
+                        reason: "This plugin uses Docker to create the AWS Lambda ZIP package."
+                    )
+                ]
+            ),
+            dependencies: [
+                .target(name: "AWSLambdaPluginHelper")
+            ]
+        ),
         .plugin(
             name: "AWSLambdaBuilder",
             capability: .command(
@@ -147,6 +157,7 @@ let package = Package(
             dependencies: [
                 .product(name: "NIOHTTP1", package: "swift-nio"),
                 .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "SotoCore", package: "soto-core"),
             ],
             swiftSettings: defaultSwiftSettings
         ),

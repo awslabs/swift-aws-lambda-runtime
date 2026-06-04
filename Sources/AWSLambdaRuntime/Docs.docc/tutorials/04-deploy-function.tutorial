@@ -12,7 +12,7 @@
         
         @Steps {
             
-            AWS Lambda runs on top of [Amazon Linux 2](https://aws.amazon.com/amazon-linux-2/). You must therefore compile your code for Linux. The AWS Lambda Runtime for Swift uses Docker to do so. Once the code is compiled, it must be assembled in a ZIP file before being deployed in the cloud.
+            AWS Lambda runs on top of [Amazon Linux 2023](https://aws.amazon.com/linux/amazon-linux-2023/). You must therefore compile your code for Linux. The AWS Lambda Runtime for Swift uses Docker to do so. Once the code is compiled, it must be assembled in a ZIP file before being deployed in the cloud.
             The AWS Lambda Runtime for Swift provides a [Swift Package Manager plugin](https://github.com/apple/swift-package-manager/blob/main/Documentation/Plugins.md) to compile and zip your Lambda function in one simple step.
 
             @Step {
@@ -22,13 +22,13 @@
             }
             
             @Step {
-                In a terminal, invoke the `archive` command to build and zip your Lambda function.
+                In a terminal, invoke the `lambda-build` command to build and zip your Lambda function.
                 
                 @Code(name: "Commands in a Terminal", file: 04-01-02-plugin-archive.sh)
             }
             
             @Step {
-                The plugin starts a Docker container running Amazon Linux 2 and compile your Lambda function code. It then creates a zip file. When everything goes well, you should see an output similar to this one. 
+                The plugin starts a Docker container running Amazon Linux 2023 and compiles your Lambda function code. It then creates a zip file. When everything goes well, you should see an output similar to this one. 
 
                 @Code(name: "Commands in a Terminal", file: 04-01-03-plugin-archive.sh)
             }
@@ -87,7 +87,7 @@
             }
 
             @Step {
-                Enter a **Function name**. I choose `PalindromeLambda`. Select `Provide your own bootstrap on Amazon Linux 2` as **Runtime**. And select `arm64` as **Architecture** when you build on a Mac with Apple Silicon. Leave all other parameter as default, and select **Create function** on the bottom right part.
+                Enter a **Function name**. I choose `PalindromeLambda`. Select `Amazon Linux 2023` as **Runtime**. And select `arm64` as **Architecture** when you build on a Mac with Apple Silicon. Leave all other parameter as default, and select **Create function** on the bottom right part.
                 
                 > The runtime architecture for Lambda (`arm64` or `x86_64`) must match the one of the machine where you compiled the code.  When you compiled on an Intel-based Mac, use `x86_64`. When compiling on an Apple Silicon-based Mac select `arm64`.
                 

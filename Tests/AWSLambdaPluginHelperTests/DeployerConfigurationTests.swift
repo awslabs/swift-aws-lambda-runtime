@@ -1,0 +1,229 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftAWSLambdaRuntime open source project
+//
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import Testing
+
+@testable import AWSLambdaPluginHelper
+
+@Suite("DeployerConfiguration argument parsing")
+struct DeployerConfigurationTests {
+
+    // MARK: - Architecture parsing (Requirement 3.14)
+
+    @Test("Valid architecture x64 is parsed correctly")
+    func architectureX64() throws {
+        let config = try DeployerConfiguration(arguments: ["--architecture", "x64"])
+        #expect(config.architecture == .x64)
+    }
+
+    @Test("Valid architecture arm64 is parsed correctly")
+    func architectureArm64() throws {
+        let config = try DeployerConfiguration(arguments: ["--architecture", "arm64"])
+        #expect(config.architecture == .arm64)
+    }
+
+    @Test("Invalid architecture throws error")
+    func invalidArchitectureThrows() throws {
+        #expect(throws: DeployerErrors.self) {
+            _ = try DeployerConfiguration(arguments: ["--architecture", "mips"])
+        }
+    }
+
+    @Test("Invalid architecture value produces descriptive error")
+    func invalidArchitectureMessage() throws {
+        do {
+            _ = try DeployerConfiguration(arguments: ["--architecture", "sparc"])
+            Issue.record("Expected an error to be thrown")
+        } catch let error as DeployerErrors {
+            let description = error.description
+            #expect(description.contains("sparc"))
+            #expect(description.contains("x64") || description.contains("arm64"))
+        }
+    }
+
+    // MARK: - Default architecture matches host (Requirement 3.13)
+
+    @Test("Default architecture matches host when --architecture is omitted")
+    func defaultArchitectureMatchesHost() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.architecture == .host)
+        // Verify .host resolves to a valid value on this machine
+        #if arch(x86_64)
+        #expect(config.architecture == .x64)
+        #else
+        #expect(config.architecture == .arm64)
+        #endif
+    }
+
+    // MARK: - Region parsing (Requirement 3.25)
+
+    @Test("Region is parsed from arguments")
+    func regionParsing() throws {
+        let config = try DeployerConfiguration(arguments: ["--region", "eu-west-1"])
+        #expect(config.region == "eu-west-1")
+    }
+
+    @Test("Region is nil when not specified")
+    func regionDefaultNil() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.region == nil)
+    }
+
+    @Test("Region with equals syntax is parsed")
+    func regionEqualsSyntax() throws {
+        let config = try DeployerConfiguration(arguments: ["--region=us-west-2"])
+        #expect(config.region == "us-west-2")
+    }
+
+    // MARK: - IAM role parsing
+
+    @Test("IAM role is parsed from arguments")
+    func iamRoleParsing() throws {
+        let roleArn = "arn:aws:iam::123456789012:role/my-role"
+        let config = try DeployerConfiguration(arguments: ["--iam-role", roleArn])
+        #expect(config.iamRole == roleArn)
+    }
+
+    @Test("IAM role is nil when not specified")
+    func iamRoleDefaultNil() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.iamRole == nil)
+    }
+
+    // MARK: - Input directory parsing
+
+    @Test("Input directory is parsed from arguments")
+    func inputDirectoryParsing() throws {
+        let config = try DeployerConfiguration(arguments: ["--input-directory", "/tmp/build/output"])
+        #expect(config.inputDirectory != nil)
+        #expect(config.inputDirectory?.path().contains("/tmp/build/output") == true)
+    }
+
+    @Test("Input directory is nil when not specified")
+    func inputDirectoryDefaultNil() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.inputDirectory == nil)
+    }
+
+    // MARK: - With URL flag parsing
+
+    @Test("--with-url flag is detected")
+    func withURLFlag() throws {
+        let config = try DeployerConfiguration(arguments: ["--with-url"])
+        #expect(config.withURL == true)
+    }
+
+    @Test("--with-url defaults to false")
+    func withURLDefaultFalse() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.withURL == false)
+    }
+
+    // MARK: - Delete flag parsing
+
+    @Test("--delete flag is detected")
+    func deleteFlag() throws {
+        let config = try DeployerConfiguration(arguments: ["--delete"])
+        #expect(config.delete == true)
+    }
+
+    @Test("--delete defaults to false")
+    func deleteDefaultFalse() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.delete == false)
+    }
+
+    // MARK: - Help flag (Requirement 3.25)
+
+    @Test("--help flag is detected")
+    func helpFlag() throws {
+        let config = try DeployerConfiguration(arguments: ["--help"])
+        #expect(config.help == true)
+    }
+
+    @Test("--help defaults to false")
+    func helpDefaultFalse() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.help == false)
+    }
+
+    // MARK: - Verbose flag
+
+    @Test("--verbose flag is detected")
+    func verboseFlag() throws {
+        let config = try DeployerConfiguration(arguments: ["--verbose"])
+        #expect(config.verboseLogging == true)
+    }
+
+    @Test("--verbose defaults to false")
+    func verboseDefaultFalse() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.verboseLogging == false)
+    }
+
+    // MARK: - Products parsing
+
+    @Test("Products are parsed from arguments")
+    func productsParsing() throws {
+        let config = try DeployerConfiguration(arguments: ["--products", "MyLambda"])
+        #expect(config.products == ["MyLambda"])
+    }
+
+    @Test("Multiple comma-separated products are parsed")
+    func multipleProductsParsing() throws {
+        let config = try DeployerConfiguration(arguments: ["--products", "FuncA,FuncB,FuncC"])
+        #expect(config.products == ["FuncA", "FuncB", "FuncC"])
+    }
+
+    @Test("Products default to empty array")
+    func productsDefaultEmpty() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.products.isEmpty)
+    }
+
+    // MARK: - Combined arguments
+
+    @Test("Multiple options parsed together")
+    func combinedArguments() throws {
+        let config = try DeployerConfiguration(arguments: [
+            "--region", "ap-southeast-1",
+            "--architecture", "arm64",
+            "--with-url",
+            "--verbose",
+            "--iam-role", "arn:aws:iam::123456789012:role/test",
+            "--input-directory", "/tmp/output",
+            "--products", "MyFunc",
+        ])
+        #expect(config.region == "ap-southeast-1")
+        #expect(config.architecture == .arm64)
+        #expect(config.withURL == true)
+        #expect(config.verboseLogging == true)
+        #expect(config.iamRole == "arn:aws:iam::123456789012:role/test")
+        #expect(config.inputDirectory?.path().contains("/tmp/output") == true)
+        #expect(config.products == ["MyFunc"])
+    }
+
+    @Test("Delete with region and products")
+    func deleteWithOptions() throws {
+        let config = try DeployerConfiguration(arguments: [
+            "--delete",
+            "--region", "us-east-1",
+            "--products", "MyFunc",
+        ])
+        #expect(config.delete == true)
+        #expect(config.region == "us-east-1")
+        #expect(config.products == ["MyFunc"])
+    }
+}

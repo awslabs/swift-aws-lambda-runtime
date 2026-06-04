@@ -18,9 +18,8 @@ import FoundationEssentials
 import Foundation
 #endif
 
+@available(LambdaSwift 2.0, *)
 struct Initializer {
-
-    private let destFileName = "Sources/main.swift"
 
     func initialize(arguments: [String]) async throws {
 
@@ -31,21 +30,116 @@ struct Initializer {
             return
         }
 
-        let destFileURL = configuration.destinationDir.appendingPathComponent(destFileName)
-        do {
+        // Find the main entry point file in the Sources directory
+        let sourcesDir = configuration.destinationDir.appendingPathComponent("Sources")
+        let entryPoint = try findEntryPoint(in: sourcesDir)
 
+        // Back up the original file
+        let backupURL = entryPoint.appendingPathExtension("bak")
+        if FileManager.default.fileExists(atPath: entryPoint.path) {
+            try? FileManager.default.copyItem(at: entryPoint, to: backupURL)
+            if configuration.verboseLogging {
+                print("Backed up original file to: \(backupURL.path)")
+            }
+        }
+
+        // Overwrite with the Lambda template
+        do {
             let template = TemplateType.template(for: configuration.templateType)
-            try template.write(to: destFileURL, atomically: true, encoding: .utf8)
+            try template.write(to: entryPoint, atomically: true, encoding: .utf8)
 
             if configuration.verboseLogging {
-                print("File created at: \(destFileURL)")
+                print("File written at: \(entryPoint.path)")
             }
 
-            print("✅ Lambda function written to \(destFileName)")
+            let relativePath = entryPoint.path.replacingOccurrences(
+                of: configuration.destinationDir.path + "/",
+                with: ""
+            )
+            print("✅ Lambda function written to \(relativePath)")
             print("📦 You can now package with: 'swift package lambda-build'")
         } catch {
-            print("🛑Failed to create the Lambda function file: \(error)")
+            print("🛑 Failed to create the Lambda function file: \(error)")
         }
+    }
+
+    /// Finds the main entry point Swift file in the Sources directory.
+    ///
+    /// Strategy:
+    /// 1. Look for a file containing `@main` or a `main.swift`
+    /// 2. If Sources has a single subdirectory, look for `<SubdirName>.swift` in it
+    /// 3. Fall back to `Sources/main.swift`
+    private func findEntryPoint(in sourcesDir: URL) throws -> URL {
+        guard FileManager.default.fileExists(atPath: sourcesDir.path) else {
+            // No Sources directory yet — use the classic path
+            return sourcesDir.appendingPathComponent("main.swift")
+        }
+
+        // List immediate children of Sources/
+        let contents = try FileManager.default.contentsOfDirectory(
+            at: sourcesDir,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        // Find subdirectories (typical Swift package layout: Sources/<TargetName>/)
+        let subdirs = contents.filter { url in
+            (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+        }
+
+        // If there's exactly one subdirectory, look inside it
+        if let targetDir = subdirs.first, subdirs.count == 1 {
+            let targetName = targetDir.lastPathComponent
+
+            // Check for main.swift first
+            let mainSwift = targetDir.appendingPathComponent("main.swift")
+            if FileManager.default.fileExists(atPath: mainSwift.path) {
+                return mainSwift
+            }
+
+            // Check for <TargetName>.swift (what `swift package init --type executable` creates)
+            let namedFile = targetDir.appendingPathComponent("\(targetName).swift")
+            if FileManager.default.fileExists(atPath: namedFile.path) {
+                return namedFile
+            }
+
+            // Look for any .swift file containing @main
+            let swiftFiles = try FileManager.default.contentsOfDirectory(
+                at: targetDir,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles]
+            ).filter { $0.pathExtension == "swift" }
+
+            for file in swiftFiles {
+                if let content = try? String(contentsOf: file, encoding: .utf8),
+                    content.contains("@main")
+                {
+                    return file
+                }
+            }
+
+            // No match found — default to <TargetName>.swift (will be created)
+            return namedFile
+        }
+
+        // No subdirectory or multiple subdirectories — check for main.swift directly in Sources/
+        let mainSwift = sourcesDir.appendingPathComponent("main.swift")
+        if FileManager.default.fileExists(atPath: mainSwift.path) {
+            return mainSwift
+        }
+
+        // Check for any .swift file in Sources/ containing @main
+        let topLevelSwiftFiles = contents.filter { $0.pathExtension == "swift" }
+        for file in topLevelSwiftFiles {
+            if let content = try? String(contentsOf: file, encoding: .utf8),
+                content.contains("@main")
+            {
+                return file
+            }
+        }
+
+        // Fall back to Sources/main.swift
+        return mainSwift
     }
 
     private func displayHelpMessage() {

@@ -21,7 +21,7 @@ The function return value will be encoded to a `HelloResponse` as your Lambda fu
 To build & archive the package, type the following commands.
 
 ```bash
-swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
@@ -29,24 +29,13 @@ The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPa
 
 ## Deploy
 
-Here is how to deploy using the `aws` command line.
+Here is how to deploy using the `lambda-deploy` plugin.
 
 ```bash
-# Replace with your AWS Account ID
-AWS_ACCOUNT_ID=012345678901
-
-aws lambda create-function \
---function-name HelloJSON \
---zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HelloJSON/HelloJSON.zip \
---runtime provided.al2023 \
---handler provided  \
---architectures arm64 \
---role arn:aws:iam::${AWS_ACCOUNT_ID}:role/lambda_basic_execution
+swift package --allow-network-connections all:443 lambda-deploy
 ```
 
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
-
-Be sure to define the `AWS_ACCOUNT_ID` environment variable with your actual AWS account ID (for example: 012345678901).
+This creates the Lambda function, provisions the necessary IAM role, and uploads the deployment package.
 
 ## Invoke your Lambda function
 
@@ -76,7 +65,7 @@ This should output the following result.
 When done testing, you can delete the Lambda function with this command.
 
 ```bash
-aws lambda delete-function --function-name HelloJSON
+swift package --allow-network-connections all:443 lambda-deploy --delete
 ```
 
 ## ⚠️ Security and Reliability Notice

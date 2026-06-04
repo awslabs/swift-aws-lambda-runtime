@@ -23,7 +23,7 @@ To build & archive the package you can use the following commands:
 
 ```bash
 swift build
-swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023
+swift package --allow-network-connections docker lambda-build
 ```
 
 If there are no errors, a ZIP file should be ready to deploy, located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip`.
@@ -33,23 +33,13 @@ If there are no errors, a ZIP file should be ready to deploy, located at `.build
 > [!IMPORTANT]
 > The Lambda function and the S3 bucket must be located in the same AWS Region. In the code below, we use `eu-west-1` (Ireland). 
 
-To deploy the Lambda function, you can use the `aws` command line:
+To deploy the Lambda function, you can use the `lambda-deploy` plugin:
 
 ```bash
-REGION=eu-west-1
-aws lambda create-function \
-    --region "${REGION}" \
-    --function-name S3EventNotifier \
-    --zip-file fileb://.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip \
-    --runtime provided.al2023 \
-    --handler provided  \
-    --architectures arm64 \
-    --role arn:aws:iam::<YOUR_ACCOUNT_ID>:role/lambda_basic_execution
+swift package --allow-network-connections all:443 lambda-deploy --region eu-west-1
 ```
 
-The `--architectures` flag is only required when you build the binary on an Apple Silicon machine (Apple M1 or more recent). It defaults to `x64`.
-
-Be sure to define `REGION` with the region where you want to deploy your Lambda function and replace `<YOUR_ACCOUNT_ID>` with your actual AWS account ID (for example: 012345678901).
+This creates the Lambda function, provisions the necessary IAM role, and uploads the deployment package.
 
 Besides deploying the Lambda function you also need to create the S3 bucket and configure it to send events to the Lambda function. You can do this using the following commands:
 

@@ -63,7 +63,7 @@
             @Step {
                 Add the `platform` section.
 
-                It defines on which Apple platforms the code can be executed. Since Lambda functions are supposed to be run on Linux servers with Amazon Linux 2, it is reasonable to make them run only on macOS, for debugging for example. It does not make sense to run this code on iOS, iPadOS, tvOS, and watchOS.
+                It defines on which Apple platforms the code can be executed. Since Lambda functions are supposed to be run on Linux servers with Amazon Linux 2023, it is reasonable to make them run only on macOS, for debugging for example. It does not make sense to run this code on iOS, iPadOS, tvOS, and watchOS.
                 @Code(name: "Package.swift", file: 03-02-02-package.swift)
             }
             @Step {

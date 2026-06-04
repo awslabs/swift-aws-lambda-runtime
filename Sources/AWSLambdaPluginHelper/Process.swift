@@ -17,7 +17,7 @@ import Dispatch
 import Foundation
 import Synchronization
 
-@available(macOS 15.0, *)
+@available(LambdaSwift 2.0, *)
 struct Utils {
     @discardableResult
     static func execute(
