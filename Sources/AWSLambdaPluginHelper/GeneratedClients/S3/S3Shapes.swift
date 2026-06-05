@@ -20,6 +20,7 @@
 // MARK: - CreateBucket
 
 /// Configuration for the bucket location constraint.
+@available(LambdaSwift 2.0, *)
 struct CreateBucketConfiguration: AWSEncodableShape, Sendable {
     static let _xmlRootNodeName: String? = "CreateBucketConfiguration"
     static let _xmlNamespace: String? = "http://s3.amazonaws.com/doc/2006-03-01/"
@@ -38,6 +39,7 @@ struct CreateBucketConfiguration: AWSEncodableShape, Sendable {
 }
 
 /// Request for CreateBucket operation.
+@available(LambdaSwift 2.0, *)
 struct CreateBucketRequest: AWSEncodableShape, Sendable {
     /// The name of the bucket to create.
     let bucket: String
@@ -63,6 +65,7 @@ struct CreateBucketRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for CreateBucket operation.
+@available(LambdaSwift 2.0, *)
 struct CreateBucketResponse: AWSDecodableShape, Sendable {
     /// The URI that identifies the bucket.
     let location: String?
@@ -76,6 +79,7 @@ struct CreateBucketResponse: AWSDecodableShape, Sendable {
 // MARK: - HeadBucket
 
 /// Request for HeadBucket operation.
+@available(LambdaSwift 2.0, *)
 struct HeadBucketRequest: AWSEncodableShape, Sendable {
     /// The bucket name.
     let bucket: String
@@ -96,6 +100,7 @@ struct HeadBucketRequest: AWSEncodableShape, Sendable {
 // MARK: - PutObject
 
 /// Request for PutObject operation.
+@available(LambdaSwift 2.0, *)
 struct PutObjectRequest: AWSEncodableShape, Sendable {
     static let _options: AWSShapeOptions = [.allowStreaming]
 
@@ -124,6 +129,7 @@ struct PutObjectRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for PutObject operation.
+@available(LambdaSwift 2.0, *)
 struct PutObjectResponse: AWSDecodableShape, Sendable {
     /// Entity tag for the uploaded object.
     let eTag: String?
@@ -140,6 +146,7 @@ struct PutObjectResponse: AWSDecodableShape, Sendable {
 // MARK: - DeleteObject
 
 /// Request for DeleteObject operation.
+@available(LambdaSwift 2.0, *)
 struct DeleteObjectRequest: AWSEncodableShape, Sendable {
     /// The bucket name.
     let bucket: String
@@ -168,6 +175,7 @@ struct DeleteObjectRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for DeleteObject operation.
+@available(LambdaSwift 2.0, *)
 struct DeleteObjectResponse: AWSDecodableShape, Sendable {
     /// Indicates whether the specified object version that was permanently deleted
     /// was a delete marker.

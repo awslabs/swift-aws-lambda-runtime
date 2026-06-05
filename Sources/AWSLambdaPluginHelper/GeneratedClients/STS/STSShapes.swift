@@ -23,6 +23,7 @@ import SotoCore
 
 /// Request shape for the GetCallerIdentity operation.
 /// This operation requires no input parameters.
+@available(LambdaSwift 2.0, *)
 struct STSGetCallerIdentityRequest: AWSEncodableShape {
     init() {}
 }
@@ -30,6 +31,7 @@ struct STSGetCallerIdentityRequest: AWSEncodableShape {
 // MARK: - Output Shapes
 
 /// Response shape for the GetCallerIdentity operation.
+@available(LambdaSwift 2.0, *)
 struct STSGetCallerIdentityResponse: AWSDecodableShape {
     /// The unique identifier of the calling entity.
     /// The exact value depends on the type of entity that is making the call.

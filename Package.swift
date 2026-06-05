@@ -11,10 +11,6 @@ let defaultSwiftSettings: [SwiftSetting] =
 
 let package = Package(
     name: "swift-aws-lambda-runtime",
-    // Required because soto-core declares platforms: [.macOS(.v10_15)] in its Package.swift.
-    // SwiftPM rejects executable targets whose platform minimum is below their dependencies'.
-    // Without this declaration the package defaults to macOS 10.13, causing a planning error.
-    platforms: [.macOS(.v15)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
 
@@ -58,7 +54,10 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-log.git", from: "1.12.0"),
         .package(url: "https://github.com/apple/swift-collections.git", from: "1.5.0"),
         .package(url: "https://github.com/swift-server/swift-service-lifecycle.git", from: "2.11.0"),
-        .package(url: "https://github.com/soto-project/soto-core.git", from: "7.13.0"),
+        // .package(url: "https://github.com/soto-project/soto-core.git", from: "7.13.0"),
+        .package(url: "https://github.com/sebsto/soto-core.git", branch: "remove-platforms-use-availability-macro"),
+        // .package(name: "soto-core", path: "../../soto-core")
+
     ],
     targets: [
         .target(

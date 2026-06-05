@@ -25,6 +25,7 @@ import SotoCore
 ///
 /// Operations use POST with `Action=<operation>&Version=2010-05-08`
 /// URL-encoded form body. Responses are XML.
+@available(LambdaSwift 2.0, *)
 public struct IAMClient: AWSService {
     /// The underlying AWS client used for making requests.
     public let client: AWSClient

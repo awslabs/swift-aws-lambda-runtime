@@ -18,6 +18,7 @@
 import SotoCore
 
 /// Error type for AWS S3 service
+@available(LambdaSwift 2.0, *)
 struct S3ErrorType: AWSErrorType {
     enum Code: String {
         case bucketAlreadyExists = "BucketAlreadyExists"

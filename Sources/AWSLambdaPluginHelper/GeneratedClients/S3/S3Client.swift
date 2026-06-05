@@ -22,6 +22,7 @@ import SotoCore
 ///
 /// S3 uses the REST-XML protocol with path-style addressing.
 /// Endpoint: `https://s3.<region>.amazonaws.com`
+@available(LambdaSwift 2.0, *)
 struct S3Client: AWSService {
     let client: AWSClient
     let config: AWSServiceConfig

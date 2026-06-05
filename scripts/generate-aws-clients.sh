@@ -294,6 +294,20 @@ copy_output() {
     log "Generated clients installed at ${OUTPUT_DIR}"
 }
 
+add_availability_annotations() {
+    log "Adding @available(LambdaSwift 2.0, *) annotations..."
+
+    # Add @available(LambdaSwift 2.0, *) before every top-level struct/enum declaration
+    # in the generated files. This is required because soto-core uses availability
+    # annotations on its types (AWSClient, AWSServiceConfig, etc.) and this package
+    # does not declare a platforms: minimum.
+    find "${OUTPUT_DIR}" -name "*.swift" -print0 | while IFS= read -r -d '' file; do
+        perl -i -pe 's/^((?:public )?(?:struct|enum) \w+)/\@available(LambdaSwift 2.0, *)\n$1/' "$file"
+    done
+
+    log "Availability annotations added."
+}
+
 cleanup() {
     log "Cleaning up working directory..."
     rm -rf "${WORK_DIR}"
@@ -323,6 +337,7 @@ main() {
     generate_config
     run_codegen
     copy_output
+    add_availability_annotations
 
     # Uncomment the following line to clean up after successful generation:
     # cleanup

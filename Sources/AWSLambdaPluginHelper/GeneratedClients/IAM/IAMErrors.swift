@@ -18,6 +18,7 @@
 import SotoCore
 
 /// Error type for AWS IAM service operations.
+@available(LambdaSwift 2.0, *)
 public struct IAMErrorType: AWSErrorType {
     enum Code: String {
         case entityAlreadyExistsException = "EntityAlreadyExists"

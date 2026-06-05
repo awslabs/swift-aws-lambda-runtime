@@ -42,6 +42,7 @@ struct BuilderConfigurationTests {
 
     // MARK: - Cross-compile parsing (Requirement 2.7)
 
+    @available(LambdaSwift 2.0, *)
     @Test("--cross-compile with valid value 'docker'")
     func crossCompileDocker() throws {
         let args = defaultArgs() + ["--cross-compile", "docker"]
@@ -49,6 +50,7 @@ struct BuilderConfigurationTests {
         #expect(config.crossCompileMethod == .docker)
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--cross-compile with valid value 'container'")
     func crossCompileContainer() throws {
         let args = defaultArgs() + ["--cross-compile", "container"]
@@ -56,6 +58,7 @@ struct BuilderConfigurationTests {
         #expect(config.crossCompileMethod == .container)
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--cross-compile with 'swift-static-sdk' throws unsupported error")
     func crossCompileSwiftStaticSdk() throws {
         let args = defaultArgs() + ["--cross-compile", "swift-static-sdk"]
@@ -64,6 +67,7 @@ struct BuilderConfigurationTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--cross-compile with 'custom-sdk' throws unsupported error")
     func crossCompileCustomSdk() throws {
         let args = defaultArgs() + ["--cross-compile", "custom-sdk"]
@@ -72,6 +76,7 @@ struct BuilderConfigurationTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--cross-compile with invalid value throws error")
     func crossCompileInvalidValue() throws {
         let args = defaultArgs() + ["--cross-compile", "invalid-method"]
@@ -80,6 +85,7 @@ struct BuilderConfigurationTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--cross-compile defaults to docker when omitted")
     func crossCompileDefaultsToDocker() throws {
         let args = defaultArgs()
@@ -89,6 +95,7 @@ struct BuilderConfigurationTests {
 
     // MARK: - No-strip flag (Requirements 2.5, 2.6)
 
+    @available(LambdaSwift 2.0, *)
     @Test("--no-strip flag is detected when present")
     func noStripFlagPresent() throws {
         let args = defaultArgs() + ["--no-strip"]
@@ -96,6 +103,7 @@ struct BuilderConfigurationTests {
         #expect(config.noStrip == true)
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--no-strip flag defaults to false when omitted")
     func noStripFlagAbsent() throws {
         let args = defaultArgs()
@@ -105,6 +113,7 @@ struct BuilderConfigurationTests {
 
     // MARK: - Output directory deprecated alias (Requirement 7.5)
 
+    @available(LambdaSwift 2.0, *)
     @Test("--output-directory deprecated alias maps to outputDirectory")
     func outputDirectoryAlias() throws {
         let args: [String] = [
@@ -121,6 +130,7 @@ struct BuilderConfigurationTests {
         #expect(config.outputDirectory.path().hasSuffix("custom/output/path"))
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--output-path takes precedence when both are provided")
     func outputPathTakesPrecedence() throws {
         let args: [String] = [
@@ -140,6 +150,7 @@ struct BuilderConfigurationTests {
 
     // MARK: - Mutual exclusion of --swift-version and --base-docker-image (Requirement 2.17)
 
+    @available(LambdaSwift 2.0, *)
     @Test("--swift-version and --base-docker-image together throws error")
     func mutualExclusionSwiftVersionAndBaseImage() throws {
         let args = defaultArgs() + ["--swift-version", "6.0", "--base-docker-image", "swift:6.0-amazonlinux2023"]
@@ -148,6 +159,7 @@ struct BuilderConfigurationTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--swift-version alone is accepted")
     func swiftVersionAlone() throws {
         let args = defaultArgs() + ["--swift-version", "6.0"]
@@ -155,6 +167,7 @@ struct BuilderConfigurationTests {
         #expect(config.baseDockerImage == "swift:6.0-amazonlinux2023")
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--base-docker-image alone is accepted")
     func baseDockerImageAlone() throws {
         let args = defaultArgs() + ["--base-docker-image", "swift:5.10-amazonlinux2023"]
@@ -164,6 +177,7 @@ struct BuilderConfigurationTests {
 
     // MARK: - Default base image is amazonlinux2023 (Requirement 6.1)
 
+    @available(LambdaSwift 2.0, *)
     @Test("Default base image contains amazonlinux2023")
     func defaultBaseImageIsAL2023() throws {
         let args = defaultArgs()
@@ -171,6 +185,7 @@ struct BuilderConfigurationTests {
         #expect(config.baseDockerImage.contains("amazonlinux2023"))
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("Default base image format without swift-version is swift:amazonlinux2023")
     func defaultBaseImageFormatNoVersion() throws {
         let args = defaultArgs()
@@ -178,6 +193,7 @@ struct BuilderConfigurationTests {
         #expect(config.baseDockerImage == "swift:amazonlinux2023")
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("Base image with --swift-version includes version prefix")
     func baseImageWithSwiftVersion() throws {
         let args = defaultArgs() + ["--swift-version", "6.1"]
@@ -187,6 +203,7 @@ struct BuilderConfigurationTests {
 
     // MARK: - Explicit AL2 image detection
 
+    @available(LambdaSwift 2.0, *)
     @Test("Explicit AL2 image is detected")
     func explicitAL2ImageDetected() throws {
         let args = defaultArgs() + ["--base-docker-image", "swift:5.10-amazonlinux2"]
@@ -194,6 +211,7 @@ struct BuilderConfigurationTests {
         #expect(config.explicitAL2Image == true)
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("AL2023 image is not flagged as explicit AL2")
     func al2023ImageNotFlaggedAsAL2() throws {
         let args = defaultArgs() + ["--base-docker-image", "swift:6.0-amazonlinux2023"]
@@ -201,6 +219,7 @@ struct BuilderConfigurationTests {
         #expect(config.explicitAL2Image == false)
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("Default image (no --base-docker-image) is not flagged as explicit AL2")
     func defaultImageNotFlaggedAsAL2() throws {
         let args = defaultArgs()

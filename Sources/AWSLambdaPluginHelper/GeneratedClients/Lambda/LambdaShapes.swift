@@ -20,24 +20,28 @@
 // MARK: - Enums
 
 /// Lambda function architecture
+@available(LambdaSwift 2.0, *)
 public enum LambdaArchitecture: String, Codable, Sendable {
     case x86_64 = "x86_64"
     case arm64 = "arm64"
 }
 
 /// Lambda function runtime
+@available(LambdaSwift 2.0, *)
 public enum LambdaRuntime: String, Codable, Sendable {
     case providedAl2023 = "provided.al2023"
     case providedAl2 = "provided.al2"
 }
 
 /// Lambda function packaging type
+@available(LambdaSwift 2.0, *)
 public enum LambdaPackageType: String, Codable, Sendable {
     case zip = "Zip"
     case image = "Image"
 }
 
 /// Function URL auth type
+@available(LambdaSwift 2.0, *)
 public enum FunctionUrlAuthType: String, Codable, Sendable {
     case awsIam = "AWS_IAM"
     case none = "NONE"
@@ -46,6 +50,7 @@ public enum FunctionUrlAuthType: String, Codable, Sendable {
 // MARK: - GetFunction
 
 /// Request for GetFunction operation
+@available(LambdaSwift 2.0, *)
 public struct GetFunctionRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -64,6 +69,7 @@ public struct GetFunctionRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for GetFunction operation
+@available(LambdaSwift 2.0, *)
 public struct GetFunctionResponse: AWSDecodableShape, Sendable {
     /// The configuration of the function.
     public let configuration: FunctionConfiguration?
@@ -77,6 +83,7 @@ public struct GetFunctionResponse: AWSDecodableShape, Sendable {
 }
 
 /// Function configuration details
+@available(LambdaSwift 2.0, *)
 public struct FunctionConfiguration: Codable, Sendable {
     /// The name of the function.
     public let functionName: String?
@@ -129,6 +136,7 @@ public struct FunctionConfiguration: Codable, Sendable {
 }
 
 /// Function code location details
+@available(LambdaSwift 2.0, *)
 public struct FunctionCodeLocation: Codable, Sendable {
     /// The service that hosts the deployment package.
     public let repositoryType: String?
@@ -144,6 +152,7 @@ public struct FunctionCodeLocation: Codable, Sendable {
 // MARK: - CreateFunction
 
 /// Function code for CreateFunction
+@available(LambdaSwift 2.0, *)
 public struct FunctionCode: Codable, Sendable {
     /// The base64-encoded contents of the deployment package.
     public let zipFile: String?
@@ -166,6 +175,7 @@ public struct FunctionCode: Codable, Sendable {
 }
 
 /// Request for CreateFunction operation
+@available(LambdaSwift 2.0, *)
 public struct CreateFunctionRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -227,6 +237,7 @@ public struct CreateFunctionRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for CreateFunction operation
+@available(LambdaSwift 2.0, *)
 public struct CreateFunctionResponse: AWSDecodableShape, Sendable {
     /// The name of the function.
     public let functionName: String?
@@ -266,6 +277,7 @@ public struct CreateFunctionResponse: AWSDecodableShape, Sendable {
 // MARK: - UpdateFunctionCode
 
 /// Request for UpdateFunctionCode operation
+@available(LambdaSwift 2.0, *)
 public struct UpdateFunctionCodeRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -311,6 +323,7 @@ public struct UpdateFunctionCodeRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for UpdateFunctionCode operation
+@available(LambdaSwift 2.0, *)
 public struct UpdateFunctionCodeResponse: AWSDecodableShape, Sendable {
     /// The name of the function.
     public let functionName: String?
@@ -347,6 +360,7 @@ public struct UpdateFunctionCodeResponse: AWSDecodableShape, Sendable {
 // MARK: - DeleteFunction
 
 /// Request for DeleteFunction operation
+@available(LambdaSwift 2.0, *)
 public struct DeleteFunctionRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -367,6 +381,7 @@ public struct DeleteFunctionRequest: AWSEncodableShape, Sendable {
 // MARK: - CreateFunctionUrlConfig
 
 /// Request for CreateFunctionUrlConfig operation
+@available(LambdaSwift 2.0, *)
 public struct CreateFunctionUrlConfigRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -391,6 +406,7 @@ public struct CreateFunctionUrlConfigRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for CreateFunctionUrlConfig operation
+@available(LambdaSwift 2.0, *)
 public struct CreateFunctionUrlConfigResponse: AWSDecodableShape, Sendable {
     /// The HTTP URL endpoint for the function.
     public let functionUrl: String?
@@ -412,6 +428,7 @@ public struct CreateFunctionUrlConfigResponse: AWSDecodableShape, Sendable {
 // MARK: - DeleteFunctionUrlConfig
 
 /// Request for DeleteFunctionUrlConfig operation
+@available(LambdaSwift 2.0, *)
 public struct DeleteFunctionUrlConfigRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -432,6 +449,7 @@ public struct DeleteFunctionUrlConfigRequest: AWSEncodableShape, Sendable {
 // MARK: - GetFunctionUrlConfig
 
 /// Request for GetFunctionUrlConfig operation
+@available(LambdaSwift 2.0, *)
 public struct GetFunctionUrlConfigRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -450,6 +468,7 @@ public struct GetFunctionUrlConfigRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for GetFunctionUrlConfig operation
+@available(LambdaSwift 2.0, *)
 public struct GetFunctionUrlConfigResponse: AWSDecodableShape, Sendable {
     /// The HTTP URL endpoint for the function.
     public let functionUrl: String?
@@ -465,6 +484,7 @@ public struct GetFunctionUrlConfigResponse: AWSDecodableShape, Sendable {
 // MARK: - AddPermission
 
 /// Request for AddPermission operation
+@available(LambdaSwift 2.0, *)
 public struct AddPermissionRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String
@@ -541,6 +561,7 @@ public struct AddPermissionRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for AddPermission operation
+@available(LambdaSwift 2.0, *)
 public struct AddPermissionResponse: AWSDecodableShape, Sendable {
     /// The permission statement that's added to the function policy.
     public let statement: String?
@@ -553,6 +574,7 @@ public struct AddPermissionResponse: AWSDecodableShape, Sendable {
 // MARK: - RemovePermission
 
 /// Request for RemovePermission operation
+@available(LambdaSwift 2.0, *)
 public struct RemovePermissionRequest: AWSEncodableShape, Sendable {
     /// The name of the Lambda function.
     public let functionName: String

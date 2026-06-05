@@ -20,6 +20,7 @@
 import SotoCore
 
 /// Error type for STS service operations.
+@available(LambdaSwift 2.0, *)
 struct STSErrorType: AWSErrorType {
     enum Code: String {
         case expiredTokenException = "ExpiredTokenException"

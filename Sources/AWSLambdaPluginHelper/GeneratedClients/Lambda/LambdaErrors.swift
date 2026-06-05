@@ -18,6 +18,7 @@
 import SotoCore
 
 /// Error type for AWS Lambda service
+@available(LambdaSwift 2.0, *)
 public struct LambdaErrorType: AWSErrorType {
     enum Code: String {
         case invalidParameterValueException = "InvalidParameterValueException"

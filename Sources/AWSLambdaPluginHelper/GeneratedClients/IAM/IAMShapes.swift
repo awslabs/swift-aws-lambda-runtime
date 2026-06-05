@@ -20,6 +20,7 @@ import SotoCore
 // MARK: - Common Shapes
 
 /// Represents an IAM role.
+@available(LambdaSwift 2.0, *)
 public struct IAMRole: AWSDecodableShape, Sendable {
     /// The friendly name that identifies the role.
     public let roleName: String?
@@ -50,6 +51,7 @@ public struct IAMRole: AWSDecodableShape, Sendable {
 // MARK: - CreateRole
 
 /// Request for the CreateRole operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMCreateRoleRequest: AWSEncodableShape, Sendable {
     /// The name of the role to create.
     public let roleName: String
@@ -81,6 +83,7 @@ public struct IAMCreateRoleRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for the CreateRole operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMCreateRoleResponse: AWSDecodableShape, Sendable {
     /// The role that was created.
     public let role: IAMRole?
@@ -93,6 +96,7 @@ public struct IAMCreateRoleResponse: AWSDecodableShape, Sendable {
 // MARK: - DeleteRole
 
 /// Request for the DeleteRole operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMDeleteRoleRequest: AWSEncodableShape, Sendable {
     /// The name of the role to delete.
     public let roleName: String
@@ -109,6 +113,7 @@ public struct IAMDeleteRoleRequest: AWSEncodableShape, Sendable {
 // MARK: - GetRole
 
 /// Request for the GetRole operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMGetRoleRequest: AWSEncodableShape, Sendable {
     /// The name of the IAM role to get information about.
     public let roleName: String
@@ -123,6 +128,7 @@ public struct IAMGetRoleRequest: AWSEncodableShape, Sendable {
 }
 
 /// Response for the GetRole operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMGetRoleResponse: AWSDecodableShape, Sendable {
     /// The role details.
     public let role: IAMRole?
@@ -135,6 +141,7 @@ public struct IAMGetRoleResponse: AWSDecodableShape, Sendable {
 // MARK: - AttachRolePolicy
 
 /// Request for the AttachRolePolicy operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMAttachRolePolicyRequest: AWSEncodableShape, Sendable {
     /// The name of the IAM role to attach the policy to.
     public let roleName: String
@@ -155,6 +162,7 @@ public struct IAMAttachRolePolicyRequest: AWSEncodableShape, Sendable {
 // MARK: - DetachRolePolicy
 
 /// Request for the DetachRolePolicy operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMDetachRolePolicyRequest: AWSEncodableShape, Sendable {
     /// The name of the IAM role to detach the policy from.
     public let roleName: String
@@ -175,6 +183,7 @@ public struct IAMDetachRolePolicyRequest: AWSEncodableShape, Sendable {
 // MARK: - PutRolePolicy
 
 /// Request for the PutRolePolicy operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMPutRolePolicyRequest: AWSEncodableShape, Sendable {
     /// The name of the role to associate the policy with.
     public let roleName: String
@@ -199,6 +208,7 @@ public struct IAMPutRolePolicyRequest: AWSEncodableShape, Sendable {
 // MARK: - DeleteRolePolicy
 
 /// Request for the DeleteRolePolicy operation.
+@available(LambdaSwift 2.0, *)
 public struct IAMDeleteRolePolicyRequest: AWSEncodableShape, Sendable {
     /// The name of the role the policy is associated with.
     public let roleName: String

@@ -152,6 +152,7 @@ struct DeprecatedAliasEquivalencePropertyTests {
         ]
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("--output-directory produces same outputDirectory as --output-path", arguments: samplePaths)
     func deprecatedAliasEquivalence(path: String) throws {
         let argsWithOutputPath = baseArgs() + ["--output-path", path]
@@ -177,13 +178,17 @@ struct DeprecatedAliasEquivalencePropertyTests {
 @Suite("Property 3: Cross-compile method parsing round-trip")
 struct CrossCompileMethodRoundTripPropertyTests {
 
-    static let allCases: [CrossCompileMethod] = [
-        .docker,
-        .container,
-        .swiftStaticSdk,
-        .customSdk,
-    ]
+    @available(LambdaSwift 2.0, *)
+    static var allCases: [CrossCompileMethod] {
+        [
+            .docker,
+            .container,
+            .swiftStaticSdk,
+            .customSdk,
+        ]
+    }
 
+    @available(LambdaSwift 2.0, *)
     @Test("rawValue → init(rawValue:) round-trips for all CrossCompileMethod cases", arguments: allCases)
     func rawValueRoundTrip(method: CrossCompileMethod) {
         let rawValue = method.rawValue
@@ -245,6 +250,7 @@ struct MutualExclusionPropertyTests {
         ]
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test(
         "Both --swift-version and --base-docker-image throws error",
         arguments: combinations
@@ -298,6 +304,7 @@ struct DeploymentBucketNamePropertyTests {
         return Array(result.prefix(100))
     }()
 
+    @available(LambdaSwift 2.0, *)
     @Test(
         "Bucket name matches expected format and is a valid S3 name",
         arguments: combinations
@@ -385,6 +392,7 @@ struct ArchiveSizeUploadStrategyPropertyTests {
         return Array(Set(sizes).sorted().prefix(100))
     }()
 
+    @available(LambdaSwift 2.0, *)
     @Test("Sizes at or below 50 MB should upload directly", arguments: sizesAtOrBelowLimit)
     func sizeAtOrBelowLimitUploadsDirect(size: Int64) {
         #expect(
@@ -393,6 +401,7 @@ struct ArchiveSizeUploadStrategyPropertyTests {
         )
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("Sizes above 50 MB should use S3 staging", arguments: sizesAboveLimit)
     func sizeAboveLimitUsesS3(size: Int64) {
         #expect(
@@ -530,6 +539,7 @@ struct AL2WarningLogicPropertyTests {
         ]
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("AL2 images (not AL2023) set explicitAL2Image to true", arguments: al2Images)
     func al2ImageDetected(image: String) throws {
         let args = baseArgs() + ["--base-docker-image", image]
@@ -540,6 +550,7 @@ struct AL2WarningLogicPropertyTests {
         )
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("AL2023 or non-AL2 images set explicitAL2Image to false", arguments: nonAL2Images)
     func nonAL2ImageNotDetected(image: String) throws {
         let args = baseArgs() + ["--base-docker-image", image]
@@ -550,6 +561,7 @@ struct AL2WarningLogicPropertyTests {
         )
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("Default image (no --base-docker-image) sets explicitAL2Image to false")
     func defaultImageNotFlagged() throws {
         let args = baseArgs()
@@ -574,6 +586,7 @@ struct UnsupportedCrossCompileMethodsPropertyTests {
 
     static let sdkGuideURL = "https://www.swift.org/documentation/articles/static-linux-getting-started.html"
 
+    @available(LambdaSwift 2.0, *)
     @Test("Unsupported methods throw error with SDK guide URL", arguments: unsupportedMethods)
     func unsupportedMethodThrowsWithLink(method: String) {
         do {
@@ -588,6 +601,7 @@ struct UnsupportedCrossCompileMethodsPropertyTests {
         }
     }
 
+    @available(LambdaSwift 2.0, *)
     @Test("Unsupported methods via BuilderConfiguration throw error with SDK guide URL", arguments: unsupportedMethods)
     func unsupportedMethodInBuilderConfigThrowsWithLink(method: String) {
         let args: [String] = [

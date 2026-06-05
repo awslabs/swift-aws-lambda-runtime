@@ -22,6 +22,7 @@ import SotoCore
 /// AWS Lambda service client
 ///
 /// Provides operations for managing AWS Lambda functions.
+@available(LambdaSwift 2.0, *)
 public struct LambdaClient: AWSService, Sendable {
     /// The underlying AWS client used for making requests.
     public let client: AWSClient
