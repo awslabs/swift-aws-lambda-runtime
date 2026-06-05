@@ -216,6 +216,22 @@ struct DeployerConfigurationTests {
         #expect(config.products.isEmpty)
     }
 
+    // MARK: - Profile parsing
+
+    @available(LambdaSwift 2.0, *)
+    @Test("Profile is parsed from arguments")
+    func profileParsing() throws {
+        let config = try DeployerConfiguration(arguments: ["--profile", "staging"])
+        #expect(config.profile == "staging")
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("Profile is nil when not specified")
+    func profileDefaultNil() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.profile == nil)
+    }
+
     // MARK: - Combined arguments
 
     @available(LambdaSwift 2.0, *)

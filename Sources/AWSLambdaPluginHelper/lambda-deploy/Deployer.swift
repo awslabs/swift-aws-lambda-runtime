@@ -559,17 +559,28 @@ struct Deployer {
         // Check for AWS configuration files and emit non-blocking warning if absent
         self.checkAWSConfigurationFiles(verbose: configuration.verboseLogging)
 
-        // Initialize AWSClient with the default credential provider chain.
-        // Use a verbose logger when --verbose is set so SotoCore reports which
-        // credential provider is attempted and why it fails.
+        // Initialize AWSClient with the appropriate credential provider.
+        // When --profile is specified, use .configFile(profile:) to load
+        // credentials from the named profile in ~/.aws/credentials and ~/.aws/config.
+        // Otherwise, use the default credential provider chain.
         let clientLogger: Logger = {
             var logger = Logger(label: "AWSLambdaDeployer")
             logger.logLevel = configuration.verboseLogging ? .debug : .info
             return logger
         }()
 
+        let credentialProvider: CredentialProviderFactory
+        if let profile = configuration.profile {
+            if configuration.verboseLogging {
+                print("[verbose] Using AWS profile: \(profile)")
+            }
+            credentialProvider = .configFile(profile: profile)
+        } else {
+            credentialProvider = .default
+        }
+
         let awsClient = AWSClient(
-            credentialProvider: .default,
+            credentialProvider: credentialProvider,
             logger: clientLogger
         )
 
@@ -1140,6 +1151,7 @@ struct Deployer {
                                  [--with-url]
                                  [--delete]
                                  [--region <region>]
+                                 [--profile <profile-name>]
                                  [--iam-role <role-arn>]
                                  [--input-directory <path>]
                                  [--architecture <x64 | arm64>]
@@ -1154,6 +1166,8 @@ struct Deployer {
                                           Function URL (if any).
             --region <region>             The AWS region to deploy to.
                                           (default: resolved from AWS configuration)
+            --profile <profile-name>     The named AWS profile to use for credentials and region.
+                                          (default: default credential provider chain)
             --iam-role <role-arn>         The ARN of an existing IAM role for the Lambda function.
                                           (default: create a new role)
             --input-directory <path>      The path to the directory containing the deployment
@@ -1176,6 +1190,7 @@ struct DeployerConfiguration: CustomStringConvertible {
     let withURL: Bool
     let delete: Bool
     let region: String?
+    let profile: String?
     let iamRole: String?
     let inputDirectory: URL?
     let architecture: Architecture
@@ -1202,6 +1217,7 @@ struct DeployerConfiguration: CustomStringConvertible {
         let withURLArgument = argumentExtractor.extractFlag(named: "with-url") > 0
         let deleteArgument = argumentExtractor.extractFlag(named: "delete") > 0
         let regionArgument = argumentExtractor.extractOption(named: "region")
+        let profileArgument = argumentExtractor.extractOption(named: "profile")
         let iamRoleArgument = argumentExtractor.extractOption(named: "iam-role")
         let inputDirectoryArgument = argumentExtractor.extractOption(named: "input-directory")
         let architectureArgument = argumentExtractor.extractOption(named: "architecture")
@@ -1221,6 +1237,9 @@ struct DeployerConfiguration: CustomStringConvertible {
 
         // AWS region (nil means Soto resolves it)
         self.region = regionArgument.first
+
+        // AWS profile from ~/.aws/config (nil means default credential chain)
+        self.profile = profileArgument.first
 
         // IAM role ARN (nil means create a new role)
         self.iamRole = iamRoleArgument.first
@@ -1253,6 +1272,7 @@ struct DeployerConfiguration: CustomStringConvertible {
           withURL: \(self.withURL)
           delete: \(self.delete)
           region: \(self.region ?? "<resolved from AWS config>")
+          profile: \(self.profile ?? "<default>")
           iamRole: \(self.iamRole ?? "<create new>")
           inputDirectory: \(self.inputDirectory?.path() ?? "<default build output>")
           architecture: \(self.architecture.rawValue)
