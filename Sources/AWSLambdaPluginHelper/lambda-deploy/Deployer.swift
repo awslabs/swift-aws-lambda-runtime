@@ -560,8 +560,10 @@ struct Deployer {
         self.checkAWSConfigurationFiles(verbose: configuration.verboseLogging)
 
         // Initialize AWSClient with the appropriate credential provider.
-        // When --profile is specified, use .configFile(profile:) to load
-        // credentials from the named profile in ~/.aws/credentials and ~/.aws/config.
+        // When --profile is specified, build a selector chain that passes the
+        // profile name to each provider that understands profiles (configFile,
+        // sso, login) — mirroring the structure of .default so profiles using
+        // login_session or sso_session resolve, not just static / assume-role.
         // Otherwise, use the default credential provider chain.
         let clientLogger: Logger = {
             var logger = Logger(label: "AWSLambdaDeployer")
@@ -574,7 +576,11 @@ struct Deployer {
             if configuration.verboseLogging {
                 print("[verbose] Using AWS profile: \(profile)")
             }
-            credentialProvider = .configFile(profile: profile)
+            credentialProvider = .selector(
+                .configFile(profile: profile),
+                .sso(profileName: profile),
+                .login(profileName: profile)
+            )
         } else {
             credentialProvider = .default
         }
