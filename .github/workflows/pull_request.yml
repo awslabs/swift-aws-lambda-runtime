@@ -10,22 +10,19 @@ permissions: read-all
 jobs:
   soundness:
     name: Soundness
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@main
+    # WORKAROUND for swiftlang/github-workflows#291:
+    # Pinned to tag 0.0.11 instead of @main because #282 broke the docs check on @main
+    # (the doc target read from .spi.yml reaches `--target` JSON-quoted, and the
+    # `docs_check_targets` input that would work around it is dropped inside containers).
+    # 0.0.11 predates #282 and has neither problem. Restore `@main` once it's fixed upstream
+    # (the maintainer recommended 0.0.11 in the meantime).
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.11
     with:
       license_header_check_project_name: "SwiftAWSLambdaRuntime"
       shell_check_enabled: true
       python_lint_check_enabled: true
       api_breakage_check_container_image: "swift:6.3-noble"
       docs_check_container_image: "swift:6.3-noble"
-      # WORKAROUND for swiftlang/github-workflows#291:
-      # Pass the doc target explicitly so the shared check-docs.sh skips its .spi.yml
-      # extraction. That extraction uses the Python `yq` (installed via apt in the
-      # container), which without `-r` emits the target JSON-quoted (e.g. "AWSLambdaRuntime"),
-      # so the literal quotes leak into `--target` and the build fails with
-      # `no target named '"AWSLambdaRuntime"'`. Supplying --doc-targets avoids that path.
-      # Remove this once the upstream regression is fixed:
-      # https://github.com/swiftlang/github-workflows/issues/291
-      docs_check_targets: "AWSLambdaRuntime"
       format_check_container_image: "swift:6.3-noble"
       yamllint_check_enabled: true
 
