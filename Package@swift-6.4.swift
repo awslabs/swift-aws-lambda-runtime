@@ -82,6 +82,7 @@ let package = Package(
                     condition: .when(traits: ["ServiceLifecycleSupport"])
                 ),
             ],
+            exclude: ["Docs.docc"],
             swiftSettings: defaultSwiftSettings
         ),
         .plugin(
