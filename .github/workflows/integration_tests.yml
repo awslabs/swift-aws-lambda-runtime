@@ -139,12 +139,20 @@ jobs:
         examples: ${{ fromJson(inputs.archive_plugin_examples) }}
     # Runs in the Swift 6.4 container so that `swift(>=6.4)` is true and the new
     # helper-delegating `archive` verb and the new `lambda-build` verb are compiled.
-    # The packaging plugins shell out to docker, so we mount the host docker socket
-    # and install the docker CLI and zip tooling inside the container.
+    #
+    # The packaging plugins shell out to the HOST docker daemon (socket mounted below).
+    # The plugin builds the example inside an Amazon Linux container and bind-mounts the
+    # checkout into it. Because the daemon runs on the host, the bind-mount source must be
+    # a HOST path: GitHub mounts the host work dir (/home/runner/work) at /__w inside this
+    # job container, so a path like /__w/... does not exist for the host daemon. We mount
+    # /home/runner/work at the SAME path here, and the test step runs the plugin from that
+    # host-equivalent path, so the inner `docker run -v <src>:/workspace` source resolves
+    # correctly on the host.
     container:
       image: ${{ inputs.archive_plugin_swift64_container_image }}
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
+        - /home/runner/work:/home/runner/work
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -170,6 +178,13 @@ jobs:
         env:
           EXAMPLE: ${{ matrix.examples }}
         run: |
+            # GitHub mounts the host work dir (/home/runner/work) at /__w inside this
+            # container, so $GITHUB_WORKSPACE is /__w/<repo>/<repo>. The plugin shells out
+            # to the host docker daemon, which cannot resolve /__w paths. We mounted
+            # /home/runner/work at the same path, so re-enter the checkout via the
+            # host-equivalent path before running the plugin.
+            HOST_WORKSPACE="${GITHUB_WORKSPACE/\/__w//home/runner/work}"
+            cd "${HOST_WORKSPACE}"
             .github/workflows/scripts/check-archive-plugin-swift64.sh
 
   check-foundation:
