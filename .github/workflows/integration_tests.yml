@@ -183,7 +183,9 @@ jobs:
             # to the host docker daemon, which cannot resolve /__w paths. We mounted
             # /home/runner/work at the same path, so re-enter the checkout via the
             # host-equivalent path before running the plugin.
-            HOST_WORKSPACE="${GITHUB_WORKSPACE/\/__w//home/runner/work}"
+            # NOTE: this step runs under `sh` (dash) inside the container, so we use
+            # POSIX `sed` rather than a bash-only `${var/a/b}` substitution.
+            HOST_WORKSPACE=$(printf '%s\n' "$GITHUB_WORKSPACE" | sed 's#^/__w/#/home/runner/work/#')
             cd "${HOST_WORKSPACE}"
             .github/workflows/scripts/check-archive-plugin-swift64.sh
 
