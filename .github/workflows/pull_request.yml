@@ -10,13 +10,7 @@ permissions: read-all
 jobs:
   soundness:
     name: Soundness
-    # WORKAROUND for swiftlang/github-workflows#291:
-    # Pinned to tag 0.0.11 instead of @main because #282 broke the docs check on @main
-    # (the doc target read from .spi.yml reaches `--target` JSON-quoted, and the
-    # `docs_check_targets` input that would work around it is dropped inside containers).
-    # 0.0.11 predates #282 and has neither problem. Restore `@main` once it's fixed upstream
-    # (the maintainer recommended 0.0.11 in the meantime).
-    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@0.0.11
+    uses: swiftlang/github-workflows/.github/workflows/soundness.yml@main
     with:
       license_header_check_project_name: "SwiftAWSLambdaRuntime"
       shell_check_enabled: true
@@ -25,6 +19,13 @@ jobs:
       docs_check_container_image: "swift:6.3-noble"
       format_check_container_image: "swift:6.3-noble"
       yamllint_check_enabled: true
+      # Temporarily disabled: the shared docs check is broken upstream (it loads
+      # check-docs.sh from main, where #282 passes the .spi.yml doc target to
+      # `--target` JSON-quoted, failing with `no target named '"AWSLambdaRuntime"'`).
+      # Pinning the workflow version does not help because the script is always fetched
+      # from main. Re-enable once the upstream fix lands:
+      # https://github.com/swiftlang/github-workflows/pull/290 (tracked in #291)
+      docs_check_enabled: false
 
   unit-tests:
     name: Unit tests
