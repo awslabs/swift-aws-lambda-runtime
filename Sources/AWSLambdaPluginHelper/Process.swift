@@ -48,7 +48,7 @@ struct Utils {
 
         let outputMutex = Mutex("")
         let outputSync = DispatchGroup()
-        let outputQueue = DispatchQueue(label: "AWSLambdaPackager.output")
+        let outputQueue = DispatchQueue(label: "AWSLambdaPluginHelper.output")
         let unsafeTransfer = UnsafeTransfer(value: stdout)
         let outputHandler = { @Sendable (data: Data?) in
             dispatchPrecondition(condition: .onQueue(outputQueue))
