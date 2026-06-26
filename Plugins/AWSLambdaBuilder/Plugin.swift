@@ -49,7 +49,7 @@ struct AWSLambdaPackager: CommandPlugin {
             else {
                 throw BuilderErrors.invalidArgument("invalid output directory '\(outputPath)'")
             }
-            outputDirectory = URL(string: outputPath)!
+            outputDirectory = URL(fileURLWithPath: outputPath)
         } else {
             outputDirectory = context.pluginWorkDirectoryURL.appending(path: "\(AWSLambdaPackager.self)")
         }
