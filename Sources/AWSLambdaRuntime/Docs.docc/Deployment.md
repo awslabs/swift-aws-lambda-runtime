@@ -87,7 +87,7 @@ Here is the content of this guide:
    swift package --allow-network-connections docker lambda-build
    ```
 
-   This command creates a ZIP file with the compiled Swift code. The ZIP file is located in the `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MyLambda/MyLambda.zip` folder.
+   This command creates a ZIP file with the compiled Swift code. The ZIP file is located in the `.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/MyLambda/MyLambda.zip` folder.
 
    The name of the ZIP file depends on the target name you entered in the `Package.swift` file.
 
@@ -289,7 +289,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       # the directory name and ZIP file names depends on the Swift executable target name
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/APIGatewayLambda/APIGatewayLambda.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2
@@ -469,7 +469,7 @@ export class LambdaApiStack extends cdk.Stack {
       runtime: lambda.Runtime.PROVIDED_AL2,
       architecture: lambda.Architecture.ARM_64,
       handler: 'bootstrap',
-      code: lambda.Code.fromAsset('../.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip'),
+      code: lambda.Code.fromAsset('../.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/APIGatewayLambda/APIGatewayLambda.zip'),
       memorySize: 128,
       timeout: cdk.Duration.seconds(30),
       environment: {

@@ -23,7 +23,7 @@ Resources:
   SotoExample:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/SotoExample/SotoExample.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/SotoExample/SotoExample.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2023

@@ -17,6 +17,6 @@ building "PalindromeLambda"
 archiving "PalindromeLambda"
 -------------------------------------------------------------------------
 1 archive created
-  * PalindromeLambda at /Users/sst/Palindrome/.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/PalindromeLambda/PalindromeLambda.zip
+  * PalindromeLambda at /Users/sst/Palindrome/.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/PalindromeLambda/PalindromeLambda.zip
 
-cp .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/PalindromeLambda/PalindromeLambda.zip ~/Desktop
+cp .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/PalindromeLambda/PalindromeLambda.zip ~/Desktop

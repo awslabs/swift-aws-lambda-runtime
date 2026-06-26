@@ -74,7 +74,7 @@ Resources:
   MultiTenantLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MultiTenant/MultiTenant.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/MultiTenant/MultiTenant.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2023

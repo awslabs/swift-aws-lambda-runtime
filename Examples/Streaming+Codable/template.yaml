@@ -23,7 +23,7 @@ Resources:
   StreamingCodable:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingCodable/StreamingCodable.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/StreamingCodable/StreamingCodable.zip
       Timeout: 15
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2023

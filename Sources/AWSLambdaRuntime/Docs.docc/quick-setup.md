@@ -130,7 +130,7 @@ building "MyFirstLambdaFunction"
 archiving "MyFirstLambdaFunction"
 -------------------------------------------------------------------------
 1 archive created
-  * MyFirstLambdaFunction at /Users/YourUserName/MyFirstLambdaFunction/.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaPackager/MyFirstLambdaFunction/MyFirstLambdaFunction.zip
+  * MyFirstLambdaFunction at /Users/YourUserName/MyFirstLambdaFunction/.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/MyFirstLambdaFunction/MyFirstLambdaFunction.zip
 ```
 
 6. Deploy on AWS Lambda

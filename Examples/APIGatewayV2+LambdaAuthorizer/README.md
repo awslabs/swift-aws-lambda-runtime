@@ -23,7 +23,7 @@ swift package --allow-network-connections docker lambda-build
 ```
 
 If there is no error, there are two ZIP files ready to deploy, one for the authorizer function and one for the business function.
-The ZIP file are located under `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager`
+The ZIP file are located under `.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder`
 
 ## Deploy
 

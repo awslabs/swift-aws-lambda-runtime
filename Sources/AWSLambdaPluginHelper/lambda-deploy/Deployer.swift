@@ -687,7 +687,7 @@ struct Deployer {
                     // The legacy AWSLambdaPackager path can be removed when the archive plugin is retired.
                     let builderPath = URL(
                         fileURLWithPath:
-                            ".build/plugins/AWSLambdaBuilder/outputs/AWSLambdaPackager/\(functionName)/\(functionName).zip"
+                            ".build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/\(functionName)/\(functionName).zip"
                     )
                     let packagerPath = URL(
                         fileURLWithPath:

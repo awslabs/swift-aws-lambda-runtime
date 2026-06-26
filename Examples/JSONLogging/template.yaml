@@ -6,7 +6,7 @@ Resources:
   JSONLoggingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/JSONLogging/JSONLogging.zip
       Timeout: 60
       Handler: swift.bootstrap
       Runtime: provided.al2023

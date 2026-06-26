@@ -22,7 +22,7 @@ swift package --allow-network-connections docker lambda-build
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
-The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HBLambda/HBLambda.zip`
+The ZIP file is located at `.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/HBLambda/HBLambda.zip`
 
 ## Deploy
 

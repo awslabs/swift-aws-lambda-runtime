@@ -30,14 +30,14 @@ Resources:
   HelloJSONFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/HelloJSON/HelloJSON.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/HelloJSON/HelloJSON.zip
       FunctionName: !Sub "${AWS::StackName}-HelloJSON"
 
   # Streaming Function - Demonstrates response streaming capabilities
   StreamingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/Streaming/Streaming.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/Streaming/Streaming.zip
       FunctionName: !Sub "${AWS::StackName}-Streaming"
       Timeout: 60  # Longer timeout for streaming operations
       FunctionUrlConfig:
@@ -48,7 +48,7 @@ Resources:
   BackgroundTasksFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/BackgroundTasks/BackgroundTasks.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/BackgroundTasks/BackgroundTasks.zip
       FunctionName: !Sub "${AWS::StackName}-BackgroundTasks"
       Timeout: 300  # 5 minutes for background processing
       Environment:

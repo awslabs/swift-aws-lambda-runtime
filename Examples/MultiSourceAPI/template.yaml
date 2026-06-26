@@ -6,7 +6,7 @@ Resources:
   MultiSourceAPIFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/MultiSourceAPI/MultiSourceAPI.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/MultiSourceAPI/MultiSourceAPI.zip
       Handler: provided
       Runtime: provided.al2023
       Architectures:

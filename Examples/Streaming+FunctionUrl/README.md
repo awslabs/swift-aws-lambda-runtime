@@ -72,7 +72,7 @@ swift package --allow-network-connections docker lambda-build
 ```
 
 If there is no error, there is a ZIP file ready to deploy. 
-The ZIP file is located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip`
+The ZIP file is located at `.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/StreamingNumbers/StreamingNumbers.zip`
 
 ## Test locally
 
@@ -169,7 +169,7 @@ Resources:
   StreamingNumbers:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/StreamingNumbers/StreamingNumbers.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/StreamingNumbers/StreamingNumbers.zip
       Timeout: 15
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2023

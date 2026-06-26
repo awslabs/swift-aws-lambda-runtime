@@ -42,7 +42,7 @@ Resources:
   JSONLoggingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/JSONLogging/JSONLogging.zip
       Handler: swift.bootstrap
       Runtime: provided.al2023
       Architectures:
@@ -88,7 +88,7 @@ swift package --allow-network-connections docker lambda-build
 ```
 
 The deployment package will be at:
-`.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip`
+`.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/JSONLogging/JSONLogging.zip`
 
 ## Deploy with SAM
 
@@ -103,7 +103,7 @@ Resources:
   JSONLoggingFunction:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/JSONLogging/JSONLogging.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/JSONLogging/JSONLogging.zip
       Timeout: 60
       Handler: swift.bootstrap
       Runtime: provided.al2023

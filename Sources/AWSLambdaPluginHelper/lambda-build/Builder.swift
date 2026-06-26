@@ -372,7 +372,7 @@ struct Builder {
             OPTIONS:
             --verbose                     Produce verbose output for debugging.
             --output-path <path>          The path of the binary package.
-                                          (default is `.build/plugins/AWSLambdaPackager/outputs/...`)
+                                          (default is `.build/plugins/AWSLambdaBuilder/outputs/...`)
             --products <list>             The list of executable targets to build.
                                           (default is taken from Package.swift)
             --configuration <name>        The build configuration (debug or release)

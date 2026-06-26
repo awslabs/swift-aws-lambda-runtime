@@ -26,7 +26,7 @@ swift build
 swift package --allow-network-connections docker lambda-build
 ```
 
-If there are no errors, a ZIP file should be ready to deploy, located at `.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/S3EventNotifier/S3EventNotifier.zip`.
+If there are no errors, a ZIP file should be ready to deploy, located at `.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/S3EventNotifier/S3EventNotifier.zip`.
 
 ## Deploy
 

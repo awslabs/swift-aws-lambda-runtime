@@ -47,7 +47,7 @@ Resources:
   APIGatewayLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/APIGatewayLambda/APIGatewayLambda.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/APIGatewayLambda/APIGatewayLambda.zip
       Timeout: 60
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2023
@@ -72,7 +72,7 @@ Resources:
   AuthorizerLambda:
     Type: AWS::Serverless::Function
     Properties:
-      CodeUri: .build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager/AuthorizerLambda/AuthorizerLambda.zip
+      CodeUri: .build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/AuthorizerLambda/AuthorizerLambda.zip
       Timeout: 29  # max 29 seconds for Lambda authorizers
       Handler: swift.bootstrap  # ignored by the Swift runtime
       Runtime: provided.al2023
