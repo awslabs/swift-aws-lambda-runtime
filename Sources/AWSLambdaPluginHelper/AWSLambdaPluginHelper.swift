@@ -44,7 +44,7 @@ struct AWSLambdaPluginHelper {
 
     /// Returns nil when help should be displayed (no args, "help", "--help", or invalid command).
     private func command(from arguments: [String]) -> Command? {
-        let args = CommandLine.arguments
+        let args = arguments
 
         guard args.count > 1 else {
             return nil
