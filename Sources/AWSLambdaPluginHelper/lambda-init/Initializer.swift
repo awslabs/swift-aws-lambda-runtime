@@ -60,6 +60,9 @@ struct Initializer {
             print("📦 You can now package with: 'swift package lambda-build'")
         } catch {
             print("🛑 Failed to create the Lambda function file: \(error)")
+            // Re-throw so the SwiftPM plugin observes a non-zero exit status and the
+            // failure is not silently swallowed.
+            throw error
         }
     }
 
