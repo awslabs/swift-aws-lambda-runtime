@@ -141,7 +141,9 @@ scaffold_project() {
     swift package init --type executable --name "${FUNCTION_NAME}"
 
     # Add macOS 15 platform requirement (needed by AWSLambdaRuntime)
-    sed -i '' 's/name: "'"${FUNCTION_NAME}"'",/name: "'"${FUNCTION_NAME}"'",\n    platforms: [.macOS(.v15)],/' Package.swift
+    # Use -i.bak (works on both BSD/macOS and GNU/Linux sed) and remove the backup.
+    sed -i.bak 's/name: "'"${FUNCTION_NAME}"'",/name: "'"${FUNCTION_NAME}"'",\n    platforms: [.macOS(.v15)],/' Package.swift
+    rm -f Package.swift.bak
 
     # Add the lambda runtime dependency
     swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch sebsto/new-plugins
