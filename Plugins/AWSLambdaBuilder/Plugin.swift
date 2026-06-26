@@ -17,7 +17,7 @@ import Foundation
 import PackagePlugin
 
 @main
-struct AWSLambdaPackager: CommandPlugin {
+struct AWSLambdaBuilder: CommandPlugin {
 
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
 
@@ -51,7 +51,7 @@ struct AWSLambdaPackager: CommandPlugin {
             }
             outputDirectory = URL(fileURLWithPath: outputPath)
         } else {
-            outputDirectory = context.pluginWorkDirectoryURL.appending(path: "\(AWSLambdaPackager.self)")
+            outputDirectory = context.pluginWorkDirectoryURL.appending(path: "\(AWSLambdaBuilder.self)")
         }
 
         let explicitProducts = !productsArgument.isEmpty

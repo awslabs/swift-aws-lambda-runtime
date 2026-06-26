@@ -87,7 +87,7 @@ verify_output "archive" "${ARCHIVE_OUTPUT_DIR}"
 # 2. New 'lambda-build' verb (Swift 6.4+ only)
 # ---------------------------------------------------------------------------
 log "Testing 'lambda-build' verb"
-BUILD_OUTPUT_DIR=.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaPackager
+BUILD_OUTPUT_DIR=.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder
 LAMBDA_USE_LOCAL_DEPS=../.. swift package lambda-build \
     --allow-network-connections docker \
     --products "${PRODUCT}" \
