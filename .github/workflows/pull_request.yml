@@ -19,13 +19,7 @@ jobs:
       docs_check_container_image: "swift:6.3-noble"
       format_check_container_image: "swift:6.3-noble"
       yamllint_check_enabled: true
-      # Temporarily disabled: the shared docs check is broken upstream (it loads
-      # check-docs.sh from main, where #282 passes the .spi.yml doc target to
-      # `--target` JSON-quoted, failing with `no target named '"AWSLambdaRuntime"'`).
-      # Pinning the workflow version does not help because the script is always fetched
-      # from main. Re-enable once the upstream fix lands:
-      # https://github.com/swiftlang/github-workflows/pull/290 (tracked in #291)
-      docs_check_enabled: false
+      docs_check_enabled: true
 
   unit-tests:
     name: Unit tests
