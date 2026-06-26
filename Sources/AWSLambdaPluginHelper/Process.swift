@@ -41,7 +41,7 @@ struct Utils {
         // This transfer is fine, because we write to the variable from a single SerialDispatchQueue here.
         // We wait until the process is run below process.waitUntilExit().
         // This means no further writes to output will happen.
-        // This makes it save for us to read the output
+        // This makes it safe for us to read the output
         struct UnsafeTransfer<Value>: @unchecked Sendable {
             let value: Value
         }
