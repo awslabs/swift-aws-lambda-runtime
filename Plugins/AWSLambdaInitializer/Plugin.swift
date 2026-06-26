@@ -17,7 +17,7 @@ import Foundation
 import PackagePlugin
 
 @main
-struct AWSLambdaPackager: CommandPlugin {
+struct AWSLambdaInitializer: CommandPlugin {
 
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
         let tool = try context.tool(named: "AWSLambdaPluginHelper")
