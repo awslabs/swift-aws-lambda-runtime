@@ -30,11 +30,12 @@ struct RetryTests {
         let result = try await withRetry(
             maxAttempts: 3,
             initialDelay: .zero,
-            isRetryable: { _ in true }
-        ) {
-            attempts.increment()
-            return 42
-        }
+            isRetryable: { _ in true },
+            operation: {
+                attempts.increment()
+                return 42
+            }
+        )
         #expect(result == 42)
         #expect(attempts.value == 1)
     }
@@ -46,12 +47,13 @@ struct RetryTests {
         let result = try await withRetry(
             maxAttempts: 5,
             initialDelay: .zero,
-            isRetryable: { $0 is Transient }
-        ) {
-            attempts.increment()
-            if attempts.value < 3 { throw Transient() }
-            return "ok"
-        }
+            isRetryable: { $0 is Transient },
+            operation: {
+                attempts.increment()
+                if attempts.value < 3 { throw Transient() }
+                return "ok"
+            }
+        )
         #expect(result == "ok")
         #expect(attempts.value == 3)
     }
@@ -64,11 +66,12 @@ struct RetryTests {
             try await withRetry(
                 maxAttempts: 3,
                 initialDelay: .zero,
-                isRetryable: { $0 is Transient }
-            ) {
-                attempts.increment()
-                throw Transient()
-            }
+                isRetryable: { $0 is Transient },
+                operation: {
+                    attempts.increment()
+                    throw Transient()
+                }
+            )
         }
         #expect(attempts.value == 3)
     }
@@ -81,11 +84,12 @@ struct RetryTests {
             try await withRetry(
                 maxAttempts: 5,
                 initialDelay: .zero,
-                isRetryable: { $0 is Transient }
-            ) {
-                attempts.increment()
-                throw Fatal()
-            }
+                isRetryable: { $0 is Transient },
+                operation: {
+                    attempts.increment()
+                    throw Fatal()
+                }
+            )
         }
         #expect(attempts.value == 1)
     }
@@ -99,12 +103,13 @@ struct RetryTests {
             maxAttempts: 4,
             initialDelay: .zero,
             isRetryable: { $0 is Transient },
-            onRetry: { _, _ in retries.increment() }
-        ) {
-            attempts.increment()
-            if attempts.value < 3 { throw Transient() }
-            return 0
-        }
+            onRetry: { _, _ in retries.increment() },
+            operation: {
+                attempts.increment()
+                if attempts.value < 3 { throw Transient() }
+                return 0
+            }
+        )
         // Two failures before the third, successful attempt → two retry callbacks.
         #expect(retries.value == 2)
     }

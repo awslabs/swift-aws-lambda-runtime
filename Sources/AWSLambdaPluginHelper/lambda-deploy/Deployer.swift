@@ -323,13 +323,16 @@ struct Deployer {
                 onRetry: { attempt, _ in
                     if verbose {
                         print(
-                            "[verbose] IAM role not yet assumable by Lambda (attempt \(attempt)); retrying..."
+                            "[verbose] IAM role not yet assumable by Lambda (attempt \(attempt)/15); retrying..."
                         )
+                    } else {
+                        print("Waiting for the role (\(attempt)/15)...")
                     }
+                },
+                operation: {
+                    try await lambdaClient.createFunction(request)
                 }
-            ) {
-                try await lambdaClient.createFunction(request)
-            }
+            )
             if verbose {
                 print("[verbose] Lambda function '\(name)' created successfully")
                 if let arn = response.functionArn {
