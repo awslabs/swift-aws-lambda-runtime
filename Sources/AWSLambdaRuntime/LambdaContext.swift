@@ -197,7 +197,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         )
     }
 
-    /// Create a `LambdaContext` using the task-local ``Logging/Logger/current`` as its logger.
+    /// Create a `LambdaContext` using the task-local `Logger.current` as its logger.
     ///
     /// The logger bound by the nearest enclosing `withLogger` scope is captured for this
     /// context. When constructed inside the runtime's per-invocation scope, this is the

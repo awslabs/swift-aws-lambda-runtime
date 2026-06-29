@@ -35,7 +35,7 @@ public struct LoggingConfiguration: Sendable {
     /// configured format (e.g. appearing as plain text when JSON mode is selected).
     /// Callers should use `makeRuntimeLogger()` after initialization to obtain a
     /// properly configured logger for any diagnostic messages.
-    /// Create a logging configuration using the task-local ``Logging/Logger/current`` as its
+    /// Create a logging configuration using the task-local `Logger.current` as its
     /// base logger.
     public init() {
         self.init(baseLogger: Logger.current)
