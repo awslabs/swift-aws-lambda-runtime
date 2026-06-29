@@ -34,33 +34,23 @@ struct Builder {
             self.displayAL2Warning()
         }
 
-        let builtProducts: [String: URL]
-
+        // Select the build backend: build natively when already on an Amazon Linux host,
+        // otherwise cross-compile using the backend chosen by --cross-compile.
+        let backend: BuildBackend
         if self.isAmazonLinux(.al2) || self.isAmazonLinux(.al2023) {
-            // native build on Amazon Linux
-            builtProducts = try self.buildNative(
-                packageIdentity: configuration.packageID,
-                products: configuration.products,
-                buildConfiguration: configuration.buildConfiguration,
-                noStrip: configuration.noStrip,
-                verboseLogging: configuration.verboseLogging
-            )
+            backend = NativeBuildBackend()
         } else {
-            // build with docker/container
-            builtProducts = try self.buildInDocker(
-                packageIdentity: configuration.packageID,
-                packageDirectory: configuration.packageDirectory,
-                products: configuration.products,
-                containerCLIPath: configuration.dockerToolPath,
-                containerCLI: configuration.crossCompileMethod,
-                outputDirectory: configuration.outputDirectory,
-                baseImage: configuration.baseDockerImage,
-                disableDockerImageUpdate: configuration.disableDockerImageUpdate,
-                buildConfiguration: configuration.buildConfiguration,
-                noStrip: configuration.noStrip,
-                verboseLogging: configuration.verboseLogging
-            )
+            backend = try configuration.crossCompileMethod.makeBackend(configuration: configuration)
         }
+
+        let builtProducts = try backend.build(
+            packageIdentity: configuration.packageID,
+            packageDirectory: configuration.packageDirectory,
+            products: configuration.products,
+            buildConfiguration: configuration.buildConfiguration,
+            noStrip: configuration.noStrip,
+            verboseLogging: configuration.verboseLogging
+        )
 
         // create the archive
         let archives = try self.package(
@@ -77,154 +67,6 @@ struct Builder {
         for (product, archivePath) in archives {
             print("  * \(product) at \(archivePath.path())")
         }
-    }
-
-    private func buildNative(
-        packageIdentity: String,
-        products: [String],
-        buildConfiguration: BuildConfiguration,
-        noStrip: Bool,
-        verboseLogging: Bool
-    ) throws -> [String: URL] {
-        print("-------------------------------------------------------------------------")
-        print("building \"\(packageIdentity)\"")
-        print("-------------------------------------------------------------------------")
-
-        var results = [String: URL]()
-        for product in products {
-            print("building \"\(product)\"")
-            var buildArguments = [
-                "build", "-c", buildConfiguration.rawValue,
-                "--product", product,
-                "--static-swift-stdlib",
-            ]
-            if !noStrip {
-                buildArguments += ["-Xlinker", "-s"]
-            }
-            try Utils.execute(
-                executable: URL(fileURLWithPath: "/usr/bin/swift"),
-                arguments: buildArguments,
-                logLevel: verboseLogging ? .debug : .output
-            )
-
-            // get the build output path
-            let showBinPathArguments = ["build", "-c", buildConfiguration.rawValue, "--show-bin-path"]
-            let binPath = try Utils.execute(
-                executable: URL(fileURLWithPath: "/usr/bin/swift"),
-                arguments: showBinPathArguments,
-                logLevel: .silent
-            ).trimmingCharacters(in: .whitespacesAndNewlines)
-
-            let productPath = URL(fileURLWithPath: binPath).appending(path: product)
-            guard FileManager.default.fileExists(atPath: productPath.path()) else {
-                print("expected '\(product)' binary at \"\(productPath.path())\"")
-                throw BuilderErrors.productExecutableNotFound(product)
-            }
-            results[product] = productPath
-        }
-        return results
-    }
-
-    private func buildInDocker(
-        packageIdentity: String,
-        packageDirectory: URL,
-        products: [String],
-        containerCLIPath: URL,
-        containerCLI: CrossCompileMethod,
-        outputDirectory: URL,
-        baseImage: String,
-        disableDockerImageUpdate: Bool,
-        buildConfiguration: BuildConfiguration,
-        noStrip: Bool,
-        verboseLogging: Bool
-    ) throws -> [String: URL] {
-
-        // verify the container CLI binary exists at the resolved path
-        guard FileManager.default.fileExists(atPath: containerCLIPath.path()) else {
-            throw BuilderErrors.containerCLINotFound(containerCLI)
-        }
-
-        print("-------------------------------------------------------------------------")
-        print("building \"\(packageIdentity)\" in \(containerCLI)")
-        print("-------------------------------------------------------------------------")
-
-        if !disableDockerImageUpdate {
-            // update the underlying image, if necessary
-            print("updating \"\(baseImage)\" image")
-            try Utils.execute(
-                executable: containerCLIPath,
-                arguments: containerCLI.pullArguments(image: baseImage),
-                logLevel: verboseLogging ? .debug : .output
-            )
-        }
-
-        // get the build output path
-        let buildOutputPathCommand = "swift build -c \(buildConfiguration.rawValue) --show-bin-path"
-        let dockerBuildOutputPath = try Utils.execute(
-            executable: containerCLIPath,
-            arguments: containerCLI.runArguments(
-                baseImage: baseImage,
-                workingDirectory: "/workspace",
-                mounts: ["\(packageDirectory.path()):/workspace"],
-                env: nil,
-                command: buildOutputPathCommand
-            ),
-            logLevel: verboseLogging ? .debug : .silent
-        )
-        guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
-            throw BuilderErrors.failedParsingDockerOutput(dockerBuildOutputPath)
-        }
-        let buildOutputPath = URL(
-            string: buildPathOutput.replacingOccurrences(of: "/workspace/", with: packageDirectory.description)
-        )!
-
-        // build the products
-        var builtProducts = [String: URL]()
-        for product in products {
-            print("building \"\(product)\"")
-            var buildCommand =
-                "swift build -c \(buildConfiguration.rawValue) --product \(product) --static-swift-stdlib"
-            if !noStrip {
-                buildCommand += " -Xlinker -s"
-            }
-            if let localPath = ProcessInfo.processInfo.environment["LAMBDA_USE_LOCAL_DEPS"] {
-                // when developing locally, we must have the full swift-aws-lambda-runtime project in the container
-                // because Examples' Package.swift have a dependency on ../..
-                // just like Package.swift's examples assume ../.., we assume we are two levels below the root project
-                let slice = packageDirectory.pathComponents.suffix(2)
-                try Utils.execute(
-                    executable: containerCLIPath,
-                    arguments: containerCLI.runArguments(
-                        baseImage: baseImage,
-                        workingDirectory: "/workspace/\(slice.joined(separator: "/"))",
-                        mounts: ["\(packageDirectory.path())../..:/workspace"],
-                        env: ["LAMBDA_USE_LOCAL_DEPS": localPath],
-                        command: buildCommand
-                    ),
-                    logLevel: verboseLogging ? .debug : .output
-                )
-            } else {
-                try Utils.execute(
-                    executable: containerCLIPath,
-                    arguments: containerCLI.runArguments(
-                        baseImage: baseImage,
-                        workingDirectory: "/workspace",
-                        mounts: ["\(packageDirectory.path()):/workspace"],
-                        env: nil,
-                        command: buildCommand
-                    ),
-                    logLevel: verboseLogging ? .debug : .output
-                )
-            }
-            let productPath = buildOutputPath.appending(path: product)
-
-            guard FileManager.default.fileExists(atPath: productPath.path()) else {
-                print("expected '\(product)' binary at \"\(productPath.path())\"")
-                throw BuilderErrors.productExecutableNotFound(product)
-            }
-            builtProducts[product] = productPath
-        }
-        return builtProducts
     }
 
     // TODO: explore using ziplib or similar instead of shelling out
@@ -399,97 +241,6 @@ struct Builder {
 }
 
 @available(LambdaSwift 2.0, *)
-enum CrossCompileMethod: String, CustomStringConvertible {
-    case docker
-    case container
-    case swiftStaticSdk = "swift-static-sdk"
-    case customSdk = "custom-sdk"
-
-    var isSupported: Bool {
-        switch self {
-        case .docker, .container: return true
-        case .swiftStaticSdk, .customSdk: return false
-        }
-    }
-
-    static func parse(_ value: String?) throws -> Self {
-        guard let value else {
-            return .docker
-        }
-
-        guard let method = CrossCompileMethod(rawValue: value.lowercased()) else {
-            throw BuilderErrors.invalidArgument(
-                "invalid cross-compile method '\(value)'. Use 'docker', 'container', 'swift-static-sdk', or 'custom-sdk'."
-            )
-        }
-
-        guard method.isSupported else {
-            throw BuilderErrors.unsupportedCrossCompileMethod(method)
-        }
-
-        return method
-    }
-
-    /// Returns the container CLI pull arguments for the given image.
-    func pullArguments(image: String) -> [String] {
-        switch self {
-        case .docker:
-            return ["pull", image]
-        case .container:
-            return ["image", "pull", image]
-        case .swiftStaticSdk, .customSdk:
-            fatalError("pullArguments should not be called for unsupported cross-compile methods")
-        }
-    }
-
-    /// Returns the container CLI run arguments for the given configuration.
-    func runArguments(
-        baseImage: String,
-        workingDirectory: String,
-        mounts: [String],
-        env: [String: String]?,
-        command: String
-    ) -> [String] {
-        func genericArgs() -> [String] {
-            var args: [String] = ["run", "--rm"]
-            for mount in mounts {
-                args += ["-v", mount]
-            }
-            if let env {
-                for (key, value) in env.sorted(by: { $0.key < $1.key }) {
-                    args += ["-e", "\(key)=\(value)"]
-                }
-            }
-            args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
-            return args
-        }
-        switch self {
-
-        case .docker:
-            return genericArgs()
-
-        case .container:
-            var args = genericArgs()
-
-            // container's runtime needs a bit more memory
-            if self == .container {
-                args.insert("--memory", at: 1)
-                args.insert("4G", at: 2)
-            }
-
-            return args
-
-        case .swiftStaticSdk, .customSdk:
-            fatalError("runArguments should not be called for unsupported cross-compile methods")
-        }
-    }
-
-    var description: String {
-        self.rawValue
-    }
-}
-
-@available(LambdaSwift 2.0, *)
 struct BuilderConfiguration: CustomStringConvertible {
 
     // passed by the user
@@ -508,7 +259,7 @@ struct BuilderConfiguration: CustomStringConvertible {
     public let packageID: String
     public let packageDisplayName: String
     public let packageDirectory: URL
-    public let dockerToolPath: URL
+    public let crossCompileToolPath: URL
     public let zipToolPath: URL
 
     public init(arguments: [String]) throws {
@@ -520,7 +271,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let packageIDArgument = argumentExtractor.extractOption(named: "package-id")
         let packageDisplayNameArgument = argumentExtractor.extractOption(named: "package-display-name")
         let packageDirectoryArgument = argumentExtractor.extractOption(named: "package-directory")
-        let dockerToolPathArgument = argumentExtractor.extractOption(named: "cross-compile-tool-path")
+        let crossCompileToolPathArgument = argumentExtractor.extractOption(named: "cross-compile-tool-path")
         let zipToolPathArgument = argumentExtractor.extractOption(named: "zip-tool-path")
         let productsArgument = argumentExtractor.extractOption(named: "products")
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
@@ -556,11 +307,11 @@ struct BuilderConfiguration: CustomStringConvertible {
         }
         self.packageDirectory = URL(fileURLWithPath: packageDirectoryArgument.first!)
 
-        // docker tool path
-        guard !dockerToolPathArgument.isEmpty else {
+        // cross-compile tool path
+        guard !crossCompileToolPathArgument.isEmpty else {
             throw BuilderErrors.invalidArgument("--cross-compile-tool-path argument is required")
         }
-        self.dockerToolPath = URL(fileURLWithPath: dockerToolPathArgument.first!)
+        self.crossCompileToolPath = URL(fileURLWithPath: crossCompileToolPathArgument.first!)
 
         // zip tool path
         guard !zipToolPathArgument.isEmpty else {
@@ -634,7 +385,7 @@ struct BuilderConfiguration: CustomStringConvertible {
           outputDirectory: \(self.outputDirectory)
           products: \(self.products)
           buildConfiguration: \(self.buildConfiguration)
-          dockerToolPath: \(self.dockerToolPath)
+          crossCompileToolPath: \(self.crossCompileToolPath)
           baseDockerImage: \(self.baseDockerImage)
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
           crossCompileMethod: \(self.crossCompileMethod)
