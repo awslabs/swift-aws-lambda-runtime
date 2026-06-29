@@ -627,3 +627,33 @@ struct UnsupportedCrossCompileMethodsPropertyTests {
         }
     }
 }
+
+@Suite("Property 10: Execution role name extraction from ARN")
+struct ExecutionRoleARNParsingTests {
+
+    static let validARNs: [(arn: String, expected: String)] = [
+        ("arn:aws:iam::123456789012:role/swift-lambda-MyLambda-role", "swift-lambda-MyLambda-role"),
+        ("arn:aws:iam::000000000000:role/basic", "basic"),
+        ("arn:aws:iam::123456789012:role/service-role/my-service-role", "my-service-role"),
+        ("arn:aws-us-gov:iam::123456789012:role/gov-role", "gov-role"),
+        ("arn:aws:iam::123456789012:role/path/to/deeply/nested-role", "nested-role"),
+    ]
+
+    @available(LambdaSwift 2.0, *)
+    @Test("Role name is the last path component of the ARN", arguments: validARNs)
+    func extractsRoleName(arn: String, expected: String) {
+        #expect(Deployer.roleName(fromARN: arn) == expected)
+    }
+
+    static let invalidARNs: [String] = [
+        "",
+        "not-an-arn",
+        "arn:aws:iam::123456789012:role/",
+    ]
+
+    @available(LambdaSwift 2.0, *)
+    @Test("ARNs without a role name return nil", arguments: invalidARNs)
+    func returnsNilForInvalidARN(arn: String) {
+        #expect(Deployer.roleName(fromARN: arn) == nil)
+    }
+}
