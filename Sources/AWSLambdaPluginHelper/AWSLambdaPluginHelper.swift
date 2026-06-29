@@ -13,6 +13,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if os(macOS)
+import Darwin.C
+#elseif canImport(Glibc)
+import Glibc
+#elseif canImport(Musl)
+import Musl
+#elseif os(Windows)
+import ucrt
+#else
+#error("Unsupported platform")
+#endif
+
 @main
 @available(LambdaSwift 2.0, *)
 struct AWSLambdaPluginHelper {
@@ -24,6 +36,11 @@ struct AWSLambdaPluginHelper {
     }
 
     public static func main() async throws {
+        // SwiftPM runs plugins with stdout connected to a pipe rather than a TTY, so the C runtime
+        // block-buffers stdout and the helper's output (and --help text) only appears when the process
+        // exits. Force line buffering so each printed line streams to the user as it is produced.
+        setvbuf(stdout, nil, _IOLBF, 0)
+
         let args = CommandLine.arguments
         let helper = AWSLambdaPluginHelper()
 
