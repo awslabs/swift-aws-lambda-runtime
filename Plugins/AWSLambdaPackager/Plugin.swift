@@ -537,8 +537,9 @@ private struct Configuration: CustomStringConvertible {
 
         let swiftVersion = swiftVersionArgument.first ?? .none  // undefined version will yield the latest docker image
 
+        // default to Amazon Linux 2023 after 30 June 2026 (Amazon Linux 2 is deprecated)
         self.baseDockerImage =
-            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2023"  // default to Amazon Linux 2023 since 30 June 2026
+            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2023"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
         self.containerCLI = try ContainerCLI.parse(
