@@ -464,7 +464,7 @@ enum CrossCompileMethod: String, CustomStringConvertible {
             return args
         }
         switch self {
-        
+
         case .docker:
             return genericArgs()
 
@@ -478,7 +478,7 @@ enum CrossCompileMethod: String, CustomStringConvertible {
             }
 
             return args
-            
+
         case .swiftStaticSdk, .customSdk:
             fatalError("runArguments should not be called for unsupported cross-compile methods")
         }
