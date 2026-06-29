@@ -307,11 +307,18 @@ struct Deployer {
 
         // A just-created IAM role is not always assumable by Lambda immediately: IAM is eventually
         // consistent, so CreateFunction can fail with InvalidParameterValueException ("The role
-        // defined for the function cannot be assumed by Lambda") until the role propagates. Retry on
-        // that specific transient error with a short backoff, up to a bounded ceiling, instead of
-        // unconditionally waiting for propagation before every create.
+        // defined for the function cannot be assumed by Lambda") until the role propagates.
+        //
+        // Role propagation is a fixed-time event (typically a few seconds), not an overloaded
+        // dependency, so we poll quickly with a low delay ceiling rather than letting the default
+        // exponential backoff grow coarse: that catches readiness within ~1s of it happening instead
+        // of overshooting into long late-stage waits. The high attempt count keeps a generous ceiling
+        // as a safety net.
         do {
             let response = try await withRetry(
+                maxAttempts: 15,
+                initialDelay: .milliseconds(500),
+                maxDelay: .seconds(2),
                 isRetryable: { self.isRoleNotYetAssumable($0) },
                 onRetry: { attempt, _ in
                     if verbose {
