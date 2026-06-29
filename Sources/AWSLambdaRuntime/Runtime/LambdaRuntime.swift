@@ -53,13 +53,13 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     public init(
         handler: sending Handler,
         eventLoop: any EventLoop = Lambda.defaultEventLoop,
-        logger: Logger = Logger(label: "LambdaRuntime")
+        logger: Logger = Logger.current
     ) {
         self.handlerStorage = SendingStorage(handler)
         self.eventLoop = eventLoop
 
         // Initialize logging configuration
-        self.loggingConfiguration = LoggingConfiguration(logger: logger)
+        self.loggingConfiguration = LoggingConfiguration(baseLogger: logger)
 
         // by setting the log level here, we understand it can not be changed dynamically at runtime
         // developers have to wait for AWS Lambda to dispose and recreate a runtime environment to pickup a change

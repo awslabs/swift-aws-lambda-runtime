@@ -136,7 +136,7 @@ extension LambdaRuntime {
     public convenience init<Event: Decodable, Output>(
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
-        logger: Logger = Logger(label: "LambdaRuntime"),
+        logger: Logger = Logger.current,
         body: sending @escaping (Event, LambdaContext) async throws -> Output
     )
     where
@@ -163,7 +163,7 @@ extension LambdaRuntime {
     /// - Parameter logger: The logger to use for the runtime. Defaults to a logger with label "LambdaRuntime".
     public convenience init<Event: Decodable>(
         decoder: JSONDecoder = JSONDecoder(),
-        logger: Logger = Logger(label: "LambdaRuntime"),
+        logger: Logger = Logger.current,
         body: sending @escaping (Event, LambdaContext) async throws -> Void
     )
     where
@@ -190,7 +190,7 @@ extension LambdaRuntime {
     ///   - lambdaHandler: A type that conforms to the `LambdaHandler` protocol, whose `Event` is `Decodable` and `Output` is `Void`
     public convenience init<Event: Decodable, LHandler: LambdaHandler>(
         decoder: JSONDecoder = JSONDecoder(),
-        logger: Logger = Logger(label: "LambdaRuntime"),
+        logger: Logger = Logger.current,
         lambdaHandler: sending LHandler
     )
     where
@@ -221,7 +221,7 @@ extension LambdaRuntime {
     public convenience init<Event: Decodable, Output, LHandler: LambdaHandler>(
         decoder: JSONDecoder = JSONDecoder(),
         encoder: JSONEncoder = JSONEncoder(),
-        logger: Logger = Logger(label: "LambdaRuntime"),
+        logger: Logger = Logger.current,
         lambdaHandler: sending LHandler
     )
     where

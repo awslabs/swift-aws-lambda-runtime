@@ -24,6 +24,31 @@ The Lambda function demonstrates various logging levels and metadata usage. When
 }
 ```
 
+## Logging from helper functions with `Logger.current`
+
+The runtime binds the per-invocation logger as the task-local [`Logger.current`](https://github.com/apple/swift-log) for the duration of each handler call. This means functions your handler calls can log with the request's metadata (request ID, trace ID) **without** receiving a `LambdaContext` or `Logger` parameter:
+
+```swift
+func validate(_ event: Request) {
+    Logger.current.debug("Validating request", metadata: ["name": .string(event.name)])
+    if event.name.isEmpty {
+        Logger.current.warning("Received a request with an empty name")
+    }
+}
+
+let runtime = LambdaRuntime { (event: Request, context: LambdaContext) in
+    context.logger.info("Processing request for \(event.name)")
+    validate(event)  // its logs carry this invocation's request ID and trace ID automatically
+    // ...
+}
+```
+
+This keeps your business code clean — no need to thread a logger through every function signature. Inside the handler itself, `context.logger` and `Logger.current` are equivalent.
+
+> **Notes**
+> - Automatic binding requires **Swift 6.2 or later**. On older toolchains, `Logger.current` falls back to the process-wide default logger (without the request metadata).
+> - Task-local values propagate through structured concurrency (`async let`, `withTaskGroup`, child `Task {}`) but are **not** inherited by `Task.detached` — capture the logger explicitly across a detached boundary.
+
 ## Configuration
 
 ### Environment Variables

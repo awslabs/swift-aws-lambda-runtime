@@ -35,7 +35,27 @@ public struct LoggingConfiguration: Sendable {
     /// configured format (e.g. appearing as plain text when JSON mode is selected).
     /// Callers should use `makeRuntimeLogger()` after initialization to obtain a
     /// properly configured logger for any diagnostic messages.
+    /// Create a logging configuration using the task-local ``Logging/Logger/current`` as its
+    /// base logger.
+    public init() {
+        self.init(baseLogger: Logger.current)
+    }
+
+    @available(
+        *,
+        deprecated,
+        message:
+            "This initializer will be removed in a future major version update. Use init() instead, which uses the task-local Logger.current. To supply a specific logger, bind it with withLogger(_:) around the call."
+    )
     public init(logger: Logger) {
+        self.init(baseLogger: logger)
+    }
+
+    /// Designated initializer. Internal so the runtime can build a configuration from a
+    /// specific logger without going through the deprecated `init(logger:)`.
+    /// `@usableFromInline` so the deprecated `@inlinable` `Lambda.runLoop` overload can call it.
+    @usableFromInline
+    init(baseLogger: Logger) {
         // Read AWS_LAMBDA_LOG_FORMAT (default: Text)
         self.format =
             LogFormat(
@@ -43,7 +63,7 @@ public struct LoggingConfiguration: Sendable {
             ) ?? .text
 
         // Store the base logger for cloning
-        self.baseLogger = logger
+        self.baseLogger = baseLogger
 
         // Determine log level with proper precedence
         // When both AWS_LAMBDA_LOG_LEVEL and LOG_LEVEL are set:

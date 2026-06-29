@@ -71,7 +71,7 @@ struct LoggingConfigurationTests {
     @available(LambdaSwift 2.0, *)
     func defaultFormatIsText() {
         withCleanEnvironment {
-            let config = LoggingConfiguration(logger: Logger(label: "test"))
+            let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
             #expect(config.format == .text)
         }
     }
@@ -81,7 +81,7 @@ struct LoggingConfigurationTests {
     func explicitTextFormat() {
         withCleanEnvironment {
             withEnvironment(["AWS_LAMBDA_LOG_FORMAT": "Text"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.format == .text)
             }
         }
@@ -92,7 +92,7 @@ struct LoggingConfigurationTests {
     func jsonFormat() {
         withCleanEnvironment {
             withEnvironment(["AWS_LAMBDA_LOG_FORMAT": "JSON"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.format == .json)
             }
         }
@@ -103,7 +103,7 @@ struct LoggingConfigurationTests {
     func invalidFormatFallsBackToText() {
         withCleanEnvironment {
             withEnvironment(["AWS_LAMBDA_LOG_FORMAT": "INVALID"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.format == .text)
             }
         }
@@ -115,7 +115,7 @@ struct LoggingConfigurationTests {
     @available(LambdaSwift 2.0, *)
     func noLogLevelByDefault() {
         withCleanEnvironment {
-            let config = LoggingConfiguration(logger: Logger(label: "test"))
+            let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
             #expect(config.applicationLogLevel == nil)
         }
     }
@@ -131,7 +131,7 @@ struct LoggingConfigurationTests {
                 "AWS_LAMBDA_LOG_LEVEL": "ERROR",
                 "LOG_LEVEL": "DEBUG",
             ]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == .error)
             }
         }
@@ -145,7 +145,7 @@ struct LoggingConfigurationTests {
                 "AWS_LAMBDA_LOG_FORMAT": "JSON",
                 "AWS_LAMBDA_LOG_LEVEL": "TRACE",
             ]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == .trace)
             }
         }
@@ -159,7 +159,7 @@ struct LoggingConfigurationTests {
                 "AWS_LAMBDA_LOG_FORMAT": "JSON",
                 "LOG_LEVEL": "WARN",
             ]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == .warning)
             }
         }
@@ -176,7 +176,7 @@ struct LoggingConfigurationTests {
                 "AWS_LAMBDA_LOG_LEVEL": "ERROR",
                 "LOG_LEVEL": "DEBUG",
             ]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == .debug)
             }
         }
@@ -187,7 +187,7 @@ struct LoggingConfigurationTests {
     func textUsesLogLevelAlone() {
         withCleanEnvironment {
             withEnvironment(["LOG_LEVEL": "ERROR"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == .error)
             }
         }
@@ -198,7 +198,7 @@ struct LoggingConfigurationTests {
     func textFallsBackToAwsLogLevel() {
         withCleanEnvironment {
             withEnvironment(["AWS_LAMBDA_LOG_LEVEL": "TRACE"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == .trace)
             }
         }
@@ -223,7 +223,7 @@ struct LoggingConfigurationTests {
         for (input, expected) in cases {
             withCleanEnvironment {
                 withEnvironment(["AWS_LAMBDA_LOG_LEVEL": input]) {
-                    let config = LoggingConfiguration(logger: Logger(label: "test"))
+                    let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                     #expect(config.applicationLogLevel == expected, "Expected \(input) to parse as \(expected)")
                 }
             }
@@ -235,7 +235,7 @@ struct LoggingConfigurationTests {
     func unknownLogLevelDefaultsToNil() {
         withCleanEnvironment {
             withEnvironment(["AWS_LAMBDA_LOG_LEVEL": "UNKNOWN"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 #expect(config.applicationLogLevel == nil)
             }
         }
@@ -248,7 +248,7 @@ struct LoggingConfigurationTests {
     func makeRuntimeLoggerTextMode() {
         withCleanEnvironment {
             withEnvironment(["LOG_LEVEL": "ERROR"]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 let logger = config.makeRuntimeLogger()
                 #expect(logger.logLevel == .error)
             }
@@ -263,7 +263,7 @@ struct LoggingConfigurationTests {
                 "AWS_LAMBDA_LOG_FORMAT": "JSON",
                 "AWS_LAMBDA_LOG_LEVEL": "DEBUG",
             ]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 let logger = config.makeRuntimeLogger()
                 #expect(logger.logLevel == .debug)
             }
@@ -277,7 +277,7 @@ struct LoggingConfigurationTests {
             let logStore = CollectEverythingLogHandler.LogStore()
             let baseLogger = Logger(label: "test") { _ in CollectEverythingLogHandler(logStore: logStore) }
 
-            let config = LoggingConfiguration(logger: baseLogger)
+            let config = LoggingConfiguration(baseLogger: baseLogger)
             let logger = config.makeLogger(label: "Lambda", requestID: "req-123", traceID: "trace-456")
 
             logger.info("test message")
@@ -297,7 +297,7 @@ struct LoggingConfigurationTests {
                 "AWS_LAMBDA_LOG_FORMAT": "JSON",
                 "AWS_LAMBDA_LOG_LEVEL": "ERROR",
             ]) {
-                let config = LoggingConfiguration(logger: Logger(label: "test"))
+                let config = LoggingConfiguration(baseLogger: Logger(label: "test"))
                 let logger = config.makeLogger(label: "Lambda", requestID: "req-123", traceID: "trace-456")
                 #expect(logger.logLevel == .error)
             }

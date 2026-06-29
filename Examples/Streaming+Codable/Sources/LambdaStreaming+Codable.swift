@@ -155,11 +155,11 @@ extension LambdaRuntime {
     /// Initialize with a streaming handler that receives decoded JSON events.
     /// - Parameters:
     ///   - decoder: The JSON decoder to use. Defaults to `JSONDecoder()`.
-    ///   - logger: The logger to use. Defaults to a logger with label "LambdaRuntime".
+    ///   - logger: The logger to use. Defaults to the task-local `Logger.current`.
     ///   - streamingBody: The handler closure that receives a decoded event.
     public convenience init<Event: Decodable>(
         decoder: JSONDecoder = JSONDecoder(),
-        logger: Logger = Logger(label: "LambdaRuntime"),
+        logger: Logger = Logger.current,
         streamingBody: @Sendable @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     )
     where

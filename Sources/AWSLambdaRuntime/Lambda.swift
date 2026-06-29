@@ -76,23 +76,43 @@ public enum Lambda {
                     metadata: metadata
                 )
 
+                let context = LambdaContext(
+                    requestID: invocation.metadata.requestID,
+                    traceID: invocation.metadata.traceID,
+                    tenantID: invocation.metadata.tenantID,
+                    invokedFunctionARN: invocation.metadata.invokedFunctionARN,
+                    deadline: LambdaClock.Instant(
+                        millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
+                    ),
+                    logger: requestLogger,
+                    logGroupName: logGroupName,
+                    logStreamName: logStreamName
+                )
+
                 do {
+                    // Bind the per-invocation logger as the task-local `Logger.current` for the
+                    // duration of the handler call, so business logic (and any function it calls)
+                    // can read `Logger.current` and inherit the request's metadata without having
+                    // to thread `context.logger` through every signature. `context.logger` keeps
+                    // working unchanged for code that prefers the explicit form.
+                    // The async `withLogger` overload requires Swift 6.2+; on 6.1 we call the
+                    // handler directly (no task-local binding). Remove the guard when 6.1 support
+                    // is dropped.
+                    #if compiler(>=6.2)
+                    try await withLogger(requestLogger) { _ in
+                        try await handler.handle(
+                            invocation.event,
+                            responseWriter: writer,
+                            context: context
+                        )
+                    }
+                    #else
                     try await handler.handle(
                         invocation.event,
                         responseWriter: writer,
-                        context: LambdaContext(
-                            requestID: invocation.metadata.requestID,
-                            traceID: invocation.metadata.traceID,
-                            tenantID: invocation.metadata.tenantID,
-                            invokedFunctionARN: invocation.metadata.invokedFunctionARN,
-                            deadline: LambdaClock.Instant(
-                                millisecondsSinceEpoch: invocation.metadata.deadlineInMillisSinceEpoch
-                            ),
-                            logger: requestLogger,
-                            logGroupName: logGroupName,
-                            logStreamName: logStreamName
-                        )
+                        context: context
                     )
+                    #endif
                     requestLogger.trace("Handler finished processing invocation")
                 } catch {
                     requestLogger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])

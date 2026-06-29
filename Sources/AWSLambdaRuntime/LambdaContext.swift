@@ -197,6 +197,68 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         )
     }
 
+    /// Create a `LambdaContext` using the task-local ``Logging/Logger/current`` as its logger.
+    ///
+    /// The logger bound by the nearest enclosing `withLogger` scope is captured for this
+    /// context. When constructed inside the runtime's per-invocation scope, this is the
+    /// request logger carrying the `requestID` / `traceID` metadata.
+    public init(
+        requestID: String,
+        traceID: String,
+        tenantID: String?,
+        invokedFunctionARN: String,
+        deadline: LambdaClock.Instant,
+        cognitoIdentity: String? = nil,
+        clientContext: ClientContext? = nil,
+        logGroupName: String? = nil,
+        logStreamName: String? = nil
+    ) {
+        self.storage = _Storage(
+            requestID: requestID,
+            traceID: traceID,
+            tenantID: tenantID,
+            invokedFunctionARN: invokedFunctionARN,
+            deadline: deadline,
+            cognitoIdentity: cognitoIdentity,
+            clientContext: clientContext,
+            logger: Logger.current,
+            logGroupName: logGroupName ?? "",
+            logStreamName: logStreamName ?? ""
+        )
+    }
+
+    /// Create a `LambdaContext` with an explicit logger. Internal so the runtime can build a
+    /// context from the per-invocation logger without going through the deprecated public
+    /// `logger:` initializer or binding the task-local just to construct the context.
+    ///
+    /// Omits `cognitoIdentity` / `clientContext` (the runtime does not set them), which also
+    /// keeps this signature distinct from the deprecated public `logger:` initializer.
+    /// `@usableFromInline` so the `@inlinable` `Lambda.runLoop` can call it.
+    @usableFromInline
+    init(
+        requestID: String,
+        traceID: String,
+        tenantID: String?,
+        invokedFunctionARN: String,
+        deadline: LambdaClock.Instant,
+        logger: Logger,
+        logGroupName: String? = nil,
+        logStreamName: String? = nil
+    ) {
+        self.storage = _Storage(
+            requestID: requestID,
+            traceID: traceID,
+            tenantID: tenantID,
+            invokedFunctionARN: invokedFunctionARN,
+            deadline: deadline,
+            cognitoIdentity: nil,
+            clientContext: nil,
+            logger: logger,
+            logGroupName: logGroupName ?? "",
+            logStreamName: logStreamName ?? ""
+        )
+    }
+
     /// The name of the Amazon CloudWatch Logs group for the function.
     public var logGroupName: String {
         self.storage.logGroupName

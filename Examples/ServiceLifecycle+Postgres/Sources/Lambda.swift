@@ -47,32 +47,41 @@ struct LambdaFunction {
     /// Function entry point when the runtime environment is created
     private func main() async throws {
 
-        // Instantiate LambdaRuntime with a handler implementing the business logic of the Lambda function
-        let lambdaRuntime = LambdaRuntime(logger: self.logger, body: self.handler)
+        // Bind our application logger as the task-local `Logger.current` for the whole
+        // service lifecycle. ServiceLifecycle propagates the task-local through the
+        // `ServiceGroup` and into every task it spawns, including each Lambda invocation.
+        // Code that runs within this scope can read `Logger.current` instead of receiving
+        // a logger as a parameter (see `prepareDatabase` / `queryUsers` below).
+        // Note: requires Swift 6.2+ for the Lambda runtime to (re)bind the per-invocation
+        // logger; the bootstrap binding here works on any supported toolchain.
+        try await withLogger(self.logger) { _ in
+            // Instantiate LambdaRuntime with a handler implementing the business logic of the Lambda function
+            let lambdaRuntime = LambdaRuntime(logger: self.logger, body: self.handler)
 
-        // Use a prelude service to execute PG code before setting up the Lambda service
-        // the PG code will run only once and will create the database schema and populate it with initial data
-        let preludeService = PreludeService(
-            service: lambdaRuntime,
-            prelude: {
-                try await prepareDatabase()
-            }
-        )
+            // Use a prelude service to execute PG code before setting up the Lambda service
+            // the PG code will run only once and will create the database schema and populate it with initial data
+            let preludeService = PreludeService(
+                service: lambdaRuntime,
+                prelude: {
+                    try await prepareDatabase()
+                }
+            )
 
-        /// Use ServiceLifecycle to manage the initialization and termination
-        /// of the PGClient together with the LambdaRuntime
-        let serviceGroup = ServiceGroup(
-            services: [self.pgClient, preludeService],
-            gracefulShutdownSignals: [.sigterm],
-            cancellationSignals: [.sigint],
-            logger: self.logger
-        )
+            /// Use ServiceLifecycle to manage the initialization and termination
+            /// of the PGClient together with the LambdaRuntime
+            let serviceGroup = ServiceGroup(
+                services: [self.pgClient, preludeService],
+                gracefulShutdownSignals: [.sigterm],
+                cancellationSignals: [.sigint],
+                logger: self.logger
+            )
 
-        // launch the service groups
-        // this call will return upon termination or cancellation of all the services
-        try await serviceGroup.run()
+            // launch the service groups
+            // this call will return upon termination or cancellation of all the services
+            try await serviceGroup.run()
 
-        // perform any cleanup here
+            // perform any cleanup here
+        }
     }
 
     /// Function handler. This code is called at each function invocation
@@ -105,20 +114,22 @@ struct LambdaFunction {
     /// At first run, this functions checks the database exist and is populated.
     /// This is useful for demo purposes. In real life, the database will contain data already.
     private func prepareDatabase() async throws {
+        // This helper takes no logger. It reads the task-local `Logger.current`, which is
+        // bound to our application logger by the `withLogger(self.logger)` scope in `main()`.
         do {
 
             // initial creation of the table. This will fails if it already exists
-            logger.trace("Testing if table exists")
+            Logger.current.trace("Testing if table exists")
             try await self.pgClient.query(SQLStatements.createTable)
 
             // it did not fail, it means the table is new and empty
-            logger.trace("Populate table")
+            Logger.current.trace("Populate table")
             try await self.pgClient.query(SQLStatements.populateTable)
 
         } catch is PSQLError {
             // when there is a database error, it means the table or values already existed
             // ignore this error
-            logger.trace("Table exists already")
+            Logger.current.trace("Table exists already")
         } catch {
             // propagate other errors
             throw error
@@ -127,11 +138,12 @@ struct LambdaFunction {
 
     /// Query the database
     private func queryUsers() async throws -> [User] {
+        // Like `prepareDatabase`, this reads `Logger.current` rather than receiving a logger.
         var users: [User] = []
         let query = SQLStatements.queryAllUsers
         let rows = try await self.pgClient.query(query)
         for try await (id, username) in rows.decode((Int, String).self) {
-            self.logger.trace("\(id) : \(username)")
+            Logger.current.trace("\(id) : \(username)")
             users.append(User(id: id, username: username))
         }
         return users

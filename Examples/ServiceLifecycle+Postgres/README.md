@@ -28,6 +28,39 @@ The Lambda function demonstrates several key concepts:
 
 5. **Error Handling**: Comprehensive error handling for database connections, queries, and certificate loading.
 
+6. **Task-local logger**: The application logger is bound once at startup with `withLogger(_:)`, so helper functions read `Logger.current` instead of receiving a logger parameter.
+
+### Task-local logging across the service lifecycle
+
+This example builds a single application `Logger` and binds it as the task-local `Logger.current` around the whole service group:
+
+```swift
+try await withLogger(self.logger) { _ in
+    let lambdaRuntime = LambdaRuntime(logger: self.logger, body: self.handler)
+    // ... build the prelude service ...
+    let serviceGroup = ServiceGroup(
+        services: [self.pgClient, preludeService],
+        gracefulShutdownSignals: [.sigterm],
+        cancellationSignals: [.sigint],
+        logger: self.logger
+    )
+    try await serviceGroup.run()
+}
+```
+
+ServiceLifecycle propagates the task-local through the `ServiceGroup` and into every task it spawns. Helper functions can then log with the bound logger without it being threaded through their signatures:
+
+```swift
+private func prepareDatabase() async throws {
+    Logger.current.trace("Testing if table exists")  // no logger parameter
+    // ...
+}
+```
+
+> **Notes**
+> - The bootstrap binding (`withLogger(self.logger) { ... }`) works on any supported toolchain. The Lambda runtime re-binding the **per-invocation** logger (with request/trace IDs) requires **Swift 6.2 or later**.
+> - `ServiceGroup` and `PostgresClient` still take an explicit `logger:` — those are external APIs and are configured directly, not via the task-local.
+
 ## Prerequisites
 
 - Swift 6.x toolchain

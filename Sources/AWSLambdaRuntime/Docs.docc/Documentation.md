@@ -36,6 +36,7 @@ Swift AWS Lambda Runtime was designed to make building Lambda functions in Swift
 ### Building and deploying
 
 - <doc:using-the-spm-plugins>
+- <doc:logging>
 - <doc:Deployment>
 
 ### Advanced

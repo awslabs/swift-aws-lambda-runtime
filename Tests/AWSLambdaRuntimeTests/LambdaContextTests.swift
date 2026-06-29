@@ -198,4 +198,24 @@ struct LambdaContextTests {
 
         #expect(context.logStreamName == "")
     }
+
+    @Test("logger-free init captures the task-local Logger.current")
+    @available(LambdaSwift 2.0, *)
+    func loggerFreeInitCapturesCurrentLogger() {
+        var boundLogger = Logger(label: "bound")
+        boundLogger[metadataKey: "scope"] = "task-local"
+
+        let context = withLogger(boundLogger) { _ in
+            LambdaContext(
+                requestID: "test-request",
+                traceID: "test-trace",
+                tenantID: nil,
+                invokedFunctionARN: "test-arn",
+                deadline: LambdaClock().now.advanced(by: .seconds(30))
+            )
+        }
+
+        #expect(context.logger.label == "bound")
+        #expect(context.logger[metadataKey: "scope"] == "task-local")
+    }
 }
