@@ -450,19 +450,35 @@ enum CrossCompileMethod: String, CustomStringConvertible {
         env: [String: String]?,
         command: String
     ) -> [String] {
-        switch self {
-        case .docker, .container:
+        func genericArgs() -> [String] {
             var args: [String] = ["run", "--rm"]
             for mount in mounts {
                 args += ["-v", mount]
             }
             if let env {
                 for (key, value) in env.sorted(by: { $0.key < $1.key }) {
-                    args += ["--env", "\(key)=\(value)"]
+                    args += ["-e", "\(key)=\(value)"]
                 }
             }
             args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
             return args
+        }
+        switch self {
+        
+        case .docker:
+            return genericArgs()
+
+        case .container:
+            var args = genericArgs()
+
+            // container's runtime needs a bit more memory
+            if self == .container {
+                args.insert("--memory", at: 1)
+                args.insert("4G", at: 2)
+            }
+
+            return args
+            
         case .swiftStaticSdk, .customSdk:
             fatalError("runArguments should not be called for unsupported cross-compile methods")
         }
