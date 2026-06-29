@@ -117,16 +117,12 @@ struct CollectEverythingLogHandler: LogHandler {
         self.logStore = logStore
     }
 
-    func log(
-        level: Logger.Level,
-        message: Logger.Message,
-        metadata: Logger.Metadata?,
-        source: String,
-        file: String,
-        function: String,
-        line: UInt
-    ) {
-        self.logStore.append(level: level, message: message, metadata: self.metadata.merging(metadata ?? [:]) { $1 })
+    func log(event: LogEvent) {
+        self.logStore.append(
+            level: event.level,
+            message: event.message,
+            metadata: self.metadata.merging(event.metadata ?? [:]) { $1 }
+        )
     }
 
     subscript(metadataKey key: String) -> Logger.Metadata.Value? {
