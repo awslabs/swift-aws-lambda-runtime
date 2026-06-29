@@ -21,43 +21,42 @@ struct AWSLambdaBuilder: CommandPlugin {
 
     func performCommand(context: PackagePlugin.PluginContext, arguments: [String]) async throws {
 
-        // values to pass to the AWSLambdaPluginHelper
-        let outputDirectory: URL
-        let products: [Product]
-        let buildConfiguration: PackageManager.BuildConfiguration
-        let packageID: String = context.package.id
-        let packageDisplayName = context.package.displayName
-        let packageDirectory = context.package.directoryURL
-        let zipToolPath = try context.tool(named: "zip").url
-
-        // extract arguments that require PluginContext to fully resolve
-        // resolve them here and pass them to the AWSLambdaPluginHelper as arguments
+        // This plugin is a thin layer over the AWSLambdaPluginHelper executable. It resolves only
+        // the values that require the PackagePlugin sandbox or the package graph, injects them as
+        // canonical arguments, then forwards every argument it did not consume to the helper. The
+        // helper owns the remaining argument parsing and defaulting.
         var argumentExtractor = ArgumentExtractor(arguments)
 
+        // Options the plugin resolves itself. These are consumed (extracted) here so they are not
+        // also forwarded via remainingArguments, which would pass them to the helper twice.
         let outputPathArgument = argumentExtractor.extractOption(named: "output-path")
         let productsArgument = argumentExtractor.extractOption(named: "products")
+        // The helper requires --configuration; the plugin supplies the default. Validation of the
+        // value itself is left to the helper.
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
-
-        // Resolve the container CLI that matches the requested cross-compilation method.
-        // The plugin sandbox can only run tools it resolves up front, so we must pick the right
-        // binary here — `container` for `--cross-compile container`, `docker` otherwise. Extracting
-        // these options only peeks them for the plugin; the original `arguments` (which the helper
-        // re-parses) is still forwarded unchanged below.
         // `--container-cli` is a deprecated alias for `--cross-compile`.
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
         let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")
+
+        // Resolve the container CLI that matches the requested cross-compilation method. The plugin
+        // sandbox can only run tools it resolves up front, so we must pick the right binary here:
+        // `container` for `--cross-compile container`, `docker` otherwise.
         let crossCompileMethod = (crossCompileArgument.first ?? containerCliArgument.first)?.lowercased()
         let containerCLIToolName = crossCompileMethod == "container" ? "container" : "docker"
         let containerToolPath = try context.tool(named: containerCLIToolName).url
+        let zipToolPath = try context.tool(named: "zip").url
 
+        // Resolve the output directory. The default lives under the plugin's work directory, whose
+        // location is only known to the plugin. This path is part of the plugin's public contract
+        // (documented and consumed by lambda-deploy), so it must stay stable.
+        let outputDirectory: URL
         if let outputPath = outputPathArgument.first {
             #if os(Linux)
             var isDirectory: Bool = false
             #else
             var isDirectory: ObjCBool = false
             #endif
-            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory)
-            else {
+            guard FileManager.default.fileExists(atPath: outputPath, isDirectory: &isDirectory) else {
                 throw BuilderErrors.invalidArgument("invalid output directory '\(outputPath)'")
             }
             outputDirectory = URL(fileURLWithPath: outputPath)
@@ -65,42 +64,35 @@ struct AWSLambdaBuilder: CommandPlugin {
             outputDirectory = context.pluginWorkDirectoryURL.appending(path: "\(AWSLambdaBuilder.self)")
         }
 
-        let explicitProducts = !productsArgument.isEmpty
-        if explicitProducts {
-            let _products = try context.package.products(named: productsArgument)
-            for product in _products {
-                guard product is ExecutableProduct else {
-                    throw BuilderErrors.invalidArgument("product named '\(product.name)' is not an executable product")
-                }
-            }
-            products = _products
-
-        } else {
+        // Resolve and validate the products against the package graph.
+        let products: [Product]
+        if productsArgument.isEmpty {
             products = context.package.products.filter { $0 is ExecutableProduct }
-        }
-
-        if let _buildConfigurationName = configurationArgument.first {
-            guard let _buildConfiguration = PackageManager.BuildConfiguration(rawValue: _buildConfigurationName) else {
-                throw BuilderErrors.invalidArgument("invalid build configuration named '\(_buildConfigurationName)'")
-            }
-            buildConfiguration = _buildConfiguration
         } else {
-            buildConfiguration = .release
+            products = try context.package.products(named: productsArgument)
+            for product in products where !(product is ExecutableProduct) {
+                throw BuilderErrors.invalidArgument("product named '\(product.name)' is not an executable product")
+            }
         }
 
         let tool = try context.tool(named: "AWSLambdaPluginHelper")
-        let args =
-            [
-                "build",
-                "--output-path", outputDirectory.path(),
-                "--products", products.map { $0.name }.joined(separator: ","),
-                "--configuration", buildConfiguration.rawValue,
-                "--package-id", packageID,
-                "--package-display-name", packageDisplayName,
-                "--package-directory", packageDirectory.path(),
-                "--docker-tool-path", containerToolPath.path,
-                "--zip-tool-path", zipToolPath.path,
-            ] + arguments
+        var args = [
+            "build",
+            "--output-path", outputDirectory.path(),
+            "--products", products.map { $0.name }.joined(separator: ","),
+            "--package-id", context.package.id,
+            "--package-display-name", context.package.displayName,
+            "--package-directory", context.package.directoryURL.path(),
+            "--configuration", configurationArgument.first ?? "release",
+            "--cross-compile-tool-path", containerToolPath.path,
+            "--zip-tool-path", zipToolPath.path,
+        ]
+        // Re-inject the cross-compilation method (normalised to --cross-compile) so the helper can
+        // select the build method, then forward everything the plugin did not consume.
+        if let crossCompileMethod {
+            args += ["--cross-compile", crossCompileMethod]
+        }
+        args += argumentExtractor.remainingArguments
 
         // Invoke the plugin helper, passing the current environment so that
         // AWS credentials and HOME are available to the subprocess.

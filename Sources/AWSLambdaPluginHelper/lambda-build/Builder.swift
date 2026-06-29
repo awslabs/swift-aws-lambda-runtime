@@ -520,7 +520,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let packageIDArgument = argumentExtractor.extractOption(named: "package-id")
         let packageDisplayNameArgument = argumentExtractor.extractOption(named: "package-display-name")
         let packageDirectoryArgument = argumentExtractor.extractOption(named: "package-directory")
-        let dockerToolPathArgument = argumentExtractor.extractOption(named: "docker-tool-path")
+        let dockerToolPathArgument = argumentExtractor.extractOption(named: "cross-compile-tool-path")
         let zipToolPathArgument = argumentExtractor.extractOption(named: "zip-tool-path")
         let productsArgument = argumentExtractor.extractOption(named: "products")
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
@@ -558,7 +558,7 @@ struct BuilderConfiguration: CustomStringConvertible {
 
         // docker tool path
         guard !dockerToolPathArgument.isEmpty else {
-            throw BuilderErrors.invalidArgument("--docker-tool-path argument is required")
+            throw BuilderErrors.invalidArgument("--cross-compile-tool-path argument is required")
         }
         self.dockerToolPath = URL(fileURLWithPath: dockerToolPathArgument.first!)
 

@@ -23,7 +23,9 @@ struct AWSLambdaDeployer: CommandPlugin {
 
         let tool = try context.tool(named: "AWSLambdaPluginHelper")
 
-        // Resolve products: use --products if provided, otherwise default to all executable targets
+        // Resolve products: use --products if provided, otherwise default to all executable targets.
+        // --products is consumed (extracted) here so it is not also forwarded via remainingArguments,
+        // which would pass it to the helper twice.
         var argumentExtractor = ArgumentExtractor(arguments)
         let productsArgument = argumentExtractor.extractOption(named: "products")
 
@@ -36,7 +38,7 @@ struct AWSLambdaDeployer: CommandPlugin {
 
         let productNames = products.map { $0.name }.joined(separator: ",")
 
-        let args = ["deploy", "--products", productNames] + arguments
+        let args = ["deploy", "--products", productNames] + argumentExtractor.remainingArguments
 
         // Invoke the plugin helper, passing the current environment so that
         // AWS credentials (env vars, HOME for ~/.aws/credentials) are available.
