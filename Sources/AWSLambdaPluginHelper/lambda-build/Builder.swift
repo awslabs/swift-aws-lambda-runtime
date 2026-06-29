@@ -52,11 +52,11 @@ struct Builder {
             verboseLogging: configuration.verboseLogging
         )
 
-        // create the archive
-        let archives = try self.package(
-            packageName: configuration.packageDisplayName,
+        // Package the built binaries into deployable artifacts, in the format chosen by
+        // --archive-format (ZIP today; OCI is stubbed for the future).
+        let archiveBackend = try configuration.makeArchiveBackend()
+        let archives = try archiveBackend.archive(
             products: builtProducts,
-            zipToolPath: configuration.zipToolPath,
             outputDirectory: configuration.outputDirectory,
             verboseLogging: configuration.verboseLogging
         )
@@ -67,100 +67,6 @@ struct Builder {
         for (product, archivePath) in archives {
             print("  * \(product) at \(archivePath.path())")
         }
-    }
-
-    // TODO: explore using ziplib or similar instead of shelling out
-    private func package(
-        packageName: String,
-        products: [String: URL],
-        zipToolPath: URL,
-        outputDirectory: URL,
-        verboseLogging: Bool
-    ) throws -> [String: URL] {
-
-        var archives = [String: URL]()
-        for (product, artifactPath) in products {
-            print("-------------------------------------------------------------------------")
-            print("archiving \"\(product)\"")
-            print("-------------------------------------------------------------------------")
-
-            // prep zipfile location
-            let workingDirectory = outputDirectory.appending(path: product)
-            let zipfilePath = workingDirectory.appending(path: "\(product).zip")
-            if FileManager.default.fileExists(atPath: workingDirectory.path()) {
-                try FileManager.default.removeItem(atPath: workingDirectory.path())
-            }
-            try FileManager.default.createDirectory(atPath: workingDirectory.path(), withIntermediateDirectories: true)
-
-            // rename artifact to "bootstrap"
-            let relocatedArtifactPath = workingDirectory.appending(path: "bootstrap")
-            try FileManager.default.copyItem(atPath: artifactPath.path(), toPath: relocatedArtifactPath.path())
-
-            var arguments: [String] = []
-            #if os(macOS) || os(Linux)
-            arguments = [
-                "--recurse-paths",
-                "--symlinks",
-                zipfilePath.lastPathComponent,
-                relocatedArtifactPath.lastPathComponent,
-            ]
-            #else
-            throw BuilderErrors.unsupportedPlatform("can't or don't know how to create a zip file on this platform")
-            #endif
-
-            // add resources
-            var artifactPathComponents = artifactPath.pathComponents
-            _ = artifactPathComponents.removeFirst()  // Get rid of beginning "/"
-            _ = artifactPathComponents.removeLast()  // Get rid of the name of the package
-            let artifactDirectory = "/\(artifactPathComponents.joined(separator: "/"))"
-            for fileInArtifactDirectory in try FileManager.default.contentsOfDirectory(atPath: artifactDirectory) {
-                guard let artifactURL = URL(string: "\(artifactDirectory)/\(fileInArtifactDirectory)") else {
-                    continue
-                }
-
-                guard artifactURL.pathExtension == "resources" else {
-                    continue  // Not resources, so don't copy
-                }
-                let resourcesDirectoryName = artifactURL.lastPathComponent
-                let relocatedResourcesDirectory = workingDirectory.appending(path: resourcesDirectoryName)
-                if FileManager.default.fileExists(atPath: artifactURL.path()) {
-                    do {
-                        arguments.append(resourcesDirectoryName)
-                        try FileManager.default.copyItem(
-                            atPath: artifactURL.path(),
-                            toPath: relocatedResourcesDirectory.path()
-                        )
-                    } catch let error as CocoaError {
-
-                        // On Linux, when the build has been done with Docker,
-                        // the source file are owned by root
-                        // this causes a permission error **after** the files have been copied
-                        // see https://github.com/awslabs/swift-aws-lambda-runtime/issues/449
-                        // see https://forums.swift.org/t/filemanager-copyitem-on-linux-fails-after-copying-the-files/77282
-
-                        // because this error happens after the files have been copied, we can ignore it
-                        // this code checks if the destination file exists
-                        // if they do, just ignore error, otherwise throw it up to the caller.
-                        if !(error.code == CocoaError.Code.fileWriteNoPermission
-                            && FileManager.default.fileExists(atPath: relocatedResourcesDirectory.path()))
-                        {
-                            throw error
-                        }  // else just ignore it
-                    }
-                }
-            }
-
-            // run the zip tool
-            try Utils.execute(
-                executable: zipToolPath,
-                arguments: arguments,
-                customWorkingDirectory: workingDirectory,
-                logLevel: verboseLogging ? .debug : .silent
-            )
-
-            archives[product] = zipfilePath
-        }
-        return archives
     }
 
     private enum AmazonLinuxVersion {
@@ -208,6 +114,7 @@ struct Builder {
                                                        [--base-docker-image <docker_image_name>]
                                                        [--disable-docker-image-update]
                                                        [--cross-compile <docker | container | swift-static-sdk | custom-sdk>]
+                                                       [--archive-format <zip | oci>]
                                                        [--no-strip]
 
 
@@ -233,6 +140,10 @@ struct Builder {
                                           Values: docker, container, swift-static-sdk, custom-sdk
                                           (default is docker)
                                           Note: swift-static-sdk and custom-sdk are not yet supported.
+            --archive-format <format>     The packaging format for the build artifact.
+                                          Values: zip, oci
+                                          (default is zip)
+                                          Note: oci is not yet supported.
             --no-strip                    Do not strip debug symbols from the binary.
             --help                        Show help information.
             """
@@ -252,6 +163,7 @@ struct BuilderConfiguration: CustomStringConvertible {
     public let baseDockerImage: String
     public let disableDockerImageUpdate: Bool
     public let crossCompileMethod: CrossCompileMethod
+    public let archiveFormat: ArchiveFormat
     public let noStrip: Bool
     public let explicitAL2Image: Bool
 
@@ -280,6 +192,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
         let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")  // deprecated alias
+        let archiveFormatArgument = argumentExtractor.extractOption(named: "archive-format")
         let noStripArgument = argumentExtractor.extractFlag(named: "no-strip") > 0
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
 
@@ -360,6 +273,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         // --container-cli is a deprecated alias for --cross-compile (backward compatibility)
         let resolvedCrossCompile = crossCompileArgument.first ?? containerCliArgument.first
         self.crossCompileMethod = try CrossCompileMethod.parse(resolvedCrossCompile)
+        self.archiveFormat = try ArchiveFormat.parse(archiveFormatArgument.first)
         self.noStrip = noStripArgument
 
         // detect when user explicitly provides an AL2 (not AL2023) base image
@@ -403,6 +317,16 @@ struct BuilderConfiguration: CustomStringConvertible {
         )
     }
 
+    /// Creates the ``ArchiveBackend`` that packages the built binaries for the configured format.
+    func makeArchiveBackend() throws -> any ArchiveBackend {
+        switch self.archiveFormat {
+        case .zip:
+            return ZipArchiveBackend(zipToolPath: self.zipToolPath)
+        case .oci:
+            throw BuilderErrors.unsupportedArchiveFormat(self.archiveFormat)
+        }
+    }
+
     var description: String {
         """
         {
@@ -413,6 +337,7 @@ struct BuilderConfiguration: CustomStringConvertible {
           baseDockerImage: \(self.baseDockerImage)
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
           crossCompileMethod: \(self.crossCompileMethod)
+          archiveFormat: \(self.archiveFormat)
           zipToolPath: \(self.zipToolPath)
           packageID: \(self.packageID)
           packageDisplayName: \(self.packageDisplayName)
@@ -429,6 +354,7 @@ enum BuilderErrors: Error, CustomStringConvertible {
     case unknownProduct(String)
     case productExecutableNotFound(String)
     case unsupportedCrossCompileMethod(CrossCompileMethod)
+    case unsupportedArchiveFormat(ArchiveFormat)
     case containerCLINotFound(CrossCompileMethod)
     case failedWritingDockerfile
     case failedParsingDockerOutput(String)
@@ -449,6 +375,8 @@ enum BuilderErrors: Error, CustomStringConvertible {
                 "The '\(method)' cross-compilation method is not yet supported. "
                 + "For information on how to install and use Swift cross-compilation SDKs, visit: "
                 + "https://www.swift.org/documentation/articles/static-linux-getting-started.html"
+        case .unsupportedArchiveFormat(let format):
+            return "The '\(format)' archive format is not yet supported."
         case .containerCLINotFound(let method):
             switch method {
             case .docker:
