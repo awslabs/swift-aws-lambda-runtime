@@ -57,23 +57,26 @@ struct Deployer {
         }
     }
 
-    /// Checks whether a Lambda function with the given name already exists.
-    func functionExists(
+    /// Looks up an existing Lambda function's configuration.
+    ///
+    /// Returns the function's current configuration, or `nil` if no function with the given name
+    /// exists. The configuration is carried downstream so callers (e.g. the update path) can reuse
+    /// it — for example to validate the execution role — without issuing a second `GetFunction` call.
+    func existingFunctionConfiguration(
         _ functionName: String,
         using lambdaClient: LambdaClient
-    ) async throws -> Bool {
+    ) async throws -> FunctionConfiguration? {
         do {
-            _ = try await lambdaClient.getFunction(
+            return try await lambdaClient.getFunction(
                 GetFunctionRequest(functionName: functionName)
-            )
-            return true
+            ).configuration
         } catch {
             // If the error indicates the resource was not found, the function doesn't exist
             let errorDescription = "\(error)"
             if errorDescription.contains("ResourceNotFoundException")
                 || errorDescription.contains("Function not found")
             {
-                return false
+                return nil
             }
             throw DeployerErrors.awsAPIError(
                 service: "Lambda",
@@ -656,13 +659,17 @@ struct Deployer {
                 print("Deploying function '\(functionName)' to \(region.rawValue)...")
             }
 
-            // Check if function already exists
+            // Check if function already exists. The configuration is reused downstream (e.g. the
+            // update path validates the execution role from it) to avoid a second GetFunction call.
             print("Checking if function '\(functionName)' exists...")
-            let exists = try await functionExists(functionName, using: lambdaClient)
-            let action = try determineDeploymentAction(functionExists: exists, delete: configuration.delete)
+            let existingConfiguration = try await existingFunctionConfiguration(functionName, using: lambdaClient)
+            let action = try determineDeploymentAction(
+                functionExists: existingConfiguration != nil,
+                delete: configuration.delete
+            )
 
             if configuration.verboseLogging {
-                print("[verbose] Function '\(functionName)' exists: \(exists), action: \(action)")
+                print("[verbose] Function '\(functionName)' exists: \(existingConfiguration != nil), action: \(action)")
             }
 
             switch action {
@@ -780,6 +787,17 @@ struct Deployer {
                     }
                     functionArn = response.functionArn
                 } else {
+                    // Verify the function's execution role still exists before updating.
+                    // Lambda validates the role lazily (at invoke time), so an update against a
+                    // function whose role was deleted would succeed here but fail at invoke.
+                    // Reuse the configuration fetched during the existence check above.
+                    try await verifyExecutionRoleExists(
+                        roleARN: existingConfiguration?.role,
+                        functionName: functionName,
+                        using: iamClient,
+                        verbose: configuration.verboseLogging
+                    )
+
                     // Update the function code
                     print("Updating Lambda function '\(functionName)'...")
                     let response: UpdateFunctionCodeResponse
@@ -906,6 +924,62 @@ struct Deployer {
     /// Format: `swift-lambda-<functionName>-role`
     static func iamRoleName(for functionName: String) -> String {
         "swift-lambda-\(functionName)-role"
+    }
+
+    /// Extracts the role name from an IAM role ARN.
+    /// e.g. `arn:aws:iam::123456789012:role/my-role` -> `my-role`,
+    /// `arn:aws:iam::123456789012:role/path/my-role` -> `my-role`.
+    /// Returns `nil` if the ARN does not contain a role name.
+    static func roleName(fromARN arn: String) -> String? {
+        guard let slashIndex = arn.lastIndex(of: "/") else { return nil }
+        let name = arn[arn.index(after: slashIndex)...]
+        return name.isEmpty ? nil : String(name)
+    }
+
+    /// Verifies that the IAM role referenced by a function's execution role ARN still exists.
+    ///
+    /// Lambda only validates that an execution role is assumable lazily, at invoke time, not when
+    /// the function is created or updated. If the role was deleted (for example by a previous
+    /// `--delete` run), an update would silently succeed but the function would fail to invoke with
+    /// `The role defined for the function cannot be assumed by Lambda`. This check surfaces the
+    /// problem at deploy time instead.
+    ///
+    /// - Parameters:
+    ///   - roleARN: The execution role ARN configured on the function, if any.
+    ///   - functionName: The function name, used for error reporting.
+    ///   - iamClient: The IAM client to use for the lookup.
+    ///   - verbose: Whether to emit verbose progress output.
+    /// - Throws: `DeployerErrors.executionRoleMissing` if the role does not exist.
+    func verifyExecutionRoleExists(
+        roleARN: String?,
+        functionName: String,
+        using iamClient: IAMClient,
+        verbose: Bool
+    ) async throws {
+        guard let roleARN, let roleName = Self.roleName(fromARN: roleARN) else {
+            // No role ARN to verify (or an unparsable ARN) — nothing to check.
+            return
+        }
+
+        if verbose {
+            print("[verbose] Verifying execution role '\(roleName)' still exists...")
+        }
+
+        do {
+            _ = try await iamClient.getRole(IAMGetRoleRequest(roleName: roleName))
+            if verbose {
+                print("[verbose] Execution role '\(roleName)' exists")
+            }
+        } catch {
+            if "\(error)".contains("NoSuchEntity") {
+                throw DeployerErrors.executionRoleMissing(functionName: functionName, role: roleARN)
+            }
+            throw DeployerErrors.awsAPIError(
+                service: "IAM",
+                operation: "GetRole",
+                message: "failed to verify execution role '\(roleName)': \(error)"
+            )
+        }
     }
 
     /// The trust policy document that allows Lambda to assume the role.
@@ -1296,6 +1370,7 @@ enum DeployerErrors: Error, CustomStringConvertible {
     case archiveNotFound(URL)
     case functionURLCreationFailed(String)
     case iamRoleCreationFailed(String)
+    case executionRoleMissing(functionName: String, role: String)
     case missingProduct
 
     var description: String {
@@ -1312,6 +1387,16 @@ enum DeployerErrors: Error, CustomStringConvertible {
             return "failed to create Function URL: \(message)"
         case .iamRoleCreationFailed(let message):
             return "failed to create IAM role: \(message)"
+        case .executionRoleMissing(let functionName, let role):
+            return """
+                the execution role configured for function '\(functionName)' no longer exists in IAM:
+                    \(role)
+                Lambda cannot assume a role that does not exist, so the function would fail to invoke.
+
+                Suggested action: delete the function and redeploy it so the role is recreated:
+                    swift package --allow-network-connections all:443 lambda-deploy --delete
+                    swift package --allow-network-connections all:443 lambda-deploy
+                """
         case .missingProduct:
             return "no product specified. Use --products or define an executable target in Package.swift."
         }
