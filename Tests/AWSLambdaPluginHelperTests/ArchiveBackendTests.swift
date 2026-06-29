@@ -91,8 +91,8 @@ struct ZipArchiveBackendTests {
     @Test("archive produces a <product>.zip per built product")
     func archiveProducesZip() throws {
         // Lay out a fake build output: <tmp>/build/<product> executable, and a separate output dir.
-        let root = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appending(path: "ziparchive-test-\(UInt64(abs(ObjectIdentifier(Self.self).hashValue)))")
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "ziparchive-test-\(UUID().uuidString)")
         let buildDir = root.appending(path: "build")
         let outputDir = root.appending(path: "out")
         try FileManager.default.createDirectory(at: buildDir, withIntermediateDirectories: true)
