@@ -150,13 +150,13 @@ struct AppleContainerCLIArgumentTests {
     }
 }
 
-// MARK: - CrossCompileMethod.makeBackend
+// MARK: - BuilderConfiguration.makeCrossCompileBackend
 
-@Suite("CrossCompileMethod backend selection")
-struct CrossCompileMethodBackendTests {
+@Suite("Cross-compile backend selection")
+struct CrossCompileBackendSelectionTests {
 
     @available(LambdaSwift 2.0, *)
-    static func makeConfiguration() throws -> BuilderConfiguration {
+    static func makeConfiguration(method: String) throws -> BuilderConfiguration {
         try BuilderConfiguration(arguments: [
             "--package-id", "test",
             "--package-display-name", "Test",
@@ -166,13 +166,14 @@ struct CrossCompileMethodBackendTests {
             "--output-path", "/tmp",
             "--products", "MyLambda",
             "--configuration", "release",
+            "--cross-compile", method,
         ])
     }
 
     @available(LambdaSwift 2.0, *)
     @Test("docker selects a container backend running the docker CLI")
     func dockerBackend() throws {
-        let backend = try CrossCompileMethod.docker.makeBackend(configuration: Self.makeConfiguration())
+        let backend = try Self.makeConfiguration(method: "docker").makeCrossCompileBackend()
         let container = try #require(backend as? ContainerBuildBackend)
         #expect(container.name == "docker")
         #expect(container.cli is DockerCLI)
@@ -181,18 +182,9 @@ struct CrossCompileMethodBackendTests {
     @available(LambdaSwift 2.0, *)
     @Test("container selects a container backend running the apple container CLI")
     func containerBackend() throws {
-        let backend = try CrossCompileMethod.container.makeBackend(configuration: Self.makeConfiguration())
+        let backend = try Self.makeConfiguration(method: "container").makeCrossCompileBackend()
         let container = try #require(backend as? ContainerBuildBackend)
         #expect(container.name == "container")
         #expect(container.cli is AppleContainerCLI)
-    }
-
-    @available(LambdaSwift 2.0, *)
-    @Test("unsupported methods throw", arguments: [CrossCompileMethod.swiftStaticSdk, .customSdk])
-    func unsupportedThrows(method: CrossCompileMethod) throws {
-        let config = try Self.makeConfiguration()
-        #expect(throws: BuilderErrors.self) {
-            _ = try method.makeBackend(configuration: config)
-        }
     }
 }

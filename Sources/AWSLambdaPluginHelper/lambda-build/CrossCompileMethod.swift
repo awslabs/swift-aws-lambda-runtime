@@ -21,9 +21,10 @@ import Foundation
 
 /// The cross-compilation method requested via `--cross-compile`.
 ///
-/// This enum is the parsed user choice and a factory for the matching ``BuildBackend``. It holds
-/// no execution logic itself: container argument spelling lives in the ``ContainerCLI`` types and
-/// the build flow lives in the ``BuildBackend`` types.
+/// This enum is purely the parsed user choice. It holds no execution logic: container argument
+/// spelling lives in the ``ContainerCLI`` types, the build flow lives in the ``BuildBackend``
+/// types, and backend construction lives on ``BuilderConfiguration`` (which holds everything a
+/// backend needs).
 @available(LambdaSwift 2.0, *)
 enum CrossCompileMethod: String, CustomStringConvertible {
     case docker
@@ -54,29 +55,6 @@ enum CrossCompileMethod: String, CustomStringConvertible {
         }
 
         return method
-    }
-
-    /// Creates the ``BuildBackend`` that performs a cross-compiled build for this method.
-    ///
-    /// Used when the host is not already an Amazon Linux machine. The configuration supplies the
-    /// resolved tool path, base image, and image-update preference.
-    func makeBackend(configuration: BuilderConfiguration) throws -> BuildBackend {
-        let cli: ContainerCLI
-        switch self {
-        case .docker:
-            cli = DockerCLI()
-        case .container:
-            cli = AppleContainerCLI()
-        case .swiftStaticSdk, .customSdk:
-            throw BuilderErrors.unsupportedCrossCompileMethod(self)
-        }
-        return ContainerBuildBackend(
-            cli: cli,
-            toolPath: configuration.crossCompileToolPath,
-            baseImage: configuration.baseDockerImage,
-            disableImageUpdate: configuration.disableDockerImageUpdate,
-            method: self
-        )
     }
 
     var description: String {

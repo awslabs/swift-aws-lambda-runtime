@@ -36,11 +36,11 @@ struct Builder {
 
         // Select the build backend: build natively when already on an Amazon Linux host,
         // otherwise cross-compile using the backend chosen by --cross-compile.
-        let backend: BuildBackend
+        let backend: any BuildBackend
         if self.isAmazonLinux(.al2) || self.isAmazonLinux(.al2023) {
             backend = NativeBuildBackend()
         } else {
-            backend = try configuration.crossCompileMethod.makeBackend(configuration: configuration)
+            backend = try configuration.makeCrossCompileBackend()
         }
 
         let builtProducts = try backend.build(
@@ -377,6 +377,30 @@ struct BuilderConfiguration: CustomStringConvertible {
             print("-------------------------------------------------------------------------")
             print(self)
         }
+    }
+
+    /// Creates the ``BuildBackend`` that performs a cross-compiled build for the configured method.
+    ///
+    /// Used when the host is not already an Amazon Linux machine. The configuration already holds
+    /// everything a backend needs (the resolved tool path, base image, and image-update
+    /// preference), so the factory lives here rather than on ``CrossCompileMethod``.
+    func makeCrossCompileBackend() throws -> any BuildBackend {
+        let cli: any ContainerCLI
+        switch self.crossCompileMethod {
+        case .docker:
+            cli = DockerCLI()
+        case .container:
+            cli = AppleContainerCLI()
+        case .swiftStaticSdk, .customSdk:
+            throw BuilderErrors.unsupportedCrossCompileMethod(self.crossCompileMethod)
+        }
+        return ContainerBuildBackend(
+            cli: cli,
+            toolPath: self.crossCompileToolPath,
+            baseImage: self.baseDockerImage,
+            disableImageUpdate: self.disableDockerImageUpdate,
+            method: self.crossCompileMethod
+        )
     }
 
     var description: String {
