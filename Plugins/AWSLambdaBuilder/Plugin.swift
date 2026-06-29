@@ -77,9 +77,6 @@ struct AWSLambdaBuilder: CommandPlugin {
             buildConfiguration = .release
         }
 
-        // TODO: When running on Amazon Linux 2, we have to build directly from the plugin
-        // launch the build, then call the helper just for the ZIP part
-
         let tool = try context.tool(named: "AWSLambdaPluginHelper")
         let args =
             [
@@ -109,47 +106,6 @@ struct AWSLambdaBuilder: CommandPlugin {
             Diagnostics.error("AWSLambdaPluginHelper invocation failed: \(problem)")
         }
     }
-
-    // TODO: When running on Amazon Linux 2, we have to build directly from the plugin
-    //    private func build(
-    //        packageIdentity: Package.ID,
-    //        products: [Product],
-    //        buildConfiguration: PackageManager.BuildConfiguration,
-    //        verboseLogging: Bool
-    //    ) throws -> [LambdaProduct: URL] {
-    //        print("-------------------------------------------------------------------------")
-    //        print("building \"\(packageIdentity)\"")
-    //        print("-------------------------------------------------------------------------")
-    //
-    //        var results = [LambdaProduct: URL]()
-    //        for product in products {
-    //            print("building \"\(product.name)\"")
-    //            var parameters = PackageManager.BuildParameters()
-    //            parameters.configuration = buildConfiguration
-    //            parameters.otherSwiftcFlags = ["-static-stdlib"]
-    //            parameters.logging = verboseLogging ? .verbose : .concise
-    //
-    //            let result = try packageManager.build(
-    //                .product(product.name),
-    //                parameters: parameters
-    //            )
-    //            guard let artifact = result.executableArtifact(for: product) else {
-    //                throw Errors.productExecutableNotFound(product.name)
-    //            }
-    //            results[.init(product)] = artifact.url
-    //        }
-    //        return results
-    //    }
-
-    //    private func isAmazonLinux2() -> Bool {
-    //         if let data = FileManager.default.contents(atPath: "/etc/system-release"),
-    //             let release = String(data: data, encoding: .utf8)
-    //         {
-    //             return release.hasPrefix("Amazon Linux release 2")
-    //         } else {
-    //             return false
-    //         }
-    //     }
 }
 
 private enum BuilderErrors: Error, CustomStringConvertible {

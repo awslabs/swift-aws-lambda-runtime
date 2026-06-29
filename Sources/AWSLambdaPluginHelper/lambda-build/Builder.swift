@@ -382,6 +382,7 @@ struct Builder {
                                           This parameter cannot be used when --base-docker-image is specified.
             --base-docker-image <name>    The name of the base docker image to use for the build.
                                           (default: swift:<version>-amazonlinux2023)
+                                          Amazon Linux 2 is deprecated since June 30, 2026.
                                           Visit Docker Hub for all available swift tags:
                                           https://hub.docker.com/_/swift/tags?name=amazonlinux
                                           This parameter cannot be used when --swift-version is specified.

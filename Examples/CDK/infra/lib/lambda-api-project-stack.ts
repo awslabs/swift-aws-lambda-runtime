@@ -24,7 +24,7 @@ export class LambdaApiStack extends cdk.Stack {
 
     // Create the Lambda function
     const lambdaFunction = new lambda.Function(this, 'SwiftLambdaFunction', {
-      runtime: lambda.Runtime.PROVIDED_AL2,
+      runtime: lambda.Runtime.PROVIDED_AL2023,
       architecture: lambda.Architecture.ARM_64,
       handler: 'bootstrap',
       code: lambda.Code.fromAsset('../.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder/APIGatewayLambda/APIGatewayLambda.zip'),

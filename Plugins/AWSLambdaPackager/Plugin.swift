@@ -388,8 +388,8 @@ struct AWSLambdaPackager: CommandPlugin {
                                           (default is latest)
                                           This parameter cannot be used when --base-docker-image  is specified.
             --base-docker-image <name>    The name of the base docker image to use for the build.
-                                          (default: swift:<version>-amazonlinux2)
-                                          Note: Amazon Linux 2023 will become the default after June 30, 2026.
+                                          (default: swift:<version>-amazonlinux2023)
+                                          Amazon Linux 2 is deprecated since June 30, 2026.
                                           Visit Docker Hub for all available swift tags:
                                           https://hub.docker.com/_/swift/tags?name=amazonlinux
                                           This parameter cannot be used when --swift-version is specified.
@@ -538,7 +538,7 @@ private struct Configuration: CustomStringConvertible {
         let swiftVersion = swiftVersionArgument.first ?? .none  // undefined version will yield the latest docker image
 
         self.baseDockerImage =
-            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2"
+            baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2023"  // default to Amazon Linux 2023 since 30 June 2026
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
         self.containerCLI = try ContainerCLI.parse(
