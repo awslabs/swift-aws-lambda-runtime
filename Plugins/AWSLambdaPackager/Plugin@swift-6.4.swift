@@ -39,7 +39,6 @@ struct AWSLambdaPackager: CommandPlugin {
         let packageID: String = context.package.id
         let packageDisplayName = context.package.displayName
         let packageDirectory = context.package.directoryURL
-        let dockerToolPath = try context.tool(named: "docker").url
         let zipToolPath = try context.tool(named: "zip").url
 
         var argumentExtractor = ArgumentExtractor(arguments)
@@ -48,6 +47,17 @@ struct AWSLambdaPackager: CommandPlugin {
         let outputDirectoryArgument = argumentExtractor.extractOption(named: "output-directory")
         let productsArgument = argumentExtractor.extractOption(named: "products")
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
+
+        // Resolve the container CLI that matches the requested cross-compilation method.
+        // The plugin sandbox can only run tools it resolves up front, so we must pick the right
+        // binary here — `container` for `container`, `docker` otherwise. Extracting these options
+        // only peeks them for the plugin; the original `arguments` (which the helper re-parses) is
+        // still forwarded unchanged below. `--container-cli` is the legacy alias for `--cross-compile`.
+        let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
+        let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")
+        let crossCompileMethod = (crossCompileArgument.first ?? containerCliArgument.first)?.lowercased()
+        let containerCLIToolName = crossCompileMethod == "container" ? "container" : "docker"
+        let containerToolPath = try context.tool(named: containerCLIToolName).url
 
         // output directory
         if let outputPath = outputPathArgument.first ?? outputDirectoryArgument.first {
@@ -100,7 +110,7 @@ struct AWSLambdaPackager: CommandPlugin {
                 "--package-id", packageID,
                 "--package-display-name", packageDisplayName,
                 "--package-directory", packageDirectory.path(),
-                "--docker-tool-path", dockerToolPath.path,
+                "--docker-tool-path", containerToolPath.path,
                 "--zip-tool-path", zipToolPath.path,
             ] + arguments
 
