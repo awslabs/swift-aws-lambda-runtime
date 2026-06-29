@@ -99,12 +99,19 @@ public enum Lambda {
                     // handler directly (no task-local binding). Remove the guard when 6.1 support
                     // is dropped.
                     #if compiler(>=6.2)
-                    try await withLogger(requestLogger) { _ in
+                    // `withLogger`'s operation closure is `nonisolated(nonsending)`, so it forms
+                    // its own isolation region. Pass the handler in by value and write the mutated
+                    // copy back out so we don't share the `var handler` across regions (which the
+                    // compiler rejects under NonisolatedNonsendingByDefault) and so any state the
+                    // handler accumulates across invocations is preserved.
+                    handler = try await withLogger(requestLogger) { [handler] _ in
+                        var handler = handler
                         try await handler.handle(
                             invocation.event,
                             responseWriter: writer,
                             context: context
                         )
+                        return handler
                     }
                     #else
                     try await handler.handle(
