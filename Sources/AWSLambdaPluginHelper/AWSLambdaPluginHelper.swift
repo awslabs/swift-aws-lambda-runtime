@@ -13,20 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// `@preconcurrency` suppresses the Swift 6 strict-concurrency diagnostic for the libc `stdout`
-// global, which is an `extern FILE *` (a mutable global var) on Glibc/Musl.
-#if os(macOS)
-@preconcurrency import Darwin.C
-#elseif canImport(Glibc)
-@preconcurrency import Glibc
-#elseif canImport(Musl)
-@preconcurrency import Musl
-#elseif os(Windows)
-@preconcurrency import ucrt
-#else
-#error("Unsupported platform")
-#endif
-
 @main
 @available(LambdaSwift 2.0, *)
 struct AWSLambdaPluginHelper {
@@ -38,10 +24,9 @@ struct AWSLambdaPluginHelper {
     }
 
     public static func main() async throws {
-        // SwiftPM runs plugins with stdout connected to a pipe rather than a TTY, so the C runtime
-        // block-buffers stdout and the helper's output (and --help text) only appears when the process
-        // exits. Force line buffering so each printed line streams to the user as it is produced.
-        setvbuf(stdout, nil, _IOLBF, 0)
+        // Stream output line-by-line; SwiftPM connects the plugin's stdout to a pipe, which the C
+        // runtime would otherwise block-buffer until the process exits.
+        enableLineBufferedStdout()
 
         let args = CommandLine.arguments
         let helper = AWSLambdaPluginHelper()
