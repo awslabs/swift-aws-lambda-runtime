@@ -13,14 +13,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// `@preconcurrency` suppresses the Swift 6 strict-concurrency diagnostic for the libc `stdout`
+// global, which is an `extern FILE *` (a mutable global var) on Glibc/Musl.
 #if os(macOS)
-import Darwin.C
+@preconcurrency import Darwin.C
 #elseif canImport(Glibc)
-import Glibc
+@preconcurrency import Glibc
 #elseif canImport(Musl)
-import Musl
+@preconcurrency import Musl
 #elseif os(Windows)
-import ucrt
+@preconcurrency import ucrt
 #else
 #error("Unsupported platform")
 #endif
