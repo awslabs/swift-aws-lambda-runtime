@@ -32,6 +32,8 @@ This directory contains example code for Lambda functions.
 
 - **[Hummingbird](Hummingbird/README.md)**: a Lambda function using the Hummingbird web framework with API Gateway integration (requires [AWS SAM](https://aws.amazon.com/serverless/sam/)).
 
+- **[OCIImage](OCIImage/README.md)**: package and deploy a Lambda function as an OCI container image instead of a ZIP archive, pushed to Amazon ECR (requires Docker or [`container`](https://github.com/apple/container) and the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
+
 - **[ResourcesPackaging](ResourcesPackaging/README.md)**: a Lambda function that demonstrates how to bundle and read static resource files using Swift Package Manager's resource bundling feature (requires [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)).
 
 - **[S3EventNotifier](S3EventNotifier/README.md)**: a Lambda function that receives object-upload notifications from an [Amazon S3](https://docs.aws.amazon.com/AmazonS3/latest/userguide/Welcome.html) bucket.
