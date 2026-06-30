@@ -65,4 +65,18 @@ struct AppleContainerCLI: ContainerCLI {
             contextDir,
         ]
     }
+
+    func loginArguments(registry: String, username: String) -> [String] {
+        // container authenticates registries under the `registry login` subcommand, unlike docker's
+        // top-level `login`. Verified working against ECR with `--password-stdin`.
+        ["registry", "login", "--username", username, "--password-stdin", registry]
+    }
+
+    func tagArguments(source: String, target: String) -> [String] {
+        ["image", "tag", source, target]
+    }
+
+    func pushArguments(tag: String) -> [String] {
+        ["image", "push", tag]
+    }
 }

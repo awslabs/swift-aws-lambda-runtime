@@ -59,4 +59,16 @@ struct DockerCLI: ContainerCLI {
             contextDir,
         ]
     }
+
+    func loginArguments(registry: String, username: String) -> [String] {
+        ["login", "--username", username, "--password-stdin", registry]
+    }
+
+    func tagArguments(source: String, target: String) -> [String] {
+        ["tag", source, target]
+    }
+
+    func pushArguments(tag: String) -> [String] {
+        ["push", tag]
+    }
 }

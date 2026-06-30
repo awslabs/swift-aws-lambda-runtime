@@ -41,14 +41,17 @@ struct OCIArchiveBackend: ArchiveBackend {
     /// architecture, so the image must be built for exactly one.
     let architecture: BuildArchitecture
 
-    /// The minimal Amazon Linux 2023 base image.
+    /// The base image the generated Dockerfile builds `FROM` (overridable via `--base-oci-image`).
+    let baseImage: String
+
+    /// The default base image: minimal Amazon Linux 2023.
     ///
-    /// We deliberately do *not* use `provided.al2023`: our compiled `bootstrap` already speaks the
-    /// Lambda Runtime API (so we are our own runtime interface client), and `provided.al2023`'s only
-    /// Lambda-specific content is the Runtime Interface Emulator, documented for local testing only.
-    /// A minimal AL2023 base is smaller, has fewer layers, and gives glibc parity with the
+    /// We deliberately do *not* default to `provided.al2023`: our compiled `bootstrap` already speaks
+    /// the Lambda Runtime API (so we are our own runtime interface client), and `provided.al2023`'s
+    /// only Lambda-specific content is the Runtime Interface Emulator, documented for local testing
+    /// only. A minimal AL2023 base is smaller, has fewer layers, and gives glibc parity with the
     /// `swift:*-amazonlinux2023` build image.
-    static let baseImage = "public.ecr.aws/amazonlinux/amazonlinux:2023-minimal"
+    static let defaultBaseImage = "public.ecr.aws/amazonlinux/amazonlinux:2023-minimal"
 
     /// The directory inside the image that holds the runtime binary and its resources.
     static let runtimeDirectory = "/var/runtime"
@@ -106,6 +109,16 @@ struct OCIArchiveBackend: ArchiveBackend {
                 logLevel: verboseLogging ? .debug : .output
             )
 
+            // write the build manifest: deploy needs the local tag, the CLI that built the image,
+            // and the baked-in architecture to push and create the Image function. The ECR-qualified
+            // reference and child-manifest digest are resolved at deploy time, after the push.
+            try BuildManifest.image(
+                product: product,
+                architecture: self.architecture,
+                containerCLI: self.cli.executableName,
+                imageTag: tag
+            ).write(into: contextDirectory)
+
             artifacts[product] = .ociImage(reference: tag)
         }
         return artifacts
@@ -118,13 +131,13 @@ struct OCIArchiveBackend: ArchiveBackend {
 
     /// The contents of the generated Dockerfile.
     ///
-    /// The image starts from a minimal Amazon Linux 2023 base, copies the `bootstrap` binary (and
-    /// any resources bundles) into `/var/runtime`, and runs `bootstrap` as the entrypoint. No `USER`
-    /// is set, so it runs as the default Lambda user; the binary is world-readable and runnable on a
-    /// read-only filesystem with a writable `/tmp`.
+    /// The image starts from the configured base (a minimal Amazon Linux 2023 image by default),
+    /// copies the `bootstrap` binary (and any resources bundles) into `/var/runtime`, and runs
+    /// `bootstrap` as the entrypoint. No `USER` is set, so it runs as the default Lambda user; the
+    /// binary is world-readable and runnable on a read-only filesystem with a writable `/tmp`.
     func dockerfileContents(resourceDirectoryNames: [String]) -> String {
         var lines: [String] = [
-            "FROM \(Self.baseImage)",
+            "FROM \(self.baseImage)",
             "COPY bootstrap \(Self.bootstrapPath)",
         ]
         for resourceDirectoryName in resourceDirectoryNames.sorted() {

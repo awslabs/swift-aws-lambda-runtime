@@ -115,6 +115,7 @@ struct Builder {
                                                        [--disable-docker-image-update]
                                                        [--cross-compile <docker | container | swift-static-sdk | custom-sdk>]
                                                        [--archive-format <zip | oci>]
+                                                       [--base-oci-image <oci_image_name>]
                                                        [--no-strip]
 
 
@@ -144,6 +145,9 @@ struct Builder {
                                           Values: zip, oci
                                           (default is zip)
                                           oci builds an OCI image (deploy support: see lambda-deploy).
+            --base-oci-image <name>       The base image for the OCI image (--archive-format oci).
+                                          (default: public.ecr.aws/amazonlinux/amazonlinux:2023-minimal)
+                                          Use a glibc-compatible Amazon Linux 2023 base.
             --no-strip                    Do not strip debug symbols from the binary.
             --help                        Show help information.
             """
@@ -164,6 +168,7 @@ struct BuilderConfiguration: CustomStringConvertible {
     public let disableDockerImageUpdate: Bool
     public let crossCompileMethod: CrossCompileMethod
     public let archiveFormat: ArchiveFormat
+    public let baseOCIImage: String
     public let noStrip: Bool
     public let explicitAL2Image: Bool
 
@@ -193,6 +198,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
         let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")  // deprecated alias
         let archiveFormatArgument = argumentExtractor.extractOption(named: "archive-format")
+        let baseOCIImageArgument = argumentExtractor.extractOption(named: "base-oci-image")
         let noStripArgument = argumentExtractor.extractFlag(named: "no-strip") > 0
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
 
@@ -274,6 +280,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let resolvedCrossCompile = crossCompileArgument.first ?? containerCliArgument.first
         self.crossCompileMethod = try CrossCompileMethod.parse(resolvedCrossCompile)
         self.archiveFormat = try ArchiveFormat.parse(archiveFormatArgument.first)
+        self.baseOCIImage = baseOCIImageArgument.first ?? OCIArchiveBackend.defaultBaseImage
         self.noStrip = noStripArgument
 
         // detect when user explicitly provides an AL2 (not AL2023) base image
@@ -335,7 +342,8 @@ struct BuilderConfiguration: CustomStringConvertible {
             return OCIArchiveBackend(
                 cli: try self.makeContainerCLI(),
                 toolPath: self.crossCompileToolPath,
-                architecture: .host
+                architecture: .host,
+                baseImage: self.baseOCIImage
             )
         }
     }
@@ -351,6 +359,7 @@ struct BuilderConfiguration: CustomStringConvertible {
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
           crossCompileMethod: \(self.crossCompileMethod)
           archiveFormat: \(self.archiveFormat)
+          baseOCIImage: \(self.baseOCIImage)
           zipToolPath: \(self.zipToolPath)
           packageID: \(self.packageID)
           packageDisplayName: \(self.packageDisplayName)

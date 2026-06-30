@@ -19,7 +19,7 @@
 /// target. Today this defaults to the host architecture; a user-facing `--architecture` flag and
 /// build-manifest plumbing are tracked separately (issue #683) and will set this explicitly.
 @available(LambdaSwift 2.0, *)
-enum BuildArchitecture: String, CustomStringConvertible {
+enum BuildArchitecture: String, Codable, CustomStringConvertible {
     case x64
     case arm64
 

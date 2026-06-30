@@ -101,9 +101,71 @@ swift package --allow-network-connections docker lambda-build \
 | `--base-docker-image <name>` | The base Docker image to build with. (default: `swift:<version>-amazonlinux2023`) Cannot be combined with `--swift-version`. |
 | `--disable-docker-image-update` | Do not attempt to update the Docker image. |
 | `--cross-compile <method>` | The cross-compilation method: `docker`, `container`, `swift-static-sdk`, or `custom-sdk`. (default: `docker`) `swift-static-sdk` and `custom-sdk` are not yet supported. |
+| `--archive-format <format>` | The packaging format: `zip` or `oci`. (default: `zip`) See [Building an OCI image](#Building-an-OCI-image). |
+| `--base-oci-image <name>` | The base image for the OCI image when `--archive-format oci` is used. (default: `public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`) |
 | `--no-strip` | Do not strip debug symbols from the binary. |
 | `--verbose` | Produce verbose output for debugging. |
 | `--help` | Show help information. |
+
+### Building an OCI image
+
+By default `lambda-build` produces a ZIP archive, which is the simplest option
+and gives the fastest cold starts for most functions. Packaging your function as
+a container image instead is useful when:
+
+- **Your deployment package is larger than the ZIP limits.** A ZIP-packaged
+  function is capped at 50 MB zipped / 250 MB unzipped, whereas a container image
+  can be up to 10 GB. Large dependencies, ML models, or bundled data that blow
+  past the ZIP limit fit comfortably in an image.
+- **You need extra binaries, shared libraries, or system packages at runtime.**
+  Tools your function shells out to (e.g. `ffmpeg`), native `.so` dependencies, or
+  any OS packages can be installed into the image with ordinary `dnf install` /
+  `COPY` steps, instead of being awkwardly vendored into a ZIP.
+- **You already build and ship with containers.** If your team's CI/CD, scanning,
+  and artifact registries are container-based, an image in Amazon ECR slots into
+  the same tooling and promotion workflow as the rest of your services.
+- **You want a reproducible, self-contained runtime.** The image pins the OS, the
+  Swift runtime libraries, and your binary together, so what you test locally is
+  byte-for-byte what runs in Lambda.
+
+If none of these apply, prefer the default ZIP format.
+
+Pass `--archive-format oci` to build an
+[OCI image](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
+suitable for deployment as a container-image Lambda function:
+
+```sh
+swift package --allow-network-connections docker lambda-build \
+  --archive-format oci
+```
+
+This builds a minimal Amazon Linux 2023 image (`public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`)
+with your compiled binary as the `bootstrap` entrypoint, using the same container
+CLI selected by `--cross-compile` (`docker` or `container`). The image is built
+for a single architecture and tagged locally as `swift-lambda/<product>:latest`.
+
+To build from a different base image — for example to add system packages or to
+use `public.ecr.aws/lambda/provided:al2023` — pass `--base-oci-image`:
+
+```sh
+swift package --allow-network-connections docker lambda-build \
+  --archive-format oci \
+  --base-oci-image public.ecr.aws/lambda/provided:al2023
+```
+
+Use a glibc-compatible Amazon Linux 2023 base so the image matches the
+`swift:*-amazonlinux2023` environment your binary was compiled in.
+
+> Important: `lambda-build --archive-format oci` only builds the image **locally**;
+> it does **not** push it to a registry. Pushing the image to Amazon ECR and
+> creating or updating the container-image function happens during `lambda-deploy`,
+> which is the step that holds your AWS credentials and network access. This mirrors
+> the ZIP flow, where `lambda-build` produces the artifact and `lambda-deploy`
+> uploads it.
+
+Alongside the artifact, `lambda-build` writes a `build-manifest.json` recording
+the package type, architecture, and (for images) the container CLI and local tag.
+`lambda-deploy` reads this manifest to determine how to deploy.
 
 ## lambda-deploy
 

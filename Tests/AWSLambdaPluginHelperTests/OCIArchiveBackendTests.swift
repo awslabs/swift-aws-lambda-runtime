@@ -27,11 +27,12 @@ import Foundation
 struct OCIArchiveBackendTests {
 
     @available(LambdaSwift 2.0, *)
-    static func makeBackend() -> OCIArchiveBackend {
+    static func makeBackend(baseImage: String = OCIArchiveBackend.defaultBaseImage) -> OCIArchiveBackend {
         OCIArchiveBackend(
             cli: DockerCLI(),
             toolPath: URL(fileURLWithPath: "/usr/local/bin/docker"),
-            architecture: .arm64
+            architecture: .arm64,
+            baseImage: baseImage
         )
     }
 
@@ -80,6 +81,21 @@ struct OCIArchiveBackendTests {
     }
 
     @available(LambdaSwift 2.0, *)
+    @Test("a custom --base-oci-image flows into the Dockerfile FROM line")
+    func dockerfileWithCustomBaseImage() {
+        let dockerfile = Self.makeBackend(baseImage: "public.ecr.aws/lambda/provided:al2023")
+            .dockerfileContents(resourceDirectoryNames: [])
+        #expect(
+            dockerfile == """
+                FROM public.ecr.aws/lambda/provided:al2023
+                COPY bootstrap /var/runtime/bootstrap
+                ENTRYPOINT ["/var/runtime/bootstrap"]
+
+                """
+        )
+    }
+
+    @available(LambdaSwift 2.0, *)
     @Test("archive lays out the build context (bootstrap + Dockerfile) and returns an .ociImage")
     func archiveLaysOutContext() throws {
         // A real build shells out to docker/container, which the test environment may not have. We
@@ -101,7 +117,8 @@ struct OCIArchiveBackendTests {
         let backend = OCIArchiveBackend(
             cli: DockerCLI(),
             toolPath: URL(fileURLWithPath: "/nonexistent/docker-\(UUID().uuidString)"),
-            architecture: .arm64
+            architecture: .arm64,
+            baseImage: OCIArchiveBackend.defaultBaseImage
         )
 
         // The build step is expected to fail (no real CLI), but the context must be laid out first.

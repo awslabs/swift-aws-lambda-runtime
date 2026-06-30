@@ -19,8 +19,8 @@
 #
 # Maintainer-run script to generate AWS service clients for the Lambda deploy
 # plugin. This script is NOT part of the build process. It uses the Soto Code
-# Generator to produce lightweight Swift clients for Lambda, IAM, S3, and STS
-# with only the operations required by the deployer.
+# Generator to produce lightweight Swift clients for Lambda, IAM, S3, STS, and
+# ECR with only the operations required by the deployer.
 #
 # Prerequisites:
 #   - Swift toolchain installed
@@ -66,6 +66,7 @@ SERVICE_OPERATIONS=(
     ["IAM"]="CreateRole,DeleteRole,AttachRolePolicy,DetachRolePolicy,GetRole,PutRolePolicy,DeleteRolePolicy"
     ["S3"]="CreateBucket,HeadBucket,PutObject,DeleteObject"
     ["STS"]="GetCallerIdentity"
+    ["ECR"]="GetAuthorizationToken,CreateRepository,DescribeRepositories,GetRepositoryPolicy,SetRepositoryPolicy,BatchGetImage"
 )
 
 # Map service names to their Smithy model directory names in aws-sdk-go-v2
@@ -75,6 +76,7 @@ SERVICE_MODEL_DIRS=(
     ["IAM"]="iam"
     ["S3"]="s3"
     ["STS"]="sts"
+    ["ECR"]="ecr"
 )
 
 # ---------------------------------------------------------------------------
@@ -205,6 +207,16 @@ generate_config() {
             "operations": [
                 "GetCallerIdentity"
             ]
+        },
+        "ECR": {
+            "operations": [
+                "GetAuthorizationToken",
+                "CreateRepository",
+                "DescribeRepositories",
+                "GetRepositoryPolicy",
+                "SetRepositoryPolicy",
+                "BatchGetImage"
+            ]
         }
     }
 }
@@ -326,7 +338,7 @@ main() {
     log "This script generates lightweight AWS service clients"
     log "for the Lambda deploy plugin using the Soto Code Generator."
     log ""
-    log "Services: Lambda, IAM, S3, STS"
+    log "Services: Lambda, IAM, S3, STS, ECR"
     log "Output:   ${OUTPUT_DIR}"
     log ""
 

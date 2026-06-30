@@ -62,4 +62,22 @@ protocol ContainerCLI {
         tag: String,
         architecture: BuildArchitecture
     ) -> [String]
+
+    /// The arguments to log in to a container registry, reading the password from stdin.
+    ///
+    /// The caller pipes the secret to the process's standard input (e.g. an ECR authorization
+    /// token), so the password never appears in the argument vector. For ECR the username is
+    /// always `AWS`.
+    ///
+    /// - Parameters:
+    ///   - registry: The registry host to authenticate against (e.g.
+    ///     `<account>.dkr.ecr.<region>.amazonaws.com`).
+    ///   - username: The registry username (`AWS` for ECR).
+    func loginArguments(registry: String, username: String) -> [String]
+
+    /// The arguments to re-tag a local image under a new reference (e.g. the ECR-qualified name).
+    func tagArguments(source: String, target: String) -> [String]
+
+    /// The arguments to push a tagged image to its registry.
+    func pushArguments(tag: String) -> [String]
 }

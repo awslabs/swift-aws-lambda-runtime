@@ -93,6 +93,29 @@ struct ArchiveBackendSelectionTests {
         let oci = try #require(backend as? OCIArchiveBackend)
         #expect(oci.name == "oci")
         #expect(oci.cli is DockerCLI)
+        // Without --base-oci-image, the backend uses the default minimal AL2023 base.
+        #expect(oci.baseImage == OCIArchiveBackend.defaultBaseImage)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--base-oci-image overrides the OCI backend base image")
+    func ociWithCustomBaseImage() throws {
+        let configuration = try BuilderConfiguration(arguments: [
+            "--package-id", "test",
+            "--package-display-name", "Test",
+            "--package-directory", "/tmp/pkg",
+            "--cross-compile-tool-path", "/usr/local/bin/docker",
+            "--zip-tool-path", "/usr/bin/zip",
+            "--output-path", "/tmp",
+            "--products", "MyLambda",
+            "--configuration", "release",
+            "--archive-format", "oci",
+            "--base-oci-image", "public.ecr.aws/lambda/provided:al2023",
+        ])
+        #expect(configuration.baseOCIImage == "public.ecr.aws/lambda/provided:al2023")
+        let backend = try configuration.makeArchiveBackend()
+        let oci = try #require(backend as? OCIArchiveBackend)
+        #expect(oci.baseImage == "public.ecr.aws/lambda/provided:al2023")
     }
 
     @available(LambdaSwift 2.0, *)
@@ -159,5 +182,11 @@ struct ZipArchiveBackendTests {
         // The binary is relocated to "bootstrap" next to the zip, as the Lambda runtime expects.
         let bootstrap = outputDir.appending(path: product).appending(path: "bootstrap")
         #expect(FileManager.default.fileExists(atPath: bootstrap.path()))
+
+        // A build manifest is written alongside the zip for the deploy hand-off.
+        let manifest = try #require(try BuildManifest.read(from: outputDir.appending(path: product)))
+        #expect(manifest.packageType == .zip)
+        #expect(manifest.product == product)
+        #expect(manifest.zipPath == zipURL.path())
     }
 }
