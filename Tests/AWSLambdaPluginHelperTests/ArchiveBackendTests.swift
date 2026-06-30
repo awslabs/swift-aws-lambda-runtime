@@ -119,6 +119,25 @@ struct ArchiveBackendSelectionTests {
     }
 
     @available(LambdaSwift 2.0, *)
+    @Test("--base-oci-image is rejected when the archive format is not oci")
+    func baseOCIImageRejectedForZip() {
+        #expect(throws: BuilderErrors.self) {
+            _ = try BuilderConfiguration(arguments: [
+                "--package-id", "test",
+                "--package-display-name", "Test",
+                "--package-directory", "/tmp/pkg",
+                "--cross-compile-tool-path", "/usr/local/bin/docker",
+                "--zip-tool-path", "/usr/bin/zip",
+                "--output-path", "/tmp",
+                "--products", "MyLambda",
+                "--configuration", "release",
+                "--archive-format", "zip",
+                "--base-oci-image", "public.ecr.aws/lambda/provided:al2023",
+            ])
+        }
+    }
+
+    @available(LambdaSwift 2.0, *)
     @Test("oci with --cross-compile container selects the Apple container CLI")
     func ociWithContainerCLI() throws {
         let configuration = try BuilderConfiguration(arguments: [

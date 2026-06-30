@@ -280,6 +280,12 @@ struct BuilderConfiguration: CustomStringConvertible {
         let resolvedCrossCompile = crossCompileArgument.first ?? containerCliArgument.first
         self.crossCompileMethod = try CrossCompileMethod.parse(resolvedCrossCompile)
         self.archiveFormat = try ArchiveFormat.parse(archiveFormatArgument.first)
+
+        // --base-oci-image only applies to the OCI image build; reject it for other formats rather
+        // than silently ignoring it.
+        guard baseOCIImageArgument.isEmpty || self.archiveFormat == .oci else {
+            throw BuilderErrors.invalidArgument("--base-oci-image can only be used with --archive-format oci")
+        }
         self.baseOCIImage = baseOCIImageArgument.first ?? OCIArchiveBackend.defaultBaseImage
         self.noStrip = noStripArgument
 
