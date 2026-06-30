@@ -29,6 +29,7 @@ Package.resolved
 **/*.xcassets/*
 **/*.appiconset/*
 **/ResourcePackaging/hello.txt
+Sources/AWSLambdaPluginHelper/GeneratedClients/**
 .mailmap
 .swiftformat
 *.yaml
