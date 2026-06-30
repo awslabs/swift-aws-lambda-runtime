@@ -35,9 +35,9 @@ struct ZipArchiveBackend: ArchiveBackend {
         products: [String: URL],
         outputDirectory: URL,
         verboseLogging: Bool
-    ) throws -> [String: URL] {
+    ) throws -> [String: Artifact] {
 
-        var archives = [String: URL]()
+        var archives = [String: Artifact]()
         for (product, artifactPath) in products {
             print("-------------------------------------------------------------------------")
             print("archiving \"\(product)\"")
@@ -117,7 +117,7 @@ struct ZipArchiveBackend: ArchiveBackend {
                 logLevel: verboseLogging ? .debug : .silent
             )
 
-            archives[product] = zipfilePath
+            archives[product] = .zip(zipfilePath)
         }
         return archives
     }

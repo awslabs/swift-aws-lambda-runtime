@@ -85,6 +85,48 @@ struct DockerCLIArgumentTests {
             ]
         )
     }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("build image arguments use --platform for arm64")
+    func buildImageArgumentsArm64() {
+        let cli = DockerCLI()
+        let args = cli.buildImageArguments(
+            dockerfile: "/ctx/Dockerfile",
+            contextDir: "/ctx",
+            tag: "swift-lambda/MyLambda:latest",
+            architecture: .arm64
+        )
+        #expect(
+            args == [
+                "build",
+                "--platform", "linux/arm64",
+                "-f", "/ctx/Dockerfile",
+                "-t", "swift-lambda/MyLambda:latest",
+                "/ctx",
+            ]
+        )
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("build image arguments use --platform for x64")
+    func buildImageArgumentsX64() {
+        let cli = DockerCLI()
+        let args = cli.buildImageArguments(
+            dockerfile: "/ctx/Dockerfile",
+            contextDir: "/ctx",
+            tag: "t",
+            architecture: .x64
+        )
+        #expect(
+            args == [
+                "build",
+                "--platform", "linux/amd64",
+                "-f", "/ctx/Dockerfile",
+                "-t", "t",
+                "/ctx",
+            ]
+        )
+    }
 }
 
 // MARK: - AppleContainerCLI argv
@@ -145,6 +187,48 @@ struct AppleContainerCLIArgumentTests {
                 "-w", "/w",
                 "img",
                 "bash", "-cl", "cmd",
+            ]
+        )
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("build image arguments use --arch and an explicit context dir for arm64")
+    func buildImageArgumentsArm64() {
+        let cli = AppleContainerCLI()
+        let args = cli.buildImageArguments(
+            dockerfile: "/ctx/Dockerfile",
+            contextDir: "/ctx",
+            tag: "swift-lambda/MyLambda:latest",
+            architecture: .arm64
+        )
+        #expect(
+            args == [
+                "build",
+                "--arch", "arm64",
+                "-f", "/ctx/Dockerfile",
+                "-t", "swift-lambda/MyLambda:latest",
+                "/ctx",
+            ]
+        )
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("build image arguments use --arch for x64")
+    func buildImageArgumentsX64() {
+        let cli = AppleContainerCLI()
+        let args = cli.buildImageArguments(
+            dockerfile: "/ctx/Dockerfile",
+            contextDir: "/ctx",
+            tag: "t",
+            architecture: .x64
+        )
+        #expect(
+            args == [
+                "build",
+                "--arch", "amd64",
+                "-f", "/ctx/Dockerfile",
+                "-t", "t",
+                "/ctx",
             ]
         )
     }

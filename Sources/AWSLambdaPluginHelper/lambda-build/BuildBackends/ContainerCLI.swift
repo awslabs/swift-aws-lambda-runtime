@@ -45,4 +45,21 @@ protocol ContainerCLI {
         env: [String: String]?,
         command: String
     ) -> [String]
+
+    /// The arguments to build an OCI image from a Dockerfile for a single target architecture.
+    ///
+    /// - Parameters:
+    ///   - dockerfile: Path to the Dockerfile to build.
+    ///   - contextDir: The build context directory (the directory containing the files the
+    ///     Dockerfile's `COPY`/`ADD` instructions reference).
+    ///   - tag: The image tag to apply (e.g. `swift-lambda/MyLambda:latest`).
+    ///   - architecture: The single CPU architecture to build for. AWS Lambda images are
+    ///     single-architecture, so this is always baked in explicitly rather than left to the
+    ///     daemon default.
+    func buildImageArguments(
+        dockerfile: String,
+        contextDir: String,
+        tag: String,
+        architecture: BuildArchitecture
+    ) -> [String]
 }

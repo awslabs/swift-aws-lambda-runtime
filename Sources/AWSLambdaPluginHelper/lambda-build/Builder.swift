@@ -64,8 +64,8 @@ struct Builder {
         print(
             "\(archives.count > 0 ? archives.count.description : "no") archive\(archives.count != 1 ? "s" : "") created"
         )
-        for (product, archivePath) in archives {
-            print("  * \(product) at \(archivePath.path())")
+        for (product, artifact) in archives {
+            print("  * \(product) at \(artifact)")
         }
     }
 
@@ -143,7 +143,7 @@ struct Builder {
             --archive-format <format>     The packaging format for the build artifact.
                                           Values: zip, oci
                                           (default is zip)
-                                          Note: oci is not yet supported.
+                                          oci builds an OCI image (deploy support: see lambda-deploy).
             --no-strip                    Do not strip debug symbols from the binary.
             --help                        Show help information.
             """
@@ -299,15 +299,7 @@ struct BuilderConfiguration: CustomStringConvertible {
     /// everything a backend needs (the resolved tool path, base image, and image-update
     /// preference), so the factory lives here rather than on ``CrossCompileMethod``.
     func makeCrossCompileBackend() throws -> any BuildBackend {
-        let cli: any ContainerCLI
-        switch self.crossCompileMethod {
-        case .docker:
-            cli = DockerCLI()
-        case .container:
-            cli = AppleContainerCLI()
-        case .swiftStaticSdk, .customSdk:
-            throw BuilderErrors.unsupportedCrossCompileMethod(self.crossCompileMethod)
-        }
+        let cli = try self.makeContainerCLI()
         return ContainerBuildBackend(
             cli: cli,
             toolPath: self.crossCompileToolPath,
@@ -317,13 +309,34 @@ struct BuilderConfiguration: CustomStringConvertible {
         )
     }
 
+    /// Resolves the ``ContainerCLI`` argument flavor for the configured cross-compile method.
+    ///
+    /// Shared by the build backend and the OCI archive backend — both shell out through the same
+    /// container CLI (docker or Apple's `container`).
+    private func makeContainerCLI() throws -> any ContainerCLI {
+        switch self.crossCompileMethod {
+        case .docker:
+            return DockerCLI()
+        case .container:
+            return AppleContainerCLI()
+        case .swiftStaticSdk, .customSdk:
+            throw BuilderErrors.unsupportedCrossCompileMethod(self.crossCompileMethod)
+        }
+    }
+
     /// Creates the ``ArchiveBackend`` that packages the built binaries for the configured format.
     func makeArchiveBackend() throws -> any ArchiveBackend {
         switch self.archiveFormat {
         case .zip:
             return ZipArchiveBackend(zipToolPath: self.zipToolPath)
         case .oci:
-            throw BuilderErrors.unsupportedArchiveFormat(self.archiveFormat)
+            // An OCI image bakes in a single architecture. A user-facing --architecture flag and
+            // build-manifest plumbing are tracked under #683; until then the image targets the host.
+            return OCIArchiveBackend(
+                cli: try self.makeContainerCLI(),
+                toolPath: self.crossCompileToolPath,
+                architecture: .host
+            )
         }
     }
 

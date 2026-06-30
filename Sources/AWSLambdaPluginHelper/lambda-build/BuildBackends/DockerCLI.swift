@@ -44,4 +44,19 @@ struct DockerCLI: ContainerCLI {
         args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
         return args
     }
+
+    func buildImageArguments(
+        dockerfile: String,
+        contextDir: String,
+        tag: String,
+        architecture: BuildArchitecture
+    ) -> [String] {
+        [
+            "build",
+            "--platform", architecture.dockerPlatform,
+            "-f", dockerfile,
+            "-t", tag,
+            contextDir,
+        ]
+    }
 }

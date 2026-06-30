@@ -39,11 +39,9 @@ struct ArchiveFormatTests {
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("oci is recognised but not yet supported")
-    func ociUnsupported() {
-        #expect(throws: BuilderErrors.self) {
-            _ = try ArchiveFormat.parse("oci")
-        }
+    @Test("oci parses and is case-insensitive", arguments: ["oci", "OCI", "Oci"])
+    func parsesOCI(value: String) throws {
+        #expect(try ArchiveFormat.parse(value) == .oci)
     }
 
     @available(LambdaSwift 2.0, *)
@@ -75,6 +73,46 @@ struct ArchiveBackendSelectionTests {
         let backend = try configuration.makeArchiveBackend()
         let zip = try #require(backend as? ZipArchiveBackend)
         #expect(zip.name == "zip")
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("oci selects the OCIArchiveBackend")
+    func ociSelectsOCIBackend() throws {
+        let configuration = try BuilderConfiguration(arguments: [
+            "--package-id", "test",
+            "--package-display-name", "Test",
+            "--package-directory", "/tmp/pkg",
+            "--cross-compile-tool-path", "/usr/local/bin/docker",
+            "--zip-tool-path", "/usr/bin/zip",
+            "--output-path", "/tmp",
+            "--products", "MyLambda",
+            "--configuration", "release",
+            "--archive-format", "oci",
+        ])
+        let backend = try configuration.makeArchiveBackend()
+        let oci = try #require(backend as? OCIArchiveBackend)
+        #expect(oci.name == "oci")
+        #expect(oci.cli is DockerCLI)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("oci with --cross-compile container selects the Apple container CLI")
+    func ociWithContainerCLI() throws {
+        let configuration = try BuilderConfiguration(arguments: [
+            "--package-id", "test",
+            "--package-display-name", "Test",
+            "--package-directory", "/tmp/pkg",
+            "--cross-compile-tool-path", "/usr/local/bin/container",
+            "--zip-tool-path", "/usr/bin/zip",
+            "--output-path", "/tmp",
+            "--products", "MyLambda",
+            "--configuration", "release",
+            "--archive-format", "oci",
+            "--cross-compile", "container",
+        ])
+        let backend = try configuration.makeArchiveBackend()
+        let oci = try #require(backend as? OCIArchiveBackend)
+        #expect(oci.cli is AppleContainerCLI)
     }
 }
 
@@ -110,7 +148,11 @@ struct ZipArchiveBackendTests {
             verboseLogging: false
         )
 
-        let zipURL = try #require(archives[product])
+        let artifact = try #require(archives[product])
+        guard case .zip(let zipURL) = artifact else {
+            Issue.record("expected a .zip artifact, got \(artifact)")
+            return
+        }
         #expect(zipURL.lastPathComponent == "\(product).zip")
         #expect(FileManager.default.fileExists(atPath: zipURL.path()))
 

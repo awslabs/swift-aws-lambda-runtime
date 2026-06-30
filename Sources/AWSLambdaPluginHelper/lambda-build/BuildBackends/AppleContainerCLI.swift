@@ -47,4 +47,22 @@ struct AppleContainerCLI: ContainerCLI {
         args += ["-w", workingDirectory, baseImage, "bash", "-cl", command]
         return args
     }
+
+    func buildImageArguments(
+        dockerfile: String,
+        contextDir: String,
+        tag: String,
+        architecture: BuildArchitecture
+    ) -> [String] {
+        // `container build` defaults its context to `.` and that misbehaves (the COPY context comes
+        // through empty), so the context directory is always passed explicitly alongside an
+        // explicit `-f`. `--arch` selects the single target architecture.
+        [
+            "build",
+            "--arch", architecture.containerArch,
+            "-f", dockerfile,
+            "-t", tag,
+            contextDir,
+        ]
+    }
 }

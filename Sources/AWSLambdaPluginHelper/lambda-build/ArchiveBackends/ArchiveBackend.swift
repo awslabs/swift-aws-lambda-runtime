@@ -37,10 +37,10 @@ protocol ArchiveBackend {
     ///     by a ``BuildBackend``.
     ///   - outputDirectory: The directory where the artifacts should be written.
     ///   - verboseLogging: When `true`, emit verbose output for debugging.
-    /// - Returns: A map of product name to the produced artifact's URL.
+    /// - Returns: A map of product name to the produced ``Artifact``.
     func archive(
         products: [String: URL],
         outputDirectory: URL,
         verboseLogging: Bool
-    ) throws -> [String: URL]
+    ) throws -> [String: Artifact]
 }

@@ -27,13 +27,13 @@ import Foundation
 enum ArchiveFormat: String, CustomStringConvertible {
     /// A ZIP package suitable for upload to AWS Lambda.
     case zip
-    /// An OCI image. Not yet supported.
+    /// An OCI image suitable for deployment as an `Image`-packaged Lambda function.
     case oci
 
     var isSupported: Bool {
         switch self {
         case .zip: return true
-        case .oci: return false
+        case .oci: return true
         }
     }
 
