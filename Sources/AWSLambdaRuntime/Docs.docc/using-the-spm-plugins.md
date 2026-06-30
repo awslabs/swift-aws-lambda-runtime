@@ -11,6 +11,8 @@ Scaffold, build, and deploy your Lambda function with the bundled SwiftPM comman
 
 ## Overview
 
+> Warning: The command plugins require **Swift 6.4 or later**. On older toolchains, `swift package lambda-init`, `lambda-build`, and `lambda-deploy` are not available, use the `archive` plugin instead. After installing [swiftly](https://www.swift.org/install/macos/), run `swiftly install 6.4.x-snapshot`.
+
 Swift AWS Lambda Runtime ships three SwiftPM command plugins that cover the full
 lifecycle of a Lambda function, from creating the project to deploying it on AWS:
 
@@ -109,6 +111,9 @@ swift package --allow-network-connections docker lambda-build \
 manages the full IAM role lifecycle, automatically creating a role with the
 `AWSLambdaBasicExecutionRole` policy when you don't provide an existing one. It
 also stages large archives (over 50 MB) through S3.
+
+> Tip: For a step-by-step walkthrough, including how credentials are resolved,
+> see <doc:deploying-with-the-plugin>.
 
 > Be sure [to have an AWS Account](https://docs.aws.amazon.com/accounts/latest/reference/manage-acct-creating.html)
 > and the [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)

@@ -21,7 +21,7 @@ echo "🚀 Building and deploying ServiceLifecycle Lambda with PostgreSQL..."
 
 # Build the Lambda function
 echo "📦 Building Swift Lambda function..."
-swift package --disable-sandbox archive --allow-network-connections docker
+swift package --allow-network-connections docker lambda-build 
 
 # Deploy with SAM
 echo "🌩️  Deploying with SAM..."

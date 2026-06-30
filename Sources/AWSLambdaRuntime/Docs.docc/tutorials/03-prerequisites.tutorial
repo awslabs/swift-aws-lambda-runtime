@@ -7,6 +7,8 @@ This tutorial has been tested on macOS, since this is what most Swift developers
 
 To follow the instructions provided by this tutorial you'll need to meet a couple of prerequisites.
 
+> Warning: The command plugins require **Swift 6.4 or later**. On older toolchains, `swift package lambda-init`, `lambda-build`, and `lambda-deploy` are not available, use the `archive` plugin instead. After installing [swiftly](https://www.swift.org/install/macos/), run `swiftly install 6.4.x-snapshot`.
+
 - We expect you to have a basic understanding of the Swift programming language and be somewhat familiar with the terminal/console. You can follow this [guided tour to have an overview of Swift](https://docs.swift.org/swift-book/documentation/the-swift-programming-language/guidedtour). [You can follow this short tutorial to learn about macOS commands and the Terminal](https://support.apple.com/guide/terminal/open-or-quit-terminal-apd5265185d-f365-44cb-8b09-71a064a42125/mac).
 
 - You'll need to have a text editor and the Swift toolchain installed.  On macOS, you can use [Xcode](https://developer.apple.com/xcode/). On Linux, you must install [the Swift runtime and toolchain](https://www.swift.org/download/). On macOS and Linux, you may also use [VSCode](https://code.visualstudio.com/download) and the [Swift extension for VSCode](https://www.swift.org/blog/vscode-extension/).

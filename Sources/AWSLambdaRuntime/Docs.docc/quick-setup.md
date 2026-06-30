@@ -11,6 +11,8 @@ Learn how to create your first project in 3 minutes.
 
 Follow these instructions to get a high-level overview of the steps to write, test, and deploy your first Lambda function written in Swift.
 
+> Warning: The command plugins require **Swift 6.4 or later**. On older toolchains, `swift package lambda-init`, `lambda-build`, and `lambda-deploy` are not available, use the `archive` plugin instead. After installing [swiftly](https://www.swift.org/install/macos/), run `swiftly install 6.4.x-snapshot`.
+
 For a detailed step-by-step instruction, follow the tutorial instead.
 
 <doc:/tutorials/table-of-content>
@@ -113,7 +115,11 @@ AWS Lambda runtime runs on Amazon Linux. You must compile your code for Amazon L
 > Be sure to have [Docker](https://docs.docker.com/desktop/install/mac-install/) installed for this step.
 
 ```sh
+# When using Swift 6.4 or more recent
 swift package --allow-network-connections docker lambda-build
+
+# When using Swift 6.3 or older
+# swift package --allow-network-connections docker archive
 
 -------------------------------------------------------------------------
 building "MyFirstLambdaFunction" in docker
@@ -140,7 +146,11 @@ archiving "MyFirstLambdaFunction"
 Deploy your function using the `lambda-deploy` plugin:
 
 ```sh
+# When using Swift 6.4 or more recent
 swift package --allow-network-connections all:443 lambda-deploy
+
+# When using Swift 6.3 or older,
+# use the AWS CLI, SAM, the CDK, or the AWS console.
 ```
 
 The plugin creates the IAM role, uploads the code, and creates the Lambda function automatically. When the deployment succeeds, it reports the function ARN and a ready-to-use `aws lambda invoke` command.
@@ -157,7 +167,16 @@ aws lambda invoke \
 When you're done, clean up the function and its IAM role:
 
 ```sh
+# When using Swift 6.4 or more recent
 swift package --allow-network-connections all:443 lambda-deploy --delete
+
+# When using Swift 6.3 or older,
+# use the AWS CLI, SAM, the CDK, or the AWS console.
 ```
 
 Congratulations 🎉! You just wrote, tested, built, and deployed a Lambda function written in Swift.
+
+## See Also
+
+- <doc:lambda-handlers>
+- <doc:testing-locally>
