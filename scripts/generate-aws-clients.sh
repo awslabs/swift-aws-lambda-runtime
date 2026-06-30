@@ -18,20 +18,39 @@
 # generate-aws-clients.sh
 #
 # Maintainer-run script to generate AWS service clients for the Lambda deploy
-# plugin. This script is NOT part of the build process. It uses the Soto Code
-# Generator to produce lightweight Swift clients for Lambda, IAM, S3, STS, and
-# ECR with only the operations required by the deployer.
+# plugin. This script is NOT part of the build process. It generates lightweight
+# Swift clients for Lambda, IAM, S3, STS, and ECR with only the operations
+# required by the deployer.
+#
+# How it works
+# ------------
+# Rather than driving the Soto Code Generator binary directly (whose CLI changes
+# between releases), this script scaffolds a *throwaway* SwiftPM project that uses
+# the two Soto plugins, with a single `soto.config.json` as the source of truth:
+#
+#   1. `swift package plugin download-aws-models` reads the services listed in
+#      soto.config.json and downloads their Smithy models (from aws/api-models-aws)
+#      into the target's `aws-models/` folder.
+#   2. `swift build` runs the SotoCodeGeneratorPlugin build-tool plugin, which emits
+#      `<service>_api.swift` / `<service>_shapes.swift` into the build output.
+#
+# The script then copies those files into `GeneratedClients/<Service>/`, prepends
+# the project license header, and inserts the `@available(LambdaSwift 2.0, *)`
+# macro the package requires.
+#
+# The throwaway project is created under a temporary directory and removed on
+# exit, so nothing but the generated clients is left behind.
 #
 # Prerequisites:
-#   - Swift toolchain installed
-#   - Git installed
-#   - Internet access (to clone repos and download models)
+#   - Swift toolchain (the same one used to build the package)
+#   - Internet access (to resolve the codegen/soto-core packages and download
+#     the AWS Smithy models)
 #
 # Usage:
 #   ./scripts/generate-aws-clients.sh
 #
-# The generated files are written to:
-#   Sources/AWSLambdaPluginHelper/GeneratedClients/
+# Compatible with the stock macOS Bash 3.2 (no associative arrays / Bash 4+
+# features are used).
 # =============================================================================
 
 set -euo pipefail
@@ -48,282 +67,195 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 OUTPUT_DIR="${PROJECT_ROOT}/Sources/AWSLambdaPluginHelper/GeneratedClients"
 
-# Soto Code Generator repository and version
-SOTO_CODEGEN_REPO="https://github.com/soto-project/soto-codegenerator.git"
-SOTO_CODEGEN_BRANCH="main"
+# Pinned plugin / soto-core versions (the plugin pulls in the generator).
+SOTO_CODEGEN_VERSION="7.9.3"
+SOTO_CORE_VERSION="7.14.0"
 
-# AWS SDK Smithy models repository
-AWS_MODELS_REPO="https://github.com/aws/aws-sdk-go-v2.git"
-AWS_MODELS_BRANCH="main"
+# soto.config.json — the single source of truth for what gets generated. Both Soto
+# plugins read it: `download-aws-models` downloads exactly the services listed (keyed
+# by their lowercase model name in aws/api-models-aws), and the codegen plugin emits
+# only the listed operations.
+#
+# IMPORTANT: operation names MUST be camelCase (lowercase first letter); PascalCase
+# matches nothing and silently emits an empty client.
+SOTO_CONFIG_JSON='{
+    "access": "public",
+    "services": {
+        "lambda": { "operations": ["createFunction","updateFunctionCode","deleteFunction","getFunction","createFunctionUrlConfig","getFunctionUrlConfig","deleteFunctionUrlConfig","addPermission","removePermission"] },
+        "iam": { "operations": ["createRole","deleteRole","attachRolePolicy","detachRolePolicy","getRole","putRolePolicy","deleteRolePolicy"] },
+        "s3": { "operations": ["createBucket","headBucket","putObject","deleteObject"] },
+        "sts": { "operations": ["getCallerIdentity"] },
+        "ecr": { "operations": ["getAuthorizationToken","createRepository","describeRepositories","getRepositoryPolicy","setRepositoryPolicy","batchGetImage"] }
+    }
+}'
 
-# Working directory for generation
-WORK_DIR="${PROJECT_ROOT}/.build/codegen-work"
+# Maps each lowercase model name (the generated <model>_*.swift prefix) to its PascalCase
+# GeneratedClients/<Service>/ directory. Space-separated "model:Service" pairs — no
+# associative arrays, so this runs on the stock macOS Bash 3.2.
+SERVICE_DIRS="lambda:Lambda iam:IAM s3:S3 sts:STS ecr:ECR"
 
-# Services and their required operations
-declare -A SERVICE_OPERATIONS
-SERVICE_OPERATIONS=(
-    ["Lambda"]="CreateFunction,UpdateFunctionCode,DeleteFunction,GetFunction,CreateFunctionUrlConfig,GetFunctionUrlConfig,DeleteFunctionUrlConfig,AddPermission,RemovePermission"
-    ["IAM"]="CreateRole,DeleteRole,AttachRolePolicy,DetachRolePolicy,GetRole,PutRolePolicy,DeleteRolePolicy"
-    ["S3"]="CreateBucket,HeadBucket,PutObject,DeleteObject"
-    ["STS"]="GetCallerIdentity"
-    ["ECR"]="GetAuthorizationToken,CreateRepository,DescribeRepositories,GetRepositoryPolicy,SetRepositoryPolicy,BatchGetImage"
-)
+# Working directory for the throwaway generation project. Removed on exit.
+WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/soto-codegen.XXXXXX")"
+GEN_PROJECT="${WORK_DIR}/SotoClientGen"
 
-# Map service names to their Smithy model directory names in aws-sdk-go-v2
-declare -A SERVICE_MODEL_DIRS
-SERVICE_MODEL_DIRS=(
-    ["Lambda"]="lambda"
-    ["IAM"]="iam"
-    ["S3"]="s3"
-    ["STS"]="sts"
-    ["ECR"]="ecr"
-)
+cleanup() {
+    rm -rf "${WORK_DIR}"
+}
+trap cleanup EXIT
 
 # ---------------------------------------------------------------------------
-# Helper functions
+# Helpers
 # ---------------------------------------------------------------------------
 
 check_prerequisites() {
     log "Checking prerequisites..."
-
-    if ! command -v swift &> /dev/null; then
-        fatal "Swift toolchain not found. Please install Swift."
-    fi
-
-    if ! command -v git &> /dev/null; then
-        fatal "Git not found. Please install git."
-    fi
-
+    command -v swift > /dev/null 2>&1 || fatal "Swift toolchain not found. Please install Swift."
     log "Prerequisites satisfied."
 }
 
-setup_work_dir() {
-    log "Setting up working directory at ${WORK_DIR}..."
-    rm -rf "${WORK_DIR}"
-    mkdir -p "${WORK_DIR}"
-}
+scaffold_project() {
+    log "Scaffolding throwaway generation project at ${GEN_PROJECT}..."
 
-clone_codegen() {
-    log "Cloning Soto Code Generator..."
-    if [ -d "${WORK_DIR}/soto-codegenerator" ]; then
-        log "Soto Code Generator already cloned, pulling latest..."
-        git -C "${WORK_DIR}/soto-codegenerator" pull --quiet
-    else
-        git clone --quiet --depth 1 --branch "${SOTO_CODEGEN_BRANCH}" \
-            "${SOTO_CODEGEN_REPO}" "${WORK_DIR}/soto-codegenerator"
-    fi
-    log "Soto Code Generator ready."
+    local sources="${GEN_PROJECT}/Sources/SotoClientGen"
+    mkdir -p "${sources}"
+
+    cat > "${GEN_PROJECT}/Package.swift" << EOF
+// swift-tools-version:6.0
+import PackageDescription
+
+let package = Package(
+    name: "SotoClientGen",
+    dependencies: [
+        .package(url: "https://github.com/soto-project/soto-codegenerator", from: "${SOTO_CODEGEN_VERSION}"),
+        .package(url: "https://github.com/soto-project/soto-core.git", from: "${SOTO_CORE_VERSION}"),
+    ],
+    targets: [
+        .target(
+            name: "SotoClientGen",
+            dependencies: [.product(name: "SotoCore", package: "soto-core")],
+            plugins: [.plugin(name: "SotoCodeGeneratorPlugin", package: "soto-codegenerator")]
+        )
+    ]
+)
+EOF
+
+    # SwiftPM only runs build-tool plugins on a target that has at least one source file.
+    echo "// Placeholder so SwiftPM treats this as a source module and runs the codegen plugin." \
+        > "${sources}/Placeholder.swift"
+
+    # The config is the single source of truth for both Soto plugins (download + codegen).
+    printf '%s\n' "${SOTO_CONFIG_JSON}" > "${sources}/soto.config.json"
+
+    log "Project scaffolded."
 }
 
 download_models() {
-    log "Downloading AWS service model files..."
-
-    local models_dir="${WORK_DIR}/aws-models"
-    mkdir -p "${models_dir}"
-
-    # Clone aws-sdk-go-v2 sparsely to get only the service model directories we need
-    if [ ! -d "${WORK_DIR}/aws-sdk-go-v2" ]; then
-        git clone --quiet --depth 1 --filter=blob:none --sparse \
-            --branch "${AWS_MODELS_BRANCH}" \
-            "${AWS_MODELS_REPO}" "${WORK_DIR}/aws-sdk-go-v2"
-
-        pushd "${WORK_DIR}/aws-sdk-go-v2" > /dev/null
-        local sparse_paths=""
-        for service in "${!SERVICE_MODEL_DIRS[@]}"; do
-            sparse_paths="${sparse_paths} codegen/sdk-codegen/aws-models/${SERVICE_MODEL_DIRS[$service]}"
-        done
-        # shellcheck disable=SC2086
-        git sparse-checkout set ${sparse_paths}
-        popd > /dev/null
-    fi
-
-    # Copy model files to our working models directory
-    for service in "${!SERVICE_MODEL_DIRS[@]}"; do
-        local model_dir_name="${SERVICE_MODEL_DIRS[$service]}"
-        local src_dir="${WORK_DIR}/aws-sdk-go-v2/codegen/sdk-codegen/aws-models/${model_dir_name}"
-        if [ -d "${src_dir}" ]; then
-            cp -r "${src_dir}" "${models_dir}/"
-            log "  Copied model for ${service} (${model_dir_name})"
-        else
-            # Try alternative model locations
-            local alt_src="${WORK_DIR}/aws-sdk-go-v2/codegen/sdk-codegen/aws-models"
-            local smithy_file
-            smithy_file=$(find "${alt_src}" -name "${model_dir_name}.json" -o -name "${model_dir_name}.smithy" 2>/dev/null | head -1)
-            if [ -n "${smithy_file}" ]; then
-                mkdir -p "${models_dir}/${model_dir_name}"
-                cp "${smithy_file}" "${models_dir}/${model_dir_name}/"
-                log "  Copied model file for ${service}"
-            else
-                fatal "Could not find Smithy model for ${service} (looked in ${src_dir})"
-            fi
-        fi
-    done
-
-    log "AWS service models ready."
-}
-
-generate_config() {
-    log "Generating code generator configuration..."
-
-    local config_file="${WORK_DIR}/codegen-config.json"
-
-    # Build the configuration JSON with only the operations we need
-    cat > "${config_file}" << 'CONFIGEOF'
-{
-    "services": {
-        "Lambda": {
-            "operations": [
-                "CreateFunction",
-                "UpdateFunctionCode",
-                "DeleteFunction",
-                "GetFunction",
-                "CreateFunctionUrlConfig",
-                "GetFunctionUrlConfig",
-                "DeleteFunctionUrlConfig",
-                "AddPermission",
-                "RemovePermission"
-            ]
-        },
-        "IAM": {
-            "operations": [
-                "CreateRole",
-                "DeleteRole",
-                "AttachRolePolicy",
-                "DetachRolePolicy",
-                "GetRole",
-                "PutRolePolicy",
-                "DeleteRolePolicy"
-            ]
-        },
-        "S3": {
-            "operations": [
-                "CreateBucket",
-                "HeadBucket",
-                "PutObject",
-                "DeleteObject"
-            ]
-        },
-        "STS": {
-            "operations": [
-                "GetCallerIdentity"
-            ]
-        },
-        "ECR": {
-            "operations": [
-                "GetAuthorizationToken",
-                "CreateRepository",
-                "DescribeRepositories",
-                "GetRepositoryPolicy",
-                "SetRepositoryPolicy",
-                "BatchGetImage"
-            ]
-        }
-    }
-}
-CONFIGEOF
-
-    log "Configuration written to ${config_file}"
+    log "Downloading AWS service models via the download-aws-models plugin..."
+    # The plugin reads soto.config.json and writes <target>/aws-models/<service>.json
+    # (plus endpoints.json), which the codegen build-tool plugin then consumes.
+    ( cd "${GEN_PROJECT}" && swift package plugin \
+        --allow-writing-to-package-directory \
+        --allow-network-connections all:443 \
+        download-aws-models 2>&1 | sed 's/^/    /' )
+    log "AWS service models downloaded."
 }
 
 run_codegen() {
-    log "Building Soto Code Generator..."
-    pushd "${WORK_DIR}/soto-codegenerator" > /dev/null
-    swift build --configuration release 2>&1 | tail -5
-    popd > /dev/null
-
-    log "Running code generation for each service..."
-
-    local codegen_bin="${WORK_DIR}/soto-codegenerator/.build/release/soto-codegenerator"
-    local models_dir="${WORK_DIR}/aws-models"
-    local generated_dir="${WORK_DIR}/generated"
-    mkdir -p "${generated_dir}"
-
-    # If the code generator binary doesn't exist, try the default executable name
-    if [ ! -f "${codegen_bin}" ]; then
-        codegen_bin=$(find "${WORK_DIR}/soto-codegenerator/.build/release" -type f -perm +111 -name "*codegen*" | head -1)
-        if [ -z "${codegen_bin}" ]; then
-            # Fall back to running via swift run
-            log "Using 'swift run' to invoke the code generator..."
-            codegen_bin="SWIFT_RUN"
-        fi
-    fi
-
-    for service in "${!SERVICE_MODEL_DIRS[@]}"; do
-        local model_dir_name="${SERVICE_MODEL_DIRS[$service]}"
-        local model_path="${models_dir}/${model_dir_name}"
-        local service_output="${generated_dir}/${service}"
-        mkdir -p "${service_output}"
-
-        log "  Generating ${service} client..."
-
-        local operations="${SERVICE_OPERATIONS[$service]}"
-
-        if [ "${codegen_bin}" = "SWIFT_RUN" ]; then
-            pushd "${WORK_DIR}/soto-codegenerator" > /dev/null
-            swift run soto-codegenerator \
-                --model-path "${model_path}" \
-                --output-path "${service_output}" \
-                --operations "${operations}" \
-                --module "${service}" \
-                2>&1 || log "  Warning: Code generation for ${service} returned non-zero (may need manual review)"
-            popd > /dev/null
-        else
-            "${codegen_bin}" \
-                --model-path "${model_path}" \
-                --output-path "${service_output}" \
-                --operations "${operations}" \
-                --module "${service}" \
-                2>&1 || log "  Warning: Code generation for ${service} returned non-zero (may need manual review)"
-        fi
-    done
-
+    log "Running the Soto Code Generator plugin (this resolves packages and builds)..."
+    ( cd "${GEN_PROJECT}" && swift build 2>&1 | sed 's/^/    /' )
     log "Code generation complete."
 }
 
-copy_output() {
-    log "Copying generated clients to ${OUTPUT_DIR}..."
+# Locate the plugin's GeneratedSources directory inside the throwaway project's .build tree.
+generated_sources_dir() {
+    find "${GEN_PROJECT}/.build" -type d -name GeneratedSources -path '*SotoCodeGeneratorPlugin*' \
+        2>/dev/null | head -1
+}
 
-    local generated_dir="${WORK_DIR}/generated"
+# The license header expected by check-license.sh, rendered for Swift files.
+license_header() {
+    cat << 'EOF'
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the SwiftAWSLambdaRuntime open source project
+//
+// Copyright SwiftAWSLambdaRuntime project authors
+// Copyright (c) Amazon.com, Inc. or its affiliates.
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of SwiftAWSLambdaRuntime project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
 
-    # Clean previous generated output
+// Generated by scripts/generate-aws-clients.sh — DO NOT EDIT
+EOF
+}
+
+# Post-process one generated file in place: prepend the license header and insert
+# `@available(LambdaSwift 2.0, *)` before each top-level public/extension declaration.
+#
+# The package does not declare a platforms: floor, but soto-core's types carry an
+# availability annotation, so every top-level declaration in the generated code must
+# match it. We add the macro before column-0 `public struct/enum/...` and `extension`
+# lines (top-level only — nested members are already covered by their enclosing type).
+postprocess_file() {
+    local src="$1" dest="$2"
+    {
+        license_header
+        echo ""
+        awk '
+            # Strip the generator’s own leading license banner so it is not duplicated
+            # below ours: skip the first comment block (the //===…===// banner and the
+            # lines between, plus any blank lines that follow it).
+            BEGIN { in_banner = 1 }
+            in_banner {
+                if ($0 ~ /^\/\// || $0 ~ /^[[:space:]]*$/) { next }
+                in_banner = 0
+            }
+            # Insert the availability macro before each top-level declaration.
+            /^(public[ ]+(struct|enum|final[ ]+class|class|actor|protocol)|extension)[ ]/ {
+                print "@available(LambdaSwift 2.0, *)"
+            }
+            { print }
+        ' "${src}"
+    } > "${dest}"
+}
+
+copy_and_postprocess() {
+    log "Installing generated clients into ${OUTPUT_DIR}..."
+
+    local gen_dir
+    gen_dir="$(generated_sources_dir)"
+    [ -n "${gen_dir}" ] || fatal "could not locate generated sources under ${GEN_PROJECT}/.build"
+
     rm -rf "${OUTPUT_DIR}"
     mkdir -p "${OUTPUT_DIR}"
 
-    for service in "${!SERVICE_MODEL_DIRS[@]}"; do
-        local service_dir="${generated_dir}/${service}"
+    for pair in ${SERVICE_DIRS}; do
+        local model_name="${pair%%:*}"
+        local service="${pair##*:}"
         local dest_dir="${OUTPUT_DIR}/${service}"
+        mkdir -p "${dest_dir}"
 
-        if [ -d "${service_dir}" ] && [ "$(ls -A "${service_dir}" 2>/dev/null)" ]; then
-            mkdir -p "${dest_dir}"
-            cp -r "${service_dir}/"* "${dest_dir}/"
-            log "  Copied ${service} → ${dest_dir}"
-        else
-            log "  Warning: No generated files found for ${service} in ${service_dir}"
-            log "  You may need to create the client files manually."
-        fi
+        local found=0
+        for suffix in api shapes; do
+            local src="${gen_dir}/${model_name}_${suffix}.swift"
+            if [ -f "${src}" ]; then
+                postprocess_file "${src}" "${dest_dir}/${service}_${suffix}.swift"
+                found=1
+            fi
+        done
+        [ "${found}" -eq 1 ] || fatal "no generated files found for ${service} (looked for ${model_name}_*.swift in ${gen_dir})"
+        log "  Installed ${service} client"
     done
+
+    log "Formatting generated clients..."
+    swift format format --parallel --in-place --recursive "${OUTPUT_DIR}" 2>/dev/null || \
+        log "  (swift format not available or failed; run 'swift format' manually if needed)"
 
     log "Generated clients installed at ${OUTPUT_DIR}"
-}
-
-add_availability_annotations() {
-    log "Adding @available(LambdaSwift 2.0, *) annotations..."
-
-    # Add @available(LambdaSwift 2.0, *) before every top-level struct/enum declaration
-    # in the generated files. This is required because soto-core uses availability
-    # annotations on its types (AWSClient, AWSServiceConfig, etc.) and this package
-    # does not declare a platforms: minimum.
-    find "${OUTPUT_DIR}" -name "*.swift" -print0 | while IFS= read -r -d '' file; do
-        perl -i -pe 's/^((?:public )?(?:struct|enum) \w+)/\@available(LambdaSwift 2.0, *)\n$1/' "$file"
-    done
-
-    log "Availability annotations added."
-}
-
-cleanup() {
-    log "Cleaning up working directory..."
-    rm -rf "${WORK_DIR}"
-    log "Cleanup complete."
 }
 
 # ---------------------------------------------------------------------------
@@ -332,45 +264,20 @@ cleanup() {
 
 main() {
     log "=========================================="
-    log "AWS Service Client Generation Script"
+    log "AWS Service Client Generation"
     log "=========================================="
     log ""
-    log "This script generates lightweight AWS service clients"
-    log "for the Lambda deploy plugin using the Soto Code Generator."
-    log ""
-    log "Services: Lambda, IAM, S3, STS, ECR"
     log "Output:   ${OUTPUT_DIR}"
     log ""
 
     check_prerequisites
-    setup_work_dir
-    clone_codegen
+    scaffold_project
     download_models
-    generate_config
     run_codegen
-    copy_output
-    add_availability_annotations
-
-    # Uncomment the following line to clean up after successful generation:
-    # cleanup
+    copy_and_postprocess
 
     log ""
-    log "=========================================="
-    log "Generation complete!"
-    log "=========================================="
-    log ""
-    log "Generated files are at:"
-    log "  ${OUTPUT_DIR}"
-    log ""
-    log "Next steps:"
-    log "  1. Review the generated files"
-    log "  2. Run 'swift build' to verify compilation"
-    log "  3. Commit the generated files to the repository"
-    log ""
-    log "Note: If the code generator did not produce the expected output,"
-    log "you may need to adjust the model paths or write the client files"
-    log "manually based on the Soto client patterns."
-    log ""
+    log "Done. Review the diff under ${OUTPUT_DIR}, then 'swift build' to verify."
 }
 
 main "$@"

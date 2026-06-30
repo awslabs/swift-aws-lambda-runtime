@@ -129,6 +129,27 @@ struct DeployerConfigurationTests {
         #expect(config.inputDirectory == nil)
     }
 
+    // MARK: - Cross-compile (image deploy) parsing
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--cross-compile and --cross-compile-tool-path are parsed")
+    func crossCompileParsing() throws {
+        let config = try DeployerConfiguration(arguments: [
+            "--cross-compile", "container",
+            "--cross-compile-tool-path", "/usr/local/bin/container",
+        ])
+        #expect(config.crossCompile == "container")
+        #expect(config.crossCompileToolPath?.path().contains("/usr/local/bin/container") == true)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("cross-compile options default to nil (resolved from the build manifest)")
+    func crossCompileDefaultsNil() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.crossCompile == nil)
+        #expect(config.crossCompileToolPath == nil)
+    }
+
     // MARK: - With URL flag parsing
 
     @available(LambdaSwift 2.0, *)

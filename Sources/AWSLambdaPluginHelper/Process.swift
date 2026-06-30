@@ -24,6 +24,7 @@ struct Utils {
         executable: URL,
         arguments: [String],
         customWorkingDirectory: URL? = .none,
+        standardInput: String? = nil,
         logLevel: ProcessLogLevel
     ) throws -> String {
         if logLevel >= .debug {
@@ -89,6 +90,17 @@ struct Utils {
             process.currentDirectoryURL = URL(fileURLWithPath: customWorkingDirectory.path())
         }
 
+        // Feed stdin when provided (e.g. piping an ECR token to `<cli> login --password-stdin`).
+        // The secret is written to the pipe and never appears in the argument vector.
+        var inputPipe: Pipe? = nil
+        if let standardInput {
+            let pipe = Pipe()
+            process.standardInput = pipe
+            inputPipe = pipe
+            // Write after the process starts (below) to avoid blocking on a full pipe buffer.
+            _ = standardInput
+        }
+
         // Read from the pipe on a background thread using a manual read loop.
         // We avoid FileHandle.readabilityHandler because on Linux its setter
         // triggers _bridgeAnythingToObjectiveC / swift_dynamicCast which can
@@ -108,6 +120,14 @@ struct Utils {
         }
 
         try process.run()
+
+        // Write the stdin payload (if any) and close the pipe so the child sees EOF.
+        if let standardInput, let inputPipe {
+            let handle = inputPipe.fileHandleForWriting
+            handle.write(Data(standardInput.utf8))
+            try? handle.close()
+        }
+
         process.waitUntilExit()
 
         // wait for output to be fully processed

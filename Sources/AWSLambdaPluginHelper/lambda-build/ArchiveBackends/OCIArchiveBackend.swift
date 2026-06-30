@@ -124,9 +124,12 @@ struct OCIArchiveBackend: ArchiveBackend {
         return artifacts
     }
 
-    /// The local image tag applied to a product's image (e.g. `swift-lambda/MyLambda:latest`).
+    /// The local image tag applied to a product's image (e.g. `swift-lambda/mylambda:latest`).
+    ///
+    /// OCI/Docker image reference names must be lowercase, so the product name is lowercased for the
+    /// repository component (the function itself keeps its original-case name).
     static func imageTag(for product: String) -> String {
-        "swift-lambda/\(product):latest"
+        "swift-lambda/\(product.lowercased()):latest"
     }
 
     /// The contents of the generated Dockerfile.

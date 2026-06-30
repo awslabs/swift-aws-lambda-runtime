@@ -43,9 +43,10 @@ struct OCIArchiveBackendTests {
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("image tag follows the swift-lambda/<product>:latest convention")
+    @Test("image tag follows the swift-lambda/<product>:latest convention, lowercased")
     func imageTag() {
-        #expect(OCIArchiveBackend.imageTag(for: "MyLambda") == "swift-lambda/MyLambda:latest")
+        // OCI/Docker image references must be lowercase, so the product name is lowercased.
+        #expect(OCIArchiveBackend.imageTag(for: "MyLambda") == "swift-lambda/mylambda:latest")
     }
 
     @available(LambdaSwift 2.0, *)
