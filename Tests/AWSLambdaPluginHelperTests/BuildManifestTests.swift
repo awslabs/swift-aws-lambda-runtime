@@ -56,10 +56,18 @@ struct BuildManifestTests {
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("write then read round-trips through disk", arguments: [
-        BuildManifest.zip(product: "Z", architecture: .arm64, zipPath: "/o/Z.zip"),
-        BuildManifest.image(product: "I", architecture: .x64, containerCLI: "docker", imageTag: "swift-lambda/I:latest"),
-    ])
+    @Test(
+        "write then read round-trips through disk",
+        arguments: [
+            BuildManifest.zip(product: "Z", architecture: .arm64, zipPath: "/o/Z.zip"),
+            BuildManifest.image(
+                product: "I",
+                architecture: .x64,
+                containerCLI: "docker",
+                imageTag: "swift-lambda/I:latest"
+            ),
+        ]
+    )
     func roundTrip(manifest: BuildManifest) throws {
         let dir = FileManager.default.temporaryDirectory.appending(path: "manifest-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

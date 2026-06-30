@@ -142,7 +142,11 @@ struct DockerCLIArgumentTests {
     @Test("tag and push arguments")
     func tagAndPushArguments() {
         let cli = DockerCLI()
-        #expect(cli.tagArguments(source: "swift-lambda/MyLambda:latest", target: "repo:latest") == ["tag", "swift-lambda/MyLambda:latest", "repo:latest"])
+        #expect(
+            cli.tagArguments(source: "swift-lambda/MyLambda:latest", target: "repo:latest") == [
+                "tag", "swift-lambda/MyLambda:latest", "repo:latest",
+            ]
+        )
         #expect(cli.pushArguments(tag: "repo:latest") == ["push", "repo:latest"])
     }
 }
@@ -257,7 +261,10 @@ struct AppleContainerCLIArgumentTests {
         let cli = AppleContainerCLI()
         #expect(
             cli.loginArguments(registry: "123.dkr.ecr.eu-central-1.amazonaws.com", username: "AWS")
-                == ["registry", "login", "--username", "AWS", "--password-stdin", "123.dkr.ecr.eu-central-1.amazonaws.com"]
+                == [
+                    "registry", "login", "--username", "AWS", "--password-stdin",
+                    "123.dkr.ecr.eu-central-1.amazonaws.com",
+                ]
         )
     }
 
@@ -265,7 +272,11 @@ struct AppleContainerCLIArgumentTests {
     @Test("tag and push use the image subcommand")
     func tagAndPushArguments() {
         let cli = AppleContainerCLI()
-        #expect(cli.tagArguments(source: "swift-lambda/MyLambda:latest", target: "repo:latest") == ["image", "tag", "swift-lambda/MyLambda:latest", "repo:latest"])
+        #expect(
+            cli.tagArguments(source: "swift-lambda/MyLambda:latest", target: "repo:latest") == [
+                "image", "tag", "swift-lambda/MyLambda:latest", "repo:latest",
+            ]
+        )
         #expect(cli.pushArguments(tag: "repo:latest") == ["image", "push", "repo:latest"])
     }
 }
