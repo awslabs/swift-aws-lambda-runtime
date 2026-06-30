@@ -4,7 +4,7 @@ This example shows how to package and deploy a Swift Lambda function as an
 **OCI container image** instead of a ZIP archive.
 
 The function code itself is intentionally identical to [HelloWorld](../HelloWorld):
-it takes a `String` and returns a `String`. What differs is the *packaging* — this
+it takes a `String` and returns a `String`. What differs is the *packaging*. This
 example uses `--archive-format oci` to build a container image, and `lambda-deploy`
 pushes it to Amazon ECR and creates a container-image Lambda function.
 
@@ -22,19 +22,19 @@ functions. Reach for a container image when:
 - **You already build and ship with containers.** An image in Amazon ECR slots into the
   same CI/CD, scanning, and registry tooling as the rest of your services.
 
-If none of these apply, prefer the default ZIP packaging — see the other examples.
+If none of these apply, prefer the default ZIP packaging. See the other examples.
 
 ## Prerequisites
 
 - Docker **or** Apple's [`container`](https://github.com/apple/container) CLI, installed
-  and started. The same CLI is used to build the image and (at deploy time) to push it.
+  and started. The same CLI is used to build the image and (at deploy time) to push it to Amazon ECR.
 - For deployment: an AWS account with credentials configured (`aws configure`, environment
   variables, or an SSO session) and permission to use Amazon ECR and AWS Lambda.
 
 > [!NOTE]
 > The commands below use `--disable-sandbox`. Building and pushing an OCI image shells out
 > to the container CLI, which talks to its local daemon over a socket the SwiftPM plugin
-> sandbox does not allow — Apple's `container` in particular requires the sandbox to be
+> sandbox does not allow. Apple's `container` in particular requires the sandbox to be
 > disabled. This is why the OCI commands differ from the ZIP examples (which use
 > `--allow-network-connections docker`).
 
@@ -54,12 +54,12 @@ This compiles the executable for Amazon Linux 2023, then builds a minimal Amazon
 (OCI image references must be lowercase, so the product name is lowercased).
 
 > [!IMPORTANT]
-> `lambda-build --archive-format oci` only builds the image **locally** — it does not push
+> `lambda-build --archive-format oci` only builds the image **locally**. It does not push
 > it. Pushing to Amazon ECR and creating/updating the function happens during
 > `lambda-deploy`, which is the step that holds your AWS credentials. This mirrors the ZIP
 > flow: `lambda-build` produces the artifact, `lambda-deploy` uploads it.
 
-To build from a different base image — for example to add system packages — pass
+To build from a different base image, for example to add system packages, pass
 `--base-oci-image <name>`. Use a glibc-compatible Amazon Linux 2023 base so it matches the
 environment your binary was compiled in.
 
@@ -130,5 +130,5 @@ it contains. Adjust `--region` to match where you deployed.
 
 These are example applications for demonstration purposes. When deploying such
 infrastructure in production environments, we strongly encourage you to follow best
-practices for improved security and resiliency — see the notice in the
+practices for improved security and resiliency. See the notice in the
 [HelloWorld example](../HelloWorld/README.md#%EF%B8%8F-security-and-reliability-notice).

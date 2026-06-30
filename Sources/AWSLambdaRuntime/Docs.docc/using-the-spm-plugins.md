@@ -144,8 +144,8 @@ with your compiled binary as the `bootstrap` entrypoint, using the same containe
 CLI selected by `--cross-compile` (`docker` or `container`). The image is built
 for a single architecture and tagged locally as `swift-lambda/<product>:latest`.
 
-To build from a different base image — for example to add system packages or to
-use `public.ecr.aws/lambda/provided:al2023` — pass `--base-oci-image`:
+To build from a different base image, for example to add system packages or to
+use `public.ecr.aws/lambda/provided:al2023`, pass `--base-oci-image`:
 
 ```sh
 swift package --allow-network-connections docker lambda-build \

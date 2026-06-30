@@ -18,6 +18,7 @@ Whichever method you choose, start with <doc:deploying-prerequisites>. It covers
 Then pick the method that fits your needs:
 
 - <doc:deploying-with-the-plugin> is the fastest path from the command line.
+- <doc:deploying-with-oci> packages the function as an OCI container image (pushed to Amazon ECR) instead of a ZIP archive. Useful for large packages or when you need extra binaries or system libraries.
 - <doc:deploying-with-the-console> uploads and tests your function manually, useful the first time.
 - <doc:deploying-with-sam> and <doc:deploying-with-cdk> let you define your function and its supporting AWS resources as code.
 
@@ -46,6 +47,7 @@ These are example applications for demonstration purposes. When deploying such i
 ### Deployment methods
 
 - <doc:deploying-with-the-plugin>
+- <doc:deploying-with-oci>
 - <doc:deploying-with-the-console>
 - <doc:deploying-with-sam>
 - <doc:deploying-with-cdk>
