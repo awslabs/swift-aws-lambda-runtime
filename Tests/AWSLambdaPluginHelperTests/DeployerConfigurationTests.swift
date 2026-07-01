@@ -150,22 +150,33 @@ struct DeployerConfigurationTests {
     // MARK: - Cross-compile (image deploy) parsing
 
     @available(LambdaSwift 2.0, *)
-    @Test("--cross-compile and --cross-compile-tool-path are parsed")
+    @Test("--cross-compile and name-keyed --cross-compile-tool-path are parsed")
     func crossCompileParsing() throws {
         let config = try DeployerConfiguration(arguments: [
             "--cross-compile", "container",
-            "--cross-compile-tool-path", "/usr/local/bin/container",
+            "--cross-compile-tool-path", "docker=/usr/local/bin/docker",
+            "--cross-compile-tool-path", "container=/usr/local/bin/container",
         ])
         #expect(config.crossCompile == "container")
-        #expect(config.crossCompileToolPath?.path().contains("/usr/local/bin/container") == true)
+        #expect(config.crossCompileToolPaths["docker"]?.path().contains("/usr/local/bin/docker") == true)
+        #expect(config.crossCompileToolPaths["container"]?.path().contains("/usr/local/bin/container") == true)
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("cross-compile options default to nil (resolved from the build manifest)")
+    @Test("a bare --cross-compile-tool-path is treated as docker for backward compatibility")
+    func crossCompileToolPathBareIsDocker() throws {
+        let config = try DeployerConfiguration(arguments: [
+            "--cross-compile-tool-path", "/usr/local/bin/docker",
+        ])
+        #expect(config.crossCompileToolPaths["docker"]?.path().contains("/usr/local/bin/docker") == true)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("cross-compile options default to empty (resolved from the build manifest)")
     func crossCompileDefaultsNil() throws {
         let config = try DeployerConfiguration(arguments: [])
         #expect(config.crossCompile == nil)
-        #expect(config.crossCompileToolPath == nil)
+        #expect(config.crossCompileToolPaths.isEmpty)
     }
 
     // MARK: - With URL flag parsing

@@ -54,16 +54,8 @@ extension Deployer {
             throw DeployerErrors.ecrError("build manifest for '\(functionName)' has no image tag")
         }
 
-        // Resolve the container CLI: explicit --cross-compile wins, else the manifest's recorded CLI,
-        // else docker. The plugin wrapper resolves and injects the matching tool path.
-        let cliName = configuration.crossCompile ?? manifest.containerCLI ?? "docker"
-        guard let toolPath = configuration.crossCompileToolPath else {
-            throw DeployerErrors.ecrError(
-                "deploying an image requires a container CLI; the plugin did not provide "
-                    + "--cross-compile-tool-path (is docker or container installed?)"
-            )
-        }
-        let cli: ContainerCLI = (cliName == "container") ? AppleContainerCLI() : DockerCLI()
+        // Resolve the container CLI and the matching executable path (see resolveContainerCLI).
+        let (cli, toolPath) = try Self.resolveContainerCLI(configuration: configuration, manifest: manifest)
 
         // Image architecture comes from the manifest (the image bakes in a single arch).
         let architecture = DeployerConfiguration.Architecture(rawValue: manifest.architecture.rawValue) ?? .host
@@ -148,6 +140,34 @@ extension Deployer {
             functionArn = response.functionArn
         }
         return functionArn
+    }
+
+    // MARK: - Container CLI
+
+    /// Resolves the container CLI to use for the push and its matching executable path.
+    ///
+    /// The CLI *flavor* (docker vs Apple `container`, which spell their argv differently) is chosen
+    /// as: explicit `--cross-compile` wins, else the CLI recorded in the build manifest, else docker.
+    /// The plugin wrapper resolves every installed CLI up front — it cannot know which flavor to use
+    /// before the manifest is read, and the sandbox only runs tools resolved ahead of time — and
+    /// forwards their paths keyed by name. This picks the path for the chosen flavor, so the argv
+    /// flavor and the executable can never disagree (the bug where container-style argv was run
+    /// against the docker binary, producing `docker registry login … unknown flag: --username`).
+    static func resolveContainerCLI(
+        configuration: DeployerConfiguration,
+        manifest: BuildManifest
+    ) throws -> (cli: any ContainerCLI, toolPath: URL) {
+        let cliName = configuration.crossCompile ?? manifest.containerCLI ?? "docker"
+        guard let toolPath = configuration.crossCompileToolPaths[cliName] else {
+            throw DeployerErrors.ecrError(
+                "deploying this image requires the '\(cliName)' CLI, but the plugin did not resolve "
+                    + "its path (is '\(cliName)' installed and on your PATH?). The image was built with "
+                    + "'\(manifest.containerCLI ?? "docker")'; deploy with that CLI, or pass "
+                    + "--cross-compile <docker|container> to override."
+            )
+        }
+        let cli: any ContainerCLI = (cliName == "container") ? AppleContainerCLI() : DockerCLI()
+        return (cli, toolPath)
     }
 
     // MARK: - ECR repository

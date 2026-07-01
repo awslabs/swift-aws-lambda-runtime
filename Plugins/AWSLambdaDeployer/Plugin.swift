@@ -29,10 +29,16 @@ struct AWSLambdaDeployer: CommandPlugin {
         var argumentExtractor = ArgumentExtractor(arguments)
         let productsArgument = argumentExtractor.extractOption(named: "products")
         // `--cross-compile` selects the container CLI used to push an OCI image to ECR (docker or
-        // container). The plugin sandbox can only run tools it resolves up front, so the matching
-        // binary is resolved here and forwarded as --cross-compile-tool-path. For a ZIP deploy this
-        // is unused; resolving docker by default is harmless.
+        // container).
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
+        // `--container-cli` only exists on the deprecated `archive` command. Reject it here rather
+        // than let it fall through to the helper and be silently ignored (which would push with the
+        // wrong CLI). The user is told to use the canonical `--cross-compile` instead.
+        guard argumentExtractor.extractOption(named: "container-cli").isEmpty else {
+            throw DeployerPluginErrors.invalidArgument(
+                "'--container-cli' is not supported by lambda-deploy. Use '--cross-compile <docker|container>' instead."
+            )
+        }
 
         let products: [Product]
         if !productsArgument.isEmpty {
@@ -44,17 +50,20 @@ struct AWSLambdaDeployer: CommandPlugin {
         let productNames = products.map { $0.name }.joined(separator: ",")
 
         let crossCompile = crossCompileArgument.first?.lowercased()
-        let containerCLIToolName = crossCompile == "container" ? "container" : "docker"
-        // Best-effort: a container CLI may not be installed for a plain ZIP deploy, so don't fail
-        // here if it can't be resolved — the helper only needs it for an image artifact.
-        let containerToolPath = try? context.tool(named: containerCLIToolName).url
 
         var args = ["deploy", "--products", productNames]
         if let crossCompile {
             args += ["--cross-compile", crossCompile]
         }
-        if let containerToolPath {
-            args += ["--cross-compile-tool-path", containerToolPath.path]
+        // The CLI flavor to use is only known after the helper reads the build manifest, and the
+        // plugin sandbox can only run tools it resolves up front. So resolve every container CLI that
+        // is installed and forward each as `--cross-compile-tool-path <name>=<path>`; the helper then
+        // picks the path matching the CLI it selects. Best-effort: a plain ZIP deploy needs none, so
+        // a CLI that can't be resolved is simply omitted.
+        for cliName in ["docker", "container"] {
+            if let toolPath = try? context.tool(named: cliName).url {
+                args += ["--cross-compile-tool-path", "\(cliName)=\(toolPath.path)"]
+            }
         }
         args += argumentExtractor.remainingArguments
 
@@ -74,4 +83,15 @@ struct AWSLambdaDeployer: CommandPlugin {
         }
     }
 
+}
+
+private enum DeployerPluginErrors: Error, CustomStringConvertible {
+    case invalidArgument(String)
+
+    var description: String {
+        switch self {
+        case .invalidArgument(let description):
+            return description
+        }
+    }
 }

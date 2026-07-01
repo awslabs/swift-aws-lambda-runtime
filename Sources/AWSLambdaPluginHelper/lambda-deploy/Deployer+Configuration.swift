@@ -46,9 +46,11 @@ struct DeployerConfiguration: CustomStringConvertible {
     /// Container CLI to use for an image (OCI) deploy: `docker` or `container`. `nil` → resolved
     /// from the build manifest, falling back to docker. Mirrors `lambda-build --cross-compile`.
     let crossCompile: String?
-    /// Resolved path to the container CLI executable, injected by the plugin wrapper. `nil` when the
-    /// deploy is a plain ZIP (no container CLI needed).
-    let crossCompileToolPath: URL?
+    /// Resolved paths to the container CLI executables, keyed by CLI name (`docker`, `container`),
+    /// injected by the plugin wrapper. The plugin resolves every CLI it can find up front (the
+    /// sandbox only runs tools resolved ahead of time) because the CLI flavor to use is only known
+    /// after reading the build manifest. Empty for a plain ZIP deploy (no container CLI needed).
+    let crossCompileToolPaths: [String: URL]
 
     enum Architecture: String {
         case x64
@@ -123,12 +125,22 @@ struct DeployerConfiguration: CustomStringConvertible {
         self.products = productsArgument.flatMap { $0.split(separator: ",").map(String.init) }
 
         // container CLI for image deploys (nil → resolved from the build manifest)
-        self.crossCompile = crossCompileArgument.first
-        if let toolPath = crossCompileToolPathArgument.first {
-            self.crossCompileToolPath = URL(fileURLWithPath: toolPath)
-        } else {
-            self.crossCompileToolPath = nil
+        self.crossCompile = crossCompileArgument.first?.lowercased()
+
+        // Resolved container CLI paths, forwarded by the plugin as `--cross-compile-tool-path
+        // <name>=<path>` (one per available CLI). A bare path with no `name=` prefix is treated as
+        // docker for backward compatibility with older plugin wrappers and existing tests.
+        var toolPaths: [String: URL] = [:]
+        for entry in crossCompileToolPathArgument {
+            if let separator = entry.firstIndex(of: "="), separator != entry.startIndex {
+                let name = String(entry[..<separator]).lowercased()
+                let path = String(entry[entry.index(after: separator)...])
+                toolPaths[name] = URL(fileURLWithPath: path)
+            } else {
+                toolPaths["docker"] = URL(fileURLWithPath: entry)
+            }
         }
+        self.crossCompileToolPaths = toolPaths
     }
 
     var description: String {
@@ -144,7 +156,7 @@ struct DeployerConfiguration: CustomStringConvertible {
           architecture: \(self.architecture.rawValue)\(self.explicitArchitecture == nil ? " <default>" : " <explicit>")
           products: \(self.products)
           crossCompile: \(self.crossCompile ?? "<from manifest>")
-          crossCompileToolPath: \(self.crossCompileToolPath?.path() ?? "<none>")
+          crossCompileToolPaths: \(self.crossCompileToolPaths.isEmpty ? "<none>" : self.crossCompileToolPaths.map { "\($0.key)=\($0.value.path())" }.sorted().joined(separator: ", "))
         }
         """
     }

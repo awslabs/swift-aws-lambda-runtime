@@ -214,7 +214,6 @@ struct BuilderConfiguration: CustomStringConvertible {
         let baseDockerImageArgument = argumentExtractor.extractOption(named: "base-docker-image")
         let disableDockerImageUpdateArgument = argumentExtractor.extractFlag(named: "disable-docker-image-update") > 0
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
-        let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")  // deprecated alias
         let archiveFormatArgument = argumentExtractor.extractOption(named: "archive-format")
         let architectureArgument = argumentExtractor.extractOption(named: "architecture")
         let baseOCIImageArgument = argumentExtractor.extractOption(named: "base-oci-image")
@@ -295,9 +294,7 @@ struct BuilderConfiguration: CustomStringConvertible {
             baseDockerImageArgument.first ?? "swift:\(swiftVersion.map { $0 + "-" } ?? "")amazonlinux2023"
 
         self.disableDockerImageUpdate = disableDockerImageUpdateArgument
-        // --container-cli is a deprecated alias for --cross-compile (backward compatibility)
-        let resolvedCrossCompile = crossCompileArgument.first ?? containerCliArgument.first
-        self.crossCompileMethod = try CrossCompileMethod.parse(resolvedCrossCompile)
+        self.crossCompileMethod = try CrossCompileMethod.parse(crossCompileArgument.first)
         self.archiveFormat = try ArchiveFormat.parse(archiveFormatArgument.first)
         self.architecture = try BuildArchitecture.parse(architectureArgument.first)
 

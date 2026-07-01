@@ -34,14 +34,20 @@ struct AWSLambdaBuilder: CommandPlugin {
         // The helper requires --configuration; the plugin supplies the default. Validation of the
         // value itself is left to the helper.
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
-        // `--container-cli` is a deprecated alias for `--cross-compile`.
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
-        let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")
+        // `--container-cli` only exists on the deprecated `archive` command. Reject it here rather
+        // than let it fall through to the helper and be silently ignored (which would build with the
+        // wrong CLI). The user is told to use the canonical `--cross-compile` instead.
+        guard argumentExtractor.extractOption(named: "container-cli").isEmpty else {
+            throw BuilderErrors.invalidArgument(
+                "'--container-cli' is not supported by lambda-build. Use '--cross-compile <docker|container>' instead."
+            )
+        }
 
         // Resolve the container CLI that matches the requested cross-compilation method. The plugin
         // sandbox can only run tools it resolves up front, so we must pick the right binary here:
         // `container` for `--cross-compile container`, `docker` otherwise.
-        let crossCompileMethod = (crossCompileArgument.first ?? containerCliArgument.first)?.lowercased()
+        let crossCompileMethod = crossCompileArgument.first?.lowercased()
         let containerCLIToolName = crossCompileMethod == "container" ? "container" : "docker"
         let containerToolPath = try context.tool(named: containerCLIToolName).url
         let zipToolPath = try context.tool(named: "zip").url
