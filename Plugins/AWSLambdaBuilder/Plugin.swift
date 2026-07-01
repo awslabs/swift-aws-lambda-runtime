@@ -51,7 +51,34 @@ struct AWSLambdaBuilder: CommandPlugin {
         let crossCompileMethod = crossCompileArgument.first?.lowercased()
         let crossCompileToolName: String
         switch crossCompileMethod {
-        case "swift-static-sdk": crossCompileToolName = "swift"
+        case "swift-static-sdk":
+            crossCompileToolName = "swift"
+            // The Static Linux SDK builds without a container, so the docker/container-specific
+            // options do not apply. Reject them here rather than let them be silently ignored.
+            // These flags are forwarded verbatim to the helper, so inspect the raw arguments.
+            let incompatibleWithStaticSDK = [
+                "--base-docker-image",
+                "--swift-version",
+                "--disable-docker-image-update",
+                "--base-oci-image",
+            ]
+            for flag in incompatibleWithStaticSDK where arguments.contains(flag) {
+                throw BuilderErrors.invalidArgument(
+                    "'\(flag)' cannot be used with '--cross-compile swift-static-sdk'; it targets a "
+                        + "container-based build. Remove it, or choose '--cross-compile docker' or 'container'."
+                )
+            }
+            // The OCI image build requires a container CLI, so it is incompatible too. Match the
+            // value that follows --archive-format rather than a bare "oci" token anywhere.
+            if let formatIndex = arguments.firstIndex(of: "--archive-format"),
+                arguments.indices.contains(formatIndex + 1),
+                arguments[formatIndex + 1].lowercased() == "oci"
+            {
+                throw BuilderErrors.invalidArgument(
+                    "'--archive-format oci' cannot be used with '--cross-compile swift-static-sdk'; "
+                        + "building an OCI image requires a container CLI. Use '--cross-compile docker' or 'container'."
+                )
+            }
         case "container": crossCompileToolName = "container"
         default: crossCompileToolName = "docker"
         }
