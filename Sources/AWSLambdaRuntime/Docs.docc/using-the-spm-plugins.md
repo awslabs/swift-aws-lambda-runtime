@@ -102,10 +102,33 @@ swift package --allow-network-connections docker lambda-build \
 | `--disable-docker-image-update` | Do not attempt to update the Docker image. |
 | `--cross-compile <method>` | The cross-compilation method: `docker`, `container`, `swift-static-sdk`, or `custom-sdk`. (default: `docker`) `swift-static-sdk` and `custom-sdk` are not yet supported. |
 | `--archive-format <format>` | The packaging format: `zip` or `oci`. (default: `zip`) See [Building an OCI image](#Building-an-OCI-image). |
+| `--architecture <arch>` | The CPU architecture to build for: `x64` or `arm64`. (default: host architecture) Recorded in the build manifest so `lambda-deploy` deploys the function for the architecture it was built for. See [Selecting the architecture](#Selecting-the-architecture). |
 | `--base-oci-image <name>` | The base image for the OCI image when `--archive-format oci` is used. (default: `public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`) |
 | `--no-strip` | Do not strip debug symbols from the binary. |
 | `--verbose` | Produce verbose output for debugging. |
 | `--help` | Show help information. |
+
+### Selecting the architecture
+
+By default `lambda-build` builds for the architecture of the machine running the
+build (`arm64` on Apple Silicon, `x64` on Intel). Pass `--architecture` to build
+for a specific architecture regardless of your host:
+
+```sh
+swift package --allow-network-connections docker lambda-build \
+  --architecture arm64
+```
+
+`arm64` (AWS Graviton) is generally cheaper and faster for Swift workloads; pick
+`x64` only if a dependency requires it.
+
+The architecture you build for is recorded in the `build-manifest.json` written
+next to the artifact. `lambda-deploy` reads it and deploys the function for that
+same architecture, so the two can never silently disagree. If you pass
+`--architecture` to `lambda-deploy` as well, it must match what was built, 
+otherwise the deploy fails fast rather than creating a function whose declared
+architecture doesn't match its binary (which would only surface as a failure at
+invoke time). See [lambda-deploy](#lambda-deploy).
 
 ### Building an OCI image
 
@@ -213,7 +236,7 @@ swift package --allow-network-connections all:443 lambda-deploy --delete
 | `--profile <profile-name>` | The named AWS profile to use for credentials and region. (default: default credential provider chain) |
 | `--iam-role <role-arn>` | The ARN of an existing IAM role for the function. (default: create a new role) |
 | `--input-directory <path>` | The directory containing the ZIP archive produced by `lambda-build`. (default: `.build/plugins/AWSLambdaBuilder/outputs/...`) |
-| `--architecture <arch>` | The function architecture, `x64` or `arm64`. (default: host architecture) |
+| `--architecture <arch>` | The function architecture, `x64` or `arm64`. (default: the architecture recorded in the build manifest; host architecture when no manifest is present) A value that disagrees with the built artifact is a hard error. |
 | `--products <list>` | The list of executable targets to deploy. (default: taken from `Package.swift`) |
 | `--verbose` | Produce verbose output for debugging. |
 | `--help` | Show help information. |

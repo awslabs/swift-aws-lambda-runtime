@@ -38,6 +38,17 @@ struct Builder {
         // otherwise cross-compile using the backend chosen by --cross-compile.
         let backend: any BuildBackend
         if self.isAmazonLinux(.al2) || self.isAmazonLinux(.al2023) {
+            // A native build compiles for the host architecture only; it cannot target another one.
+            // Recording a mismatched architecture in the manifest would recreate the very bug the
+            // --architecture flag exists to prevent, so reject an explicit cross-architecture request.
+            guard configuration.architecture == .host else {
+                throw BuilderErrors.invalidArgument(
+                    "cannot build for '\(configuration.architecture)' on a '\(BuildArchitecture.host)' "
+                        + "Amazon Linux host: a native build targets the host architecture only. "
+                        + "Build on a '\(configuration.architecture)' host, or cross-compile from a non-Amazon "
+                        + "Linux host (docker or container)."
+                )
+            }
             backend = NativeBuildBackend()
         } else {
             backend = try configuration.makeCrossCompileBackend()
@@ -115,6 +126,7 @@ struct Builder {
                                                        [--disable-docker-image-update]
                                                        [--cross-compile <docker | container | swift-static-sdk | custom-sdk>]
                                                        [--archive-format <zip | oci>]
+                                                       [--architecture <x64 | arm64>]
                                                        [--base-oci-image <oci_image_name>]
                                                        [--no-strip]
 
@@ -145,6 +157,11 @@ struct Builder {
                                           Values: zip, oci
                                           (default is zip)
                                           oci builds an OCI image (deploy support: see lambda-deploy).
+            --architecture <arch>         The CPU architecture to build for.
+                                          Values: x64, arm64
+                                          (default: host architecture)
+                                          Recorded in the build manifest; lambda-deploy deploys the
+                                          function for this architecture.
             --base-oci-image <name>       The base image for the OCI image (--archive-format oci).
                                           (default: public.ecr.aws/amazonlinux/amazonlinux:2023-minimal)
                                           Use a glibc-compatible Amazon Linux 2023 base.
@@ -168,6 +185,7 @@ struct BuilderConfiguration: CustomStringConvertible {
     public let disableDockerImageUpdate: Bool
     public let crossCompileMethod: CrossCompileMethod
     public let archiveFormat: ArchiveFormat
+    public let architecture: BuildArchitecture
     public let baseOCIImage: String
     public let noStrip: Bool
     public let explicitAL2Image: Bool
@@ -198,6 +216,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
         let containerCliArgument = argumentExtractor.extractOption(named: "container-cli")  // deprecated alias
         let archiveFormatArgument = argumentExtractor.extractOption(named: "archive-format")
+        let architectureArgument = argumentExtractor.extractOption(named: "architecture")
         let baseOCIImageArgument = argumentExtractor.extractOption(named: "base-oci-image")
         let noStripArgument = argumentExtractor.extractFlag(named: "no-strip") > 0
         let helpArgument = argumentExtractor.extractFlag(named: "help") > 0
@@ -280,6 +299,7 @@ struct BuilderConfiguration: CustomStringConvertible {
         let resolvedCrossCompile = crossCompileArgument.first ?? containerCliArgument.first
         self.crossCompileMethod = try CrossCompileMethod.parse(resolvedCrossCompile)
         self.archiveFormat = try ArchiveFormat.parse(archiveFormatArgument.first)
+        self.architecture = try BuildArchitecture.parse(architectureArgument.first)
 
         // --base-oci-image only applies to the OCI image build; reject it for other formats rather
         // than silently ignoring it.
@@ -318,6 +338,7 @@ struct BuilderConfiguration: CustomStringConvertible {
             toolPath: self.crossCompileToolPath,
             baseImage: self.baseDockerImage,
             disableImageUpdate: self.disableDockerImageUpdate,
+            architecture: self.architecture,
             method: self.crossCompileMethod
         )
     }
@@ -341,14 +362,13 @@ struct BuilderConfiguration: CustomStringConvertible {
     func makeArchiveBackend() throws -> any ArchiveBackend {
         switch self.archiveFormat {
         case .zip:
-            return ZipArchiveBackend(zipToolPath: self.zipToolPath)
+            return ZipArchiveBackend(zipToolPath: self.zipToolPath, architecture: self.architecture)
         case .oci:
-            // An OCI image bakes in a single architecture. A user-facing --architecture flag and
-            // build-manifest plumbing are tracked under #683; until then the image targets the host.
+            // An OCI image bakes in a single architecture: the one selected by --architecture.
             return OCIArchiveBackend(
                 cli: try self.makeContainerCLI(),
                 toolPath: self.crossCompileToolPath,
-                architecture: .host,
+                architecture: self.architecture,
                 baseImage: self.baseOCIImage
             )
         }
@@ -365,6 +385,7 @@ struct BuilderConfiguration: CustomStringConvertible {
           disableDockerImageUpdate: \(self.disableDockerImageUpdate)
           crossCompileMethod: \(self.crossCompileMethod)
           archiveFormat: \(self.archiveFormat)
+          architecture: \(self.architecture)
           baseOCIImage: \(self.baseOCIImage)
           zipToolPath: \(self.zipToolPath)
           packageID: \(self.packageID)

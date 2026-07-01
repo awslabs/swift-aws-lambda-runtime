@@ -267,6 +267,17 @@ struct Deployer {
                     }
                 }
 
+                // Reconcile the deploy architecture with what lambda-build actually produced. The
+                // manifest records the built architecture; an explicit --architecture that disagrees
+                // is a hard error (it would deploy a function whose binary can't run), and when
+                // --architecture is omitted we deploy exactly what was built rather than re-defaulting
+                // to the host. Absent manifest (legacy flows) falls back to the configured value.
+                let architecture = try Self.reconcileArchitecture(
+                    configuration: configuration,
+                    manifest: manifest,
+                    functionName: functionName
+                )
+
                 if manifest?.packageType == .image {
                     functionArn = try await deployImage(
                         functionName: functionName,
@@ -283,6 +294,7 @@ struct Deployer {
                 } else {
                     functionArn = try await deployZip(
                         functionName: functionName,
+                        architecture: architecture,
                         action: action,
                         accountId: accountId,
                         region: region,
@@ -357,6 +369,34 @@ struct Deployer {
     static func readBuildManifest(functionName: String, inputDirectory: URL?) throws -> BuildManifest? {
         let dir = defaultBuildOutputDirectory(functionName: functionName, inputDirectory: inputDirectory)
         return try BuildManifest.read(from: dir)
+    }
+
+    /// Resolves the architecture to deploy for, reconciling the request with the build manifest.
+    ///
+    /// - When the manifest is absent (legacy flows, no build-manifest handoff), the configured
+    ///   architecture is used unchanged.
+    /// - When a manifest is present and the user passed `--architecture` explicitly, a disagreement
+    ///   with the built architecture is a hard error: deploying a function whose declared
+    ///   architecture does not match its binary produces a function that fails at invoke time.
+    /// - When a manifest is present and `--architecture` was omitted, the built architecture wins so
+    ///   the deploy follows what was actually built rather than re-defaulting to the host.
+    static func reconcileArchitecture(
+        configuration: DeployerConfiguration,
+        manifest: BuildManifest?,
+        functionName: String
+    ) throws -> DeployerConfiguration.Architecture {
+        guard let manifest else {
+            return configuration.architecture
+        }
+        let built = DeployerConfiguration.Architecture(rawValue: manifest.architecture.rawValue) ?? .host
+        if let requested = configuration.explicitArchitecture, requested != built {
+            throw DeployerErrors.architectureMismatch(
+                functionName: functionName,
+                requested: requested.rawValue,
+                built: built.rawValue
+            )
+        }
+        return built
     }
 
     /// Check for the presence of AWS configuration files and emit an informational
@@ -467,7 +507,9 @@ struct Deployer {
                                           ZIP archive produced by lambda-build.
                                           (default: .build/plugins/AWSLambdaBuilder/outputs/...)
             --architecture <arch>         The Lambda function architecture (x64 or arm64).
-                                          (default: host architecture - \(DeployerConfiguration.Architecture.host.rawValue))
+                                          (default: the architecture recorded in the build manifest;
+                                          host architecture - \(DeployerConfiguration.Architecture.host.rawValue) - when no manifest is present)
+                                          A value that disagrees with the built artifact is an error.
             --cross-compile <cli>         The container CLI (docker or container) used to push an
                                           OCI image to ECR. Only used for an image artifact
                                           (lambda-build --archive-format oci).

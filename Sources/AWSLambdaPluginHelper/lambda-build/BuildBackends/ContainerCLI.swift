@@ -27,19 +27,23 @@ protocol ContainerCLI {
     /// The name of the executable to resolve and run (e.g. "docker", "container").
     var executableName: String { get }
 
-    /// The arguments to pull (update) the given base image.
-    func pullArguments(image: String) -> [String]
+    /// The arguments to pull (update) the given base image for a target architecture.
+    func pullArguments(image: String, architecture: BuildArchitecture) -> [String]
 
     /// The arguments to run a command inside a container created from `baseImage`.
     ///
     /// - Parameters:
     ///   - baseImage: The container image to run.
+    ///   - architecture: The CPU architecture the container should run as. The build compiles for
+    ///     the container's architecture, so this is what determines the produced binary's
+    ///     architecture and must match what the function is deployed for.
     ///   - workingDirectory: The working directory inside the container.
     ///   - mounts: Volume mounts, each in the CLI's `host:container` form.
     ///   - env: Environment variables to set inside the container, or `nil`.
     ///   - command: The shell command to execute inside the container.
     func runArguments(
         baseImage: String,
+        architecture: BuildArchitecture,
         workingDirectory: String,
         mounts: [String],
         env: [String: String]?,

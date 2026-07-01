@@ -23,19 +23,29 @@
 struct AppleContainerCLI: ContainerCLI {
     let executableName = "container"
 
-    func pullArguments(image: String) -> [String] {
-        ["image", "pull", image]
+    /// The value Apple `container`'s `--arch` flag expects (`amd64`, `arm64`).
+    func arch(for architecture: BuildArchitecture) -> String {
+        switch architecture {
+        case .x64: return "amd64"
+        case .arm64: return "arm64"
+        }
+    }
+
+    func pullArguments(image: String, architecture: BuildArchitecture) -> [String] {
+        ["image", "pull", "--platform", "linux/\(self.arch(for: architecture))", image]
     }
 
     func runArguments(
         baseImage: String,
+        architecture: BuildArchitecture,
         workingDirectory: String,
         mounts: [String],
         env: [String: String]?,
         command: String
     ) -> [String] {
-        // container's runtime needs a bit more memory than the default
-        var args: [String] = ["run", "--memory", "4G", "--rm"]
+        // container's runtime needs a bit more memory than the default. `--arch` selects the
+        // container's CPU architecture, which is what the in-container `swift build` compiles for.
+        var args: [String] = ["run", "--arch", self.arch(for: architecture), "--memory", "4G", "--rm"]
         for mount in mounts {
             args += ["-v", mount]
         }
@@ -59,7 +69,7 @@ struct AppleContainerCLI: ContainerCLI {
         // explicit `-f`. `--arch` selects the single target architecture.
         [
             "build",
-            "--arch", architecture.containerArch,
+            "--arch", self.arch(for: architecture),
             "-f", dockerfile,
             "-t", tag,
             contextDir,

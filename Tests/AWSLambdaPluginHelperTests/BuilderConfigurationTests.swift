@@ -93,6 +93,63 @@ struct BuilderConfigurationTests {
         #expect(config.crossCompileMethod == .docker)
     }
 
+    // MARK: - Architecture parsing (issue #683)
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--architecture x64 is parsed", arguments: ["x64", "X64"])
+    func architectureX64(value: String) throws {
+        let config = try BuilderConfiguration(arguments: defaultArgs() + ["--architecture", value])
+        #expect(config.architecture == .x64)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--architecture arm64 is parsed", arguments: ["arm64", "ARM64"])
+    func architectureArm64(value: String) throws {
+        let config = try BuilderConfiguration(arguments: defaultArgs() + ["--architecture", value])
+        #expect(config.architecture == .arm64)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--architecture defaults to the host when omitted")
+    func architectureDefaultsToHost() throws {
+        let config = try BuilderConfiguration(arguments: defaultArgs())
+        #expect(config.architecture == .host)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("invalid --architecture throws")
+    func architectureInvalidThrows() throws {
+        #expect(throws: (any Error).self) {
+            _ = try BuilderConfiguration(arguments: defaultArgs() + ["--architecture", "mips"])
+        }
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--architecture flows into the ZIP archive backend")
+    func architectureFlowsIntoZipBackend() throws {
+        let config = try BuilderConfiguration(arguments: defaultArgs() + ["--architecture", "arm64"])
+        let backend = try #require(try config.makeArchiveBackend() as? ZipArchiveBackend)
+        #expect(backend.architecture == .arm64)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--architecture flows into the OCI archive backend")
+    func architectureFlowsIntoOCIBackend() throws {
+        let config = try BuilderConfiguration(
+            arguments: defaultArgs() + ["--archive-format", "oci", "--architecture", "x64"]
+        )
+        let backend = try #require(try config.makeArchiveBackend() as? OCIArchiveBackend)
+        #expect(backend.architecture == .x64)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("--architecture flows into the cross-compile build backend")
+    func architectureFlowsIntoBuildBackend() throws {
+        let config = try BuilderConfiguration(arguments: defaultArgs() + ["--architecture", "arm64"])
+        let backend = try #require(try config.makeCrossCompileBackend() as? ContainerBuildBackend)
+        #expect(backend.architecture == .arm64)
+    }
+
     // MARK: - No-strip flag (Requirements 2.5, 2.6)
 
     @available(LambdaSwift 2.0, *)

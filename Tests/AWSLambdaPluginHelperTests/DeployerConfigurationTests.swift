@@ -72,6 +72,24 @@ struct DeployerConfigurationTests {
         #endif
     }
 
+    // MARK: - Explicit vs default architecture (issue #683)
+
+    @available(LambdaSwift 2.0, *)
+    @Test("explicitArchitecture is set when --architecture is passed")
+    func explicitArchitectureSet() throws {
+        let config = try DeployerConfiguration(arguments: ["--architecture", "arm64"])
+        #expect(config.explicitArchitecture == .arm64)
+        #expect(config.architecture == .arm64)
+    }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("explicitArchitecture is nil when --architecture is omitted")
+    func explicitArchitectureNilWhenOmitted() throws {
+        let config = try DeployerConfiguration(arguments: [])
+        #expect(config.explicitArchitecture == nil)
+        #expect(config.architecture == .host)
+    }
+
     // MARK: - Region parsing (Requirement 3.25)
 
     @available(LambdaSwift 2.0, *)

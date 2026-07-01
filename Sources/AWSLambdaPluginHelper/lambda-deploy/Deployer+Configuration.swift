@@ -29,7 +29,19 @@ struct DeployerConfiguration: CustomStringConvertible {
     let profile: String?
     let iamRole: String?
     let inputDirectory: URL?
+    /// The architecture resolved for deployment: the explicitly requested one, else the host.
+    /// The deployer reconciles this against the build manifest (see `explicitArchitecture`).
     let architecture: Architecture
+    /// The architecture the user requested via `--architecture`, or `nil` when omitted. When set,
+    /// the deployer treats a disagreement with the built artifact as a hard error rather than
+    /// silently deploying a function whose declared architecture does not match its binary.
+    ///
+    /// This is primarily useful for deploying an artifact that was *not* produced by `lambda-build`
+    /// (e.g. a ZIP from the legacy `archive` command, or one supplied via `--input-directory`) and
+    /// therefore has no build manifest to read the architecture from. In the normal
+    /// `lambda-build` → `lambda-deploy` flow the manifest already records the architecture, so this
+    /// flag only acts as an optional assertion against it.
+    let explicitArchitecture: Architecture?
     let products: [String]
     /// Container CLI to use for an image (OCI) deploy: `docker` or `container`. `nil` → resolved
     /// from the build manifest, falling back to docker. Mirrors `lambda-build --cross-compile`.
@@ -101,8 +113,10 @@ struct DeployerConfiguration: CustomStringConvertible {
                 throw DeployerErrors.invalidArchitecture(archString)
             }
             self.architecture = arch
+            self.explicitArchitecture = arch
         } else {
             self.architecture = .host
+            self.explicitArchitecture = nil
         }
 
         // products
@@ -127,7 +141,7 @@ struct DeployerConfiguration: CustomStringConvertible {
           profile: \(self.profile ?? "<default>")
           iamRole: \(self.iamRole ?? "<create new>")
           inputDirectory: \(self.inputDirectory?.path() ?? "<default build output>")
-          architecture: \(self.architecture.rawValue)
+          architecture: \(self.architecture.rawValue)\(self.explicitArchitecture == nil ? " <default>" : " <explicit>")
           products: \(self.products)
           crossCompile: \(self.crossCompile ?? "<from manifest>")
           crossCompileToolPath: \(self.crossCompileToolPath?.path() ?? "<none>")

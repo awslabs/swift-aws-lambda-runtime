@@ -32,6 +32,10 @@ struct ContainerBuildBackend: BuildBackend {
     let baseImage: String
     let disableImageUpdate: Bool
 
+    /// The CPU architecture to build for. The container runs as this architecture, so the compiled
+    /// binary targets it; recorded in the build manifest and matched against the deploy architecture.
+    let architecture: BuildArchitecture
+
     /// The cross-compile method that selected this backend, retained for error reporting.
     let method: CrossCompileMethod
 
@@ -60,7 +64,7 @@ struct ContainerBuildBackend: BuildBackend {
             print("updating \"\(self.baseImage)\" image")
             try Utils.execute(
                 executable: self.toolPath,
-                arguments: self.cli.pullArguments(image: self.baseImage),
+                arguments: self.cli.pullArguments(image: self.baseImage, architecture: self.architecture),
                 logLevel: verboseLogging ? .debug : .output
             )
         }
@@ -71,6 +75,7 @@ struct ContainerBuildBackend: BuildBackend {
             executable: self.toolPath,
             arguments: self.cli.runArguments(
                 baseImage: self.baseImage,
+                architecture: self.architecture,
                 workingDirectory: "/workspace",
                 mounts: ["\(packageDirectory.path()):/workspace"],
                 env: nil,
@@ -103,6 +108,7 @@ struct ContainerBuildBackend: BuildBackend {
                     executable: self.toolPath,
                     arguments: self.cli.runArguments(
                         baseImage: self.baseImage,
+                        architecture: self.architecture,
                         workingDirectory: "/workspace/\(slice.joined(separator: "/"))",
                         mounts: ["\(packageDirectory.path())../..:/workspace"],
                         env: ["LAMBDA_USE_LOCAL_DEPS": localPath],
@@ -115,6 +121,7 @@ struct ContainerBuildBackend: BuildBackend {
                     executable: self.toolPath,
                     arguments: self.cli.runArguments(
                         baseImage: self.baseImage,
+                        architecture: self.architecture,
                         workingDirectory: "/workspace",
                         mounts: ["\(packageDirectory.path()):/workspace"],
                         env: nil,

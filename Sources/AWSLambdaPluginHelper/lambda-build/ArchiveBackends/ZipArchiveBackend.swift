@@ -30,6 +30,10 @@ struct ZipArchiveBackend: ArchiveBackend {
     /// The resolved path to the `zip` tool.
     let zipToolPath: URL
 
+    /// The architecture the binaries were built for, recorded in the build manifest so the deploy
+    /// step deploys the function for the architecture it was actually built for.
+    let architecture: BuildArchitecture
+
     // TODO: explore using ziplib or similar instead of shelling out
     func archive(
         products: [String: URL],
@@ -121,7 +125,7 @@ struct ZipArchiveBackend: ArchiveBackend {
             // (package type + architecture) instead of re-deriving everything from the path.
             try BuildManifest.zip(
                 product: product,
-                architecture: .host,
+                architecture: self.architecture,
                 zipPath: zipfilePath.path()
             ).write(into: workingDirectory)
 

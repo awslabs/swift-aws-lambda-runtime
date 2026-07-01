@@ -32,6 +32,7 @@ enum DeployerErrors: Error, CustomStringConvertible {
     case ecrError(String)
     case imageManifestNotAnIndex
     case packageTypeMismatch(functionName: String, existing: String, requested: String)
+    case architectureMismatch(functionName: String, requested: String, built: String)
 
     var description: String {
         switch self {
@@ -72,6 +73,17 @@ enum DeployerErrors: Error, CustomStringConvertible {
                 Suggested action: delete the function and redeploy it:
                     swift package --allow-network-connections all:443 lambda-deploy --delete
                     swift package --allow-network-connections all:443 lambda-deploy
+                """
+        case .architectureMismatch(let functionName, let requested, let built):
+            return """
+                cannot deploy function '\(functionName)' for architecture '\(requested)': the \
+                artifact produced by lambda-build was built for '\(built)'. Deploying a function \
+                whose declared architecture does not match its binary produces a function that \
+                fails at invoke time.
+
+                Suggested action: either drop --architecture to deploy what was built ('\(built)'), \
+                or rebuild for '\(requested)':
+                    swift package --allow-network-connections docker lambda-build --architecture \(requested)
                 """
         }
     }

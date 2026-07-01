@@ -32,19 +32,27 @@ import Foundation
 struct DockerCLIArgumentTests {
 
     @available(LambdaSwift 2.0, *)
-    @Test("pull arguments")
+    @Test("pull arguments pin the target platform")
     func pullArguments() {
         let cli = DockerCLI()
         #expect(cli.executableName == "docker")
-        #expect(cli.pullArguments(image: "swift:amazonlinux2023") == ["pull", "swift:amazonlinux2023"])
+        #expect(
+            cli.pullArguments(image: "swift:amazonlinux2023", architecture: .arm64)
+                == ["pull", "--platform", "linux/arm64", "swift:amazonlinux2023"]
+        )
+        #expect(
+            cli.pullArguments(image: "swift:amazonlinux2023", architecture: .x64)
+                == ["pull", "--platform", "linux/amd64", "swift:amazonlinux2023"]
+        )
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("run arguments without env")
+    @Test("run arguments without env pin the target platform")
     func runArgumentsNoEnv() {
         let cli = DockerCLI()
         let args = cli.runArguments(
             baseImage: "swift:amazonlinux2023",
+            architecture: .arm64,
             workingDirectory: "/workspace",
             mounts: ["/host/pkg:/workspace"],
             env: nil,
@@ -52,7 +60,7 @@ struct DockerCLIArgumentTests {
         )
         #expect(
             args == [
-                "run", "--rm",
+                "run", "--platform", "linux/arm64", "--rm",
                 "-v", "/host/pkg:/workspace",
                 "-w", "/workspace",
                 "swift:amazonlinux2023",
@@ -67,6 +75,7 @@ struct DockerCLIArgumentTests {
         let cli = DockerCLI()
         let args = cli.runArguments(
             baseImage: "img",
+            architecture: .x64,
             workingDirectory: "/w",
             mounts: ["/a:/b", "/c:/d"],
             env: ["ZED": "1", "ABLE": "2"],
@@ -74,7 +83,7 @@ struct DockerCLIArgumentTests {
         )
         #expect(
             args == [
-                "run", "--rm",
+                "run", "--platform", "linux/amd64", "--rm",
                 "-v", "/a:/b",
                 "-v", "/c:/d",
                 "-e", "ABLE=2",
@@ -160,19 +169,27 @@ struct DockerCLIArgumentTests {
 struct AppleContainerCLIArgumentTests {
 
     @available(LambdaSwift 2.0, *)
-    @Test("pull arguments use the image subcommand")
+    @Test("pull arguments use the image subcommand and pin the platform")
     func pullArguments() {
         let cli = AppleContainerCLI()
         #expect(cli.executableName == "container")
-        #expect(cli.pullArguments(image: "swift:amazonlinux2023") == ["image", "pull", "swift:amazonlinux2023"])
+        #expect(
+            cli.pullArguments(image: "swift:amazonlinux2023", architecture: .arm64)
+                == ["image", "pull", "--platform", "linux/arm64", "swift:amazonlinux2023"]
+        )
+        #expect(
+            cli.pullArguments(image: "swift:amazonlinux2023", architecture: .x64)
+                == ["image", "pull", "--platform", "linux/amd64", "swift:amazonlinux2023"]
+        )
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("run arguments reserve memory and come before --rm")
+    @Test("run arguments select the arch, reserve memory, and come before --rm")
     func runArgumentsNoEnv() {
         let cli = AppleContainerCLI()
         let args = cli.runArguments(
             baseImage: "swift:amazonlinux2023",
+            architecture: .arm64,
             workingDirectory: "/workspace",
             mounts: ["/host/pkg:/workspace"],
             env: nil,
@@ -180,7 +197,7 @@ struct AppleContainerCLIArgumentTests {
         )
         #expect(
             args == [
-                "run", "--memory", "4G", "--rm",
+                "run", "--arch", "arm64", "--memory", "4G", "--rm",
                 "-v", "/host/pkg:/workspace",
                 "-w", "/workspace",
                 "swift:amazonlinux2023",
@@ -195,6 +212,7 @@ struct AppleContainerCLIArgumentTests {
         let cli = AppleContainerCLI()
         let args = cli.runArguments(
             baseImage: "img",
+            architecture: .x64,
             workingDirectory: "/w",
             mounts: ["/a:/b"],
             env: ["ZED": "1", "ABLE": "2"],
@@ -202,7 +220,7 @@ struct AppleContainerCLIArgumentTests {
         )
         #expect(
             args == [
-                "run", "--memory", "4G", "--rm",
+                "run", "--arch", "amd64", "--memory", "4G", "--rm",
                 "-v", "/a:/b",
                 "-e", "ABLE=2",
                 "-e", "ZED=1",

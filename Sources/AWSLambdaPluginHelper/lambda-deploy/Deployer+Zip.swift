@@ -32,6 +32,7 @@ extension Deployer {
     /// The image counterpart is ``deployImage(functionName:manifest:action:accountId:region:configuration:existingConfiguration:awsClient:lambdaClient:iamClient:)``.
     func deployZip(
         functionName: String,
+        architecture: DeployerConfiguration.Architecture,
         action: DeploymentAction,
         accountId: String,
         region: Region,
@@ -125,7 +126,7 @@ extension Deployer {
             if let bucket = s3Bucket, let key = s3Key {
                 response = try await createFunction(
                     name: functionName,
-                    architecture: configuration.architecture,
+                    architecture: architecture,
                     role: roleArn,
                     bucket: bucket,
                     key: key,
@@ -135,7 +136,7 @@ extension Deployer {
             } else {
                 response = try await createFunction(
                     name: functionName,
-                    architecture: configuration.architecture,
+                    architecture: architecture,
                     role: roleArn,
                     zipData: zipData,
                     using: lambdaClient,

@@ -15,9 +15,9 @@
 
 /// The target CPU architecture an artifact is built for.
 ///
-/// An OCI image bakes in a single architecture, so the build step needs to know which one to
-/// target. Today this defaults to the host architecture; a user-facing `--architecture` flag and
-/// build-manifest plumbing are tracked separately (issue #683) and will set this explicitly.
+/// Set explicitly by `--architecture` (defaulting to the host architecture) and recorded in the
+/// build manifest so `lambda-deploy` deploys the function for the architecture the binary was
+/// actually built for. Both the ZIP and OCI archive backends target this single architecture.
 @available(LambdaSwift 2.0, *)
 enum BuildArchitecture: String, Codable, CustomStringConvertible {
     case x64
@@ -32,20 +32,17 @@ enum BuildArchitecture: String, Codable, CustomStringConvertible {
         #endif
     }
 
-    /// The value docker's `--platform` flag expects (`linux/amd64`, `linux/arm64`).
-    var dockerPlatform: String {
-        switch self {
-        case .x64: return "linux/amd64"
-        case .arm64: return "linux/arm64"
+    /// Parses the `--architecture` value, defaulting to the host architecture when omitted.
+    static func parse(_ value: String?) throws -> Self {
+        guard let value else {
+            return .host
         }
-    }
-
-    /// The value Apple `container`'s `--arch` flag expects (`amd64`, `arm64`).
-    var containerArch: String {
-        switch self {
-        case .x64: return "amd64"
-        case .arm64: return "arm64"
+        guard let architecture = BuildArchitecture(rawValue: value.lowercased()) else {
+            throw BuilderErrors.invalidArgument(
+                "invalid architecture '\(value)'. Use 'x64' or 'arm64'."
+            )
         }
+        return architecture
     }
 
     var description: String {

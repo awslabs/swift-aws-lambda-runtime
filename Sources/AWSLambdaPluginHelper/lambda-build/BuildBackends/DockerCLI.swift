@@ -21,18 +21,27 @@
 struct DockerCLI: ContainerCLI {
     let executableName = "docker"
 
-    func pullArguments(image: String) -> [String] {
-        ["pull", image]
+    /// The value docker's `--platform` flag expects (`linux/amd64`, `linux/arm64`).
+    func platform(for architecture: BuildArchitecture) -> String {
+        switch architecture {
+        case .x64: return "linux/amd64"
+        case .arm64: return "linux/arm64"
+        }
+    }
+
+    func pullArguments(image: String, architecture: BuildArchitecture) -> [String] {
+        ["pull", "--platform", self.platform(for: architecture), image]
     }
 
     func runArguments(
         baseImage: String,
+        architecture: BuildArchitecture,
         workingDirectory: String,
         mounts: [String],
         env: [String: String]?,
         command: String
     ) -> [String] {
-        var args: [String] = ["run", "--rm"]
+        var args: [String] = ["run", "--platform", self.platform(for: architecture), "--rm"]
         for mount in mounts {
             args += ["-v", mount]
         }
@@ -53,7 +62,7 @@ struct DockerCLI: ContainerCLI {
     ) -> [String] {
         [
             "build",
-            "--platform", architecture.dockerPlatform,
+            "--platform", self.platform(for: architecture),
             "-f", dockerfile,
             "-t", tag,
             contextDir,

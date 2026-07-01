@@ -164,7 +164,9 @@ struct ZipArchiveBackendTests {
     @available(LambdaSwift 2.0, *)
     @Test("name is zip")
     func name() {
-        #expect(ZipArchiveBackend(zipToolPath: URL(fileURLWithPath: "/usr/bin/zip")).name == "zip")
+        #expect(
+            ZipArchiveBackend(zipToolPath: URL(fileURLWithPath: "/usr/bin/zip"), architecture: .arm64).name == "zip"
+        )
     }
 
     @available(LambdaSwift 2.0, *)
@@ -183,7 +185,7 @@ struct ZipArchiveBackendTests {
         let binary = buildDir.appending(path: product)
         try Data("#!/bin/sh\necho hi\n".utf8).write(to: binary)
 
-        let backend = ZipArchiveBackend(zipToolPath: URL(fileURLWithPath: "/usr/bin/zip"))
+        let backend = ZipArchiveBackend(zipToolPath: URL(fileURLWithPath: "/usr/bin/zip"), architecture: .arm64)
         let archives = try backend.archive(
             products: [product: binary],
             outputDirectory: outputDir,
@@ -202,10 +204,12 @@ struct ZipArchiveBackendTests {
         let bootstrap = outputDir.appending(path: product).appending(path: "bootstrap")
         #expect(FileManager.default.fileExists(atPath: bootstrap.path()))
 
-        // A build manifest is written alongside the zip for the deploy hand-off.
+        // A build manifest is written alongside the zip for the deploy hand-off, recording the
+        // architecture the backend was built for.
         let manifest = try #require(try BuildManifest.read(from: outputDir.appending(path: product)))
         #expect(manifest.packageType == .zip)
         #expect(manifest.product == product)
         #expect(manifest.zipPath == zipURL.path())
+        #expect(manifest.architecture == .arm64)
     }
 }

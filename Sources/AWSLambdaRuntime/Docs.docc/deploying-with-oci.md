@@ -42,7 +42,7 @@ swift package --disable-sandbox lambda-build --archive-format oci
 
 To use Apple's `container` CLI instead of Docker, add `--cross-compile container`.
 
-This compiles the executable for Amazon Linux 2023, then builds a minimal Amazon Linux 2023 image (`public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`) with your binary as the `bootstrap` entrypoint. The image targets a single architecture and is tagged locally as `swift-lambda/<product>:latest`, lowercased, since OCI image references must be lowercase.
+This compiles the executable for Amazon Linux 2023, then builds a minimal Amazon Linux 2023 image (`public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`) with your binary as the `bootstrap` entrypoint. The image targets a single architecture (the host by default, or the one selected with `--architecture <x64|arm64>`) and is tagged locally as `swift-lambda/<product>:latest`, lowercased, since OCI image references must be lowercase.
 
 `lambda-build --archive-format oci` builds the image locally. It does not push it. The push to Amazon ECR and the function create or update happen during `lambda-deploy`, the step that holds your AWS credentials. This matches the ZIP flow, where `lambda-build` produces the artifact and `lambda-deploy` uploads it.
 
@@ -64,7 +64,7 @@ For an image artifact, `lambda-deploy`:
 4. resolves the single-architecture child manifest by digest. Both Docker and `container` push a multi-architecture image index, which Lambda does not accept, so the deployer selects the child manifest that matches the target architecture, then
 5. creates or updates the Lambda function with `PackageType=Image`.
 
-The deployer reads the architecture and container CLI from `build-manifest.json`. To override the CLI used for the push, pass `--cross-compile <docker|container>`.
+The deployer reads the architecture and container CLI from `build-manifest.json`. To override the CLI used for the push, pass `--cross-compile <docker|container>`. Passing `--architecture` to `lambda-deploy` that disagrees with the built image is a hard error, since a container-image function's declared architecture must match the image.
 
 > Note: AWS does not allow changing the package type of an existing function, ZIP to image or back. If a function with the same name already exists with a different package type, `lambda-deploy` stops with an error. Delete the function and redeploy.
 
