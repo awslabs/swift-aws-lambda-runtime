@@ -66,10 +66,12 @@ swift package lambda-init --allow-writing-to-package-directory --with-url
 ## lambda-build
 
 `lambda-build` compiles your executable targets for Amazon Linux 2023 and
-packages them into deployment ZIP archives. By default the build runs inside a
-container, so you must have [Docker](https://docs.docker.com/desktop/install/mac-install/)
-(or `container`) installed and started. To build without a container, see
-[Building without a container](#Building-without-a-container).
+packages them into deployment archives. You choose along two independent axes:
+how to compile (see [Choosing how to compile](#Choosing-how-to-compile)) and
+what format to package (see [Choosing the package format](#Choosing-the-package-format)).
+By default the build runs inside a container and produces a ZIP, so you must have
+[Docker](https://docs.docker.com/desktop/install/mac-install/) (or `container`)
+installed and started.
 
 ```sh
 swift package --allow-network-connections docker lambda-build
@@ -101,41 +103,34 @@ swift package --allow-network-connections docker lambda-build \
 | `--swift-version <version>` | The Swift version to use for building. (default: latest) Cannot be combined with `--base-docker-image`. |
 | `--base-docker-image <name>` | The base Docker image to build with. (default: `swift:<version>-amazonlinux2023`) Cannot be combined with `--swift-version`. |
 | `--disable-docker-image-update` | Do not attempt to update the Docker image. |
-| `--cross-compile <method>` | The cross-compilation method: `docker`, `container`, `swift-static-sdk`, or `custom-sdk`. (default: `docker`) `swift-static-sdk` builds without a container using a pre-installed Static Linux SDK, see [Building without a container](#Building-without-a-container). `custom-sdk` is not yet supported. |
-| `--archive-format <format>` | The packaging format: `zip` or `oci`. (default: `zip`) See [Building an OCI image](#Building-an-OCI-image). |
+| `--cross-compile <method>` | The cross-compilation method: `docker`, `container`, `swift-static-sdk`, or `custom-sdk`. (default: `docker`) See [Choosing how to compile](#Choosing-how-to-compile). `custom-sdk` is not yet supported. |
+| `--archive-format <format>` | The packaging format: `zip` or `oci`. (default: `zip`) See [Choosing the package format](#Choosing-the-package-format). |
 | `--architecture <arch>` | The CPU architecture to build for: `x64` or `arm64`. (default: host architecture) Recorded in the build manifest so `lambda-deploy` deploys the function for the architecture it was built for. See [Selecting the architecture](#Selecting-the-architecture). |
 | `--base-oci-image <name>` | The base image for the OCI image when `--archive-format oci` is used. (default: `public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`) |
 | `--no-strip` | Do not strip debug symbols from the binary. |
 | `--verbose` | Produce verbose output for debugging. |
 | `--help` | Show help information. |
 
-### Selecting the architecture
+### Choosing how to compile
 
-By default `lambda-build` builds for the architecture of the machine running the
-build (`arm64` on Apple Silicon, `x64` on Intel). Pass `--architecture` to build
-for a specific architecture regardless of your host:
+`--cross-compile` selects how your code is compiled for Amazon Linux. All three
+methods produce a `bootstrap` that runs on the Lambda `provided.al2023` runtime;
+they differ in what tooling they need on your machine.
 
-```sh
-swift package --allow-network-connections docker lambda-build \
-  --architecture arm64
-```
+- `docker` (default) cross-compiles inside a Docker container. Requires Docker
+  installed and running, and `--allow-network-connections docker`.
+- `container` cross-compiles inside Apple's `container` runtime instead of
+  Docker. Same workflow, different runtime.
+- `swift-static-sdk` compiles directly on your host with no container at all,
+  using the Static Linux SDK. See [Building without a container](#Building-without-a-container).
 
-`arm64` (AWS Graviton) is generally cheaper and faster for Swift workloads; pick
-`x64` only if a dependency requires it.
+The `docker` and `container` methods also accept `--base-docker-image`,
+`--swift-version`, and `--disable-docker-image-update`. Those options do not
+apply to `swift-static-sdk`, which builds on the host.
 
-The architecture you build for is recorded in the `build-manifest.json` written
-next to the artifact. `lambda-deploy` reads it and deploys the function for that
-same architecture, so the two can never silently disagree. If you pass
-`--architecture` to `lambda-deploy` as well, it must match what was built, 
-otherwise the deploy fails fast rather than creating a function whose declared
-architecture doesn't match its binary (which would only surface as a failure at
-invoke time). See [lambda-deploy](#lambda-deploy).
+#### Building without a container
 
-### Building without a container
-
-By default `lambda-build` cross-compiles inside a container, which requires
-Docker (or `container`) to be installed and running. As an alternative, the
-[Static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html)
+The [Static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html)
 compiles a fully static, musl-linked binary directly on your host with no
 container runtime at all:
 
@@ -158,19 +153,25 @@ swift sdk install <static-linux-sdk-url>
 `--architecture` selects the target: `arm64` maps to the
 `aarch64-swift-linux-musl` SDK triple and `x64` to `x86_64-swift-linux-musl`.
 Because the SDK genuinely cross-compiles, you can build either architecture from
-either host. The resulting `bootstrap` runs as-is on the Lambda
-`provided.al2023` runtime.
+either host.
 
-Trade-offs versus the container build: statically linking the Swift runtime and
-musl produces a larger binary, which can affect cold-start time. Measure for
-your workload. Stripping still applies through `--no-strip` exactly as with the
-other methods.
+On binary size: statically linking musl does not, in practice, produce a much
+larger binary than the container build. Both statically link the Swift standard
+library, which dominates the size, so the two land close to each other (in a
+trivial function, the static-SDK binary is actually slightly smaller). Stripping
+applies through `--no-strip` exactly as with the other methods.
 
-### Building an OCI image
+### Choosing the package format
 
-By default `lambda-build` produces a ZIP archive, which is the simplest option
-and gives the fastest cold starts for most functions. Packaging your function as
-a container image instead is useful when:
+`--archive-format` selects what `lambda-build` packages, independently of how you
+compiled. `zip` (default) is the simplest option and gives the fastest cold
+starts for most functions. `oci` builds a container image instead. Both formats
+work with any `--cross-compile` method, except that `oci` needs a container CLI
+and so cannot be combined with `swift-static-sdk`.
+
+#### Building an OCI image
+
+Packaging your function as a container image instead of a ZIP is useful when:
 
 - **Your deployment package is larger than the ZIP limits.** A ZIP-packaged
   function is capped at 50 MB zipped / 250 MB unzipped, whereas a container image
@@ -225,6 +226,28 @@ Use a glibc-compatible Amazon Linux 2023 base so the image matches the
 Alongside the artifact, `lambda-build` writes a `build-manifest.json` recording
 the package type, architecture, and (for images) the container CLI and local tag.
 `lambda-deploy` reads this manifest to determine how to deploy.
+
+### Selecting the architecture
+
+By default `lambda-build` builds for the architecture of the machine running the
+build (`arm64` on Apple Silicon, `x64` on Intel). Pass `--architecture` to build
+for a specific architecture regardless of your host:
+
+```sh
+swift package --allow-network-connections docker lambda-build \
+  --architecture arm64
+```
+
+`arm64` (AWS Graviton) is generally cheaper and faster for Swift workloads; pick
+`x64` only if a dependency requires it.
+
+The architecture you build for is recorded in the `build-manifest.json` written
+next to the artifact. `lambda-deploy` reads it and deploys the function for that
+same architecture, so the two can never silently disagree. If you pass
+`--architecture` to `lambda-deploy` as well, it must match what was built,
+otherwise the deploy fails fast rather than creating a function whose declared
+architecture doesn't match its binary (which would only surface as a failure at
+invoke time). See [lambda-deploy](#lambda-deploy).
 
 ## lambda-deploy
 
