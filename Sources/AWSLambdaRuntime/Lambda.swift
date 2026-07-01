@@ -99,16 +99,13 @@ public enum Lambda {
                     // handler directly (no task-local binding). Remove the guard when 6.1 support
                     // is dropped.
                     #if compiler(>=6.2)
-                    // `withLogger`'s operation closure is `nonisolated(nonsending)`, so it forms
-                    // its own isolation region. Pass the handler in by value and write the mutated
-                    // copy back out so we don't share the `var handler` across regions (which the
-                    // compiler rejects under NonisolatedNonsendingByDefault) and so any state the
-                    // handler accumulates across invocations is preserved.
-                    handler = try await withLogger(requestLogger) { [handler] _ in
-                        var handler = handler
+                    let handlerBox = UnsafeTransferBox(value: handler)
+                    let writerBox = UnsafeTransferBox(value: writer)
+                    handler = try await withLogger(requestLogger) { _ in
+                        var handler = handlerBox.value
                         try await handler.handle(
                             invocation.event,
-                            responseWriter: writer,
+                            responseWriter: writerBox.value,
                             context: context
                         )
                         return handler
@@ -135,6 +132,21 @@ public enum Lambda {
 
     /// The default EventLoop the Lambda is scheduled on.
     public static let defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
+}
+
+/// Moves a non-`Sendable` value across an isolation boundary without a `sending` requirement.
+///
+/// Used by `runLoop` to hand the handler and response writer into `withLogger`'s
+/// `nonisolated(nonsending)` operation closure. The closure runs on a different executor than
+/// `handle`, so passing these non-`Sendable` values would otherwise be diagnosed as a cross-region
+/// send. The transfer is safe here because the run loop does not touch `writer` or `handler` while
+/// `handle` is in flight: it awaits the call and only reads the returned handler afterwards.
+@usableFromInline
+struct UnsafeTransferBox<Value>: @unchecked Sendable {
+    @usableFromInline let value: Value
+    @usableFromInline init(value: Value) {
+        self.value = value
+    }
 }
 
 // MARK: - Public API
