@@ -57,9 +57,30 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
 
         let triple = self.architecture.muslTriple
 
-        // The plugin sandbox cannot download the SDK (network is limited to Docker), so require it
-        // to be installed up front and fail with actionable guidance otherwise.
-        try self.verifyStaticSDKInstalled(triple: triple, verboseLogging: verboseLogging)
+        // Resolve the build output path with the same `--swift-sdk` selector the build uses. This
+        // doubles as the SDK preflight: SwiftPM resolves the SDK exactly as a real build would, so
+        // if no SDK targets the triple this fails, and we surface actionable install guidance. We
+        // cannot download the SDK ourselves (the plugin sandbox limits network to Docker).
+        //
+        // `swift sdk list` is deliberately NOT used here: it prints SDK bundle identifiers (e.g.
+        // `swift-…_static-linux-0.1.0`), which do not contain the target triple, so matching on the
+        // triple gives false negatives even when the SDK is installed.
+        let binPath: String
+        do {
+            binPath = try Utils.execute(
+                executable: self.swiftToolPath,
+                arguments: [
+                    "build", "-c", buildConfiguration.rawValue,
+                    "--swift-sdk", triple,
+                    "--show-bin-path",
+                ],
+                customWorkingDirectory: packageDirectory,
+                logLevel: verboseLogging ? .debug : .silent
+            ).trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            throw BuilderErrors.staticSDKNotInstalled(triple)
+        }
+        let buildOutputPath = URL(fileURLWithPath: binPath)
 
         print("-------------------------------------------------------------------------")
         print("building \"\(packageIdentity)\" with the Static Linux SDK (\(triple))")
@@ -84,21 +105,7 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
                 logLevel: verboseLogging ? .debug : .output
             )
 
-            // The Static Linux SDK build outputs under `.build/<triple>/<config>`, which differs
-            // from a native build, so resolve the path with the same --swift-sdk selector.
-            let showBinPathArguments = [
-                "build", "-c", buildConfiguration.rawValue,
-                "--swift-sdk", triple,
-                "--show-bin-path",
-            ]
-            let binPath = try Utils.execute(
-                executable: self.swiftToolPath,
-                arguments: showBinPathArguments,
-                customWorkingDirectory: packageDirectory,
-                logLevel: .silent
-            ).trimmingCharacters(in: .whitespacesAndNewlines)
-
-            let productPath = URL(fileURLWithPath: binPath).appending(path: product)
+            let productPath = buildOutputPath.appending(path: product)
             guard FileManager.default.fileExists(atPath: productPath.path()) else {
                 print("expected '\(product)' binary at \"\(productPath.path())\"")
                 throw BuilderErrors.productExecutableNotFound(product)
@@ -106,20 +113,5 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
             builtProducts[product] = productPath
         }
         return builtProducts
-    }
-
-    /// Confirms a Static Linux SDK targeting `triple` is installed by scanning `swift sdk list`.
-    ///
-    /// Matches leniently on the triple substring rather than a pinned SDK name/version: the SDK
-    /// identifier varies across Swift releases, and pinning would force per-toolchain maintenance.
-    private func verifyStaticSDKInstalled(triple: String, verboseLogging: Bool) throws {
-        let installed = try Utils.execute(
-            executable: self.swiftToolPath,
-            arguments: ["sdk", "list"],
-            logLevel: verboseLogging ? .debug : .silent
-        )
-        guard installed.contains(triple) else {
-            throw BuilderErrors.staticSDKNotInstalled(triple)
-        }
     }
 }
