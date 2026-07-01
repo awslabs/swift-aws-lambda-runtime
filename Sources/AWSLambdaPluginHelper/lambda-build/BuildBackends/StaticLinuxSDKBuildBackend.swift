@@ -57,6 +57,13 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
 
         let triple = self.architecture.muslTriple
 
+        // Build into a dedicated scratch path, NOT the package's default `.build`. This plugin runs
+        // as a SwiftPM command plugin, which holds the workspace lock on `.build` for its whole
+        // duration; a nested `swift build` targeting the same `.build` would block forever waiting
+        // for that lock. A separate scratch path sidesteps the deadlock (the container backend does
+        // not hit this because its build runs inside the container, not against the host `.build`).
+        let scratchPath = packageDirectory.appending(path: ".build").appending(path: "lambda-static-sdk")
+
         // Resolve the build output path with the same `--swift-sdk` selector the build uses. This
         // doubles as the SDK preflight: SwiftPM resolves the SDK exactly as a real build would, so
         // if no SDK targets the triple this fails, and we surface actionable install guidance. We
@@ -72,6 +79,7 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
                 arguments: [
                     "build", "-c", buildConfiguration.rawValue,
                     "--swift-sdk", triple,
+                    "--scratch-path", scratchPath.path(),
                     "--show-bin-path",
                 ],
                 customWorkingDirectory: packageDirectory,
@@ -93,6 +101,7 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
                 "build", "-c", buildConfiguration.rawValue,
                 "--product", product,
                 "--swift-sdk", triple,
+                "--scratch-path", scratchPath.path(),
                 "--static-swift-stdlib",
             ]
             if !noStrip {
