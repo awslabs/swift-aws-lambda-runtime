@@ -173,8 +173,8 @@ struct DeprecatedAliasEquivalencePropertyTests {
 /// **Validates: Requirements 2.7**
 ///
 /// For any valid `CrossCompileMethod` enum case, `rawValue` → parse → original case.
-/// Note: swift-static-sdk and custom-sdk throw "unsupported" on `parse()`, but their
-/// rawValue round-trips through the enum initializer correctly.
+/// Note: custom-sdk throws "unsupported" on `parse()`, but its rawValue round-trips
+/// through the enum initializer correctly.
 @Suite("Property 3: Cross-compile method parsing round-trip")
 struct CrossCompileMethodRoundTripPropertyTests {
 
@@ -580,8 +580,7 @@ struct AL2WarningLogicPropertyTests {
 struct UnsupportedCrossCompileMethodsPropertyTests {
 
     static let unsupportedMethods: [String] = [
-        "swift-static-sdk",
-        "custom-sdk",
+        "custom-sdk"
     ]
 
     static let sdkGuideURL = "https://www.swift.org/documentation/articles/static-linux-getting-started.html"

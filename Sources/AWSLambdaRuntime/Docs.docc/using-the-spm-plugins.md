@@ -66,9 +66,10 @@ swift package lambda-init --allow-writing-to-package-directory --with-url
 ## lambda-build
 
 `lambda-build` compiles your executable targets for Amazon Linux 2023 and
-packages them into deployment ZIP archives. The build runs inside a container,
-so you must have [Docker](https://docs.docker.com/desktop/install/mac-install/)
-(or `container`) installed and started.
+packages them into deployment ZIP archives. By default the build runs inside a
+container, so you must have [Docker](https://docs.docker.com/desktop/install/mac-install/)
+(or `container`) installed and started. To build without a container, see
+[Building without a container](#Building-without-a-container).
 
 ```sh
 swift package --allow-network-connections docker lambda-build
@@ -100,7 +101,7 @@ swift package --allow-network-connections docker lambda-build \
 | `--swift-version <version>` | The Swift version to use for building. (default: latest) Cannot be combined with `--base-docker-image`. |
 | `--base-docker-image <name>` | The base Docker image to build with. (default: `swift:<version>-amazonlinux2023`) Cannot be combined with `--swift-version`. |
 | `--disable-docker-image-update` | Do not attempt to update the Docker image. |
-| `--cross-compile <method>` | The cross-compilation method: `docker`, `container`, `swift-static-sdk`, or `custom-sdk`. (default: `docker`) `swift-static-sdk` and `custom-sdk` are not yet supported. |
+| `--cross-compile <method>` | The cross-compilation method: `docker`, `container`, `swift-static-sdk`, or `custom-sdk`. (default: `docker`) `swift-static-sdk` builds without a container using a pre-installed Static Linux SDK, see [Building without a container](#Building-without-a-container). `custom-sdk` is not yet supported. |
 | `--archive-format <format>` | The packaging format: `zip` or `oci`. (default: `zip`) See [Building an OCI image](#Building-an-OCI-image). |
 | `--architecture <arch>` | The CPU architecture to build for: `x64` or `arm64`. (default: host architecture) Recorded in the build manifest so `lambda-deploy` deploys the function for the architecture it was built for. See [Selecting the architecture](#Selecting-the-architecture). |
 | `--base-oci-image <name>` | The base image for the OCI image when `--archive-format oci` is used. (default: `public.ecr.aws/amazonlinux/amazonlinux:2023-minimal`) |
@@ -129,6 +130,41 @@ same architecture, so the two can never silently disagree. If you pass
 otherwise the deploy fails fast rather than creating a function whose declared
 architecture doesn't match its binary (which would only surface as a failure at
 invoke time). See [lambda-deploy](#lambda-deploy).
+
+### Building without a container
+
+By default `lambda-build` cross-compiles inside a container, which requires
+Docker (or `container`) to be installed and running. As an alternative, the
+[Static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html)
+compiles a fully static, musl-linked binary directly on your host with no
+container runtime at all:
+
+```sh
+swift package lambda-build --cross-compile swift-static-sdk
+```
+
+Note that `--allow-network-connections docker` is not needed here, since no
+container is used.
+
+The Static Linux SDK must be installed beforehand. `lambda-build` does not
+install it for you (the plugin's sandbox does not permit the download), and
+fails with guidance if a matching SDK is not found. Install the SDK version that
+matches your Swift toolchain once:
+
+```sh
+swift sdk install <static-linux-sdk-url>
+```
+
+`--architecture` selects the target: `arm64` maps to the
+`aarch64-swift-linux-musl` SDK triple and `x64` to `x86_64-swift-linux-musl`.
+Because the SDK genuinely cross-compiles, you can build either architecture from
+either host. The resulting `bootstrap` runs as-is on the Lambda
+`provided.al2023` runtime.
+
+Trade-offs versus the container build: statically linking the Swift runtime and
+musl produces a larger binary, which can affect cold-start time. Measure for
+your workload. Stripping still applies through `--no-strip` exactly as with the
+other methods.
 
 ### Building an OCI image
 

@@ -34,8 +34,8 @@ enum CrossCompileMethod: String, CustomStringConvertible {
 
     var isSupported: Bool {
         switch self {
-        case .docker, .container: return true
-        case .swiftStaticSdk, .customSdk: return false
+        case .docker, .container, .swiftStaticSdk: return true
+        case .customSdk: return false
         }
     }
 

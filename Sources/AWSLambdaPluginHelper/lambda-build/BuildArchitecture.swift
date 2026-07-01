@@ -32,6 +32,15 @@ enum BuildArchitecture: String, Codable, CustomStringConvertible {
         #endif
     }
 
+    /// The Static Linux SDK (musl) target triple for this architecture, passed to
+    /// `swift build --swift-sdk`.
+    var muslTriple: String {
+        switch self {
+        case .x64: return "x86_64-swift-linux-musl"
+        case .arm64: return "aarch64-swift-linux-musl"
+        }
+    }
+
     /// Parses the `--architecture` value, defaulting to the host architecture when omitted.
     static func parse(_ value: String?) throws -> Self {
         guard let value else {

@@ -336,4 +336,28 @@ struct CrossCompileBackendSelectionTests {
         #expect(container.name == "container")
         #expect(container.cli is AppleContainerCLI)
     }
+
+    @available(LambdaSwift 2.0, *)
+    @Test("swift-static-sdk selects the Static Linux SDK backend, no container CLI")
+    func staticLinuxSDKBackend() throws {
+        let config = try Self.makeConfiguration(method: "swift-static-sdk")
+        let backend = try config.makeCrossCompileBackend()
+        let sdk = try #require(backend as? StaticLinuxSDKBuildBackend)
+        #expect(sdk.name == "swift-static-sdk")
+        // The plugin forwards the resolved swift path via --cross-compile-tool-path.
+        #expect(sdk.swiftToolPath.path == "/usr/local/bin/docker")
+    }
+}
+
+// MARK: - Static Linux SDK triple mapping
+
+@Suite("BuildArchitecture musl triple")
+struct BuildArchitectureMuslTripleTests {
+
+    @available(LambdaSwift 2.0, *)
+    @Test("maps each architecture to its Static Linux SDK triple")
+    func muslTriples() {
+        #expect(BuildArchitecture.arm64.muslTriple == "aarch64-swift-linux-musl")
+        #expect(BuildArchitecture.x64.muslTriple == "x86_64-swift-linux-musl")
+    }
 }

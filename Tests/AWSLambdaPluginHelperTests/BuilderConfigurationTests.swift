@@ -59,12 +59,11 @@ struct BuilderConfigurationTests {
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("--cross-compile with 'swift-static-sdk' throws unsupported error")
+    @Test("--cross-compile with valid value 'swift-static-sdk'")
     func crossCompileSwiftStaticSdk() throws {
         let args = defaultArgs() + ["--cross-compile", "swift-static-sdk"]
-        #expect(throws: (any Error).self) {
-            _ = try BuilderConfiguration(arguments: args)
-        }
+        let config = try BuilderConfiguration(arguments: args)
+        #expect(config.crossCompileMethod == .swiftStaticSdk)
     }
 
     @available(LambdaSwift 2.0, *)

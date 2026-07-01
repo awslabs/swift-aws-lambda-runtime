@@ -35,9 +35,13 @@ struct Builder {
         }
 
         // Select the build backend: build natively when already on an Amazon Linux host,
-        // otherwise cross-compile using the backend chosen by --cross-compile.
+        // otherwise cross-compile using the backend chosen by --cross-compile. An explicit
+        // --cross-compile swift-static-sdk always cross-compiles (it can target either
+        // architecture), so it takes precedence over the native path even on Amazon Linux.
         let backend: any BuildBackend
-        if self.isAmazonLinux(.al2) || self.isAmazonLinux(.al2023) {
+        if configuration.crossCompileMethod == .swiftStaticSdk {
+            backend = try configuration.makeCrossCompileBackend()
+        } else if self.isAmazonLinux(.al2) || self.isAmazonLinux(.al2023) {
             // A native build compiles for the host architecture only; it cannot target another one.
             // Recording a mismatched architecture in the manifest would recreate the very bug the
             // --architecture flag exists to prevent, so reject an explicit cross-architecture request.
@@ -152,7 +156,10 @@ struct Builder {
             --cross-compile <method>      The cross-compilation method to use.
                                           Values: docker, container, swift-static-sdk, custom-sdk
                                           (default is docker)
-                                          Note: swift-static-sdk and custom-sdk are not yet supported.
+                                          swift-static-sdk requires a pre-installed Static Linux
+                                          SDK (musl); it needs no docker/container. Install it with
+                                          'swift sdk install <url>'.
+                                          Note: custom-sdk is not yet supported.
             --archive-format <format>     The packaging format for the build artifact.
                                           Values: zip, oci
                                           (default is zip)
@@ -329,15 +336,26 @@ struct BuilderConfiguration: CustomStringConvertible {
     /// everything a backend needs (the resolved tool path, base image, and image-update
     /// preference), so the factory lives here rather than on ``CrossCompileMethod``.
     func makeCrossCompileBackend() throws -> any BuildBackend {
-        let cli = try self.makeContainerCLI()
-        return ContainerBuildBackend(
-            cli: cli,
-            toolPath: self.crossCompileToolPath,
-            baseImage: self.baseDockerImage,
-            disableImageUpdate: self.disableDockerImageUpdate,
-            architecture: self.architecture,
-            method: self.crossCompileMethod
-        )
+        switch self.crossCompileMethod {
+        case .docker, .container:
+            return ContainerBuildBackend(
+                cli: try self.makeContainerCLI(),
+                toolPath: self.crossCompileToolPath,
+                baseImage: self.baseDockerImage,
+                disableImageUpdate: self.disableDockerImageUpdate,
+                architecture: self.architecture,
+                method: self.crossCompileMethod
+            )
+        case .swiftStaticSdk:
+            // The Static Linux SDK build shells out to `swift`, not a container CLI. The plugin
+            // resolves the swift toolchain and forwards its path via --cross-compile-tool-path.
+            return StaticLinuxSDKBuildBackend(
+                architecture: self.architecture,
+                swiftToolPath: self.crossCompileToolPath
+            )
+        case .customSdk:
+            throw BuilderErrors.unsupportedCrossCompileMethod(self.crossCompileMethod)
+        }
     }
 
     /// Resolves the ``ContainerCLI`` argument flavor for the configured cross-compile method.
@@ -402,6 +420,8 @@ enum BuilderErrors: Error, CustomStringConvertible {
     case unsupportedCrossCompileMethod(CrossCompileMethod)
     case unsupportedArchiveFormat(ArchiveFormat)
     case containerCLINotFound(CrossCompileMethod)
+    case swiftToolNotFound(String)
+    case staticSDKNotInstalled(String)
     case failedWritingDockerfile
     case failedParsingDockerOutput(String)
     case processFailed([String], Int32)
@@ -439,6 +459,14 @@ enum BuilderErrors: Error, CustomStringConvertible {
                     + "For information on how to install and use Swift cross-compilation SDKs, visit: "
                     + "https://www.swift.org/documentation/articles/static-linux-getting-started.html"
             }
+        case .swiftToolNotFound(let path):
+            return "The 'swift' executable was not found at the expected path '\(path)'."
+        case .staticSDKNotInstalled(let triple):
+            return
+                "No Static Linux SDK targeting '\(triple)' is installed. "
+                + "Install it with 'swift sdk install <url>' and try again. "
+                + "For information on how to install and use Swift cross-compilation SDKs, visit: "
+                + "https://www.swift.org/documentation/articles/static-linux-getting-started.html"
         case .failedWritingDockerfile:
             return "failed writing dockerfile"
         case .failedParsingDockerOutput(let output):
