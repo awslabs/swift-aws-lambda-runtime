@@ -84,7 +84,7 @@ struct StaticLinuxSDKBuildBackend: BuildBackend {
                 ],
                 customWorkingDirectory: packageDirectory,
                 logLevel: verboseLogging ? .debug : .silent
-            ).trimmingCharacters(in: .whitespacesAndNewlines)
+            ).trimming(while: { $0.isWhitespace })
         } catch {
             throw BuilderErrors.staticSDKNotInstalled(triple)
         }

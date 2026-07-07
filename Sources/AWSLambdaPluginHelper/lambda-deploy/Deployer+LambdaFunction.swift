@@ -78,7 +78,7 @@ extension Deployer {
             } else if zipData != nil {
                 let sizeMB = Double(zipData!.count) / (1024 * 1024)
                 print(
-                    "[verbose] Creating Lambda function '\(name)' with direct upload (\(String(format: "%.1f", sizeMB)) MB)..."
+                    "[verbose] Creating Lambda function '\(name)' with direct upload (\(Self.oneDecimal(sizeMB)) MB)..."
                 )
             } else {
                 print(
@@ -206,7 +206,7 @@ extension Deployer {
             } else if zipData != nil {
                 let sizeMB = Double(zipData!.count) / (1024 * 1024)
                 print(
-                    "[verbose] Updating function code for '\(name)' with direct upload (\(String(format: "%.1f", sizeMB)) MB)..."
+                    "[verbose] Updating function code for '\(name)' with direct upload (\(Self.oneDecimal(sizeMB)) MB)..."
                 )
             } else {
                 print(

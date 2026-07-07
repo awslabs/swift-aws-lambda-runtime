@@ -212,9 +212,10 @@ struct JSONLogHandlerTests {
         let timestamp = entry?.timestamp
         #expect(timestamp != nil)
 
-        // Verify it matches ISO 8601 format with milliseconds (e.g. "2024-01-16T10:30:45.123Z")
-        let iso8601Pattern = #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}Z$"#
-        let matches = timestamp?.range(of: iso8601Pattern, options: .regularExpression) != nil
+        // Verify it matches ISO 8601 format with milliseconds (e.g. "2024-01-16T10:30:45.123Z").
+        // Uses the standard library's `Regex` (no Foundation dependency).
+        let iso8601Regex = #/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,6}Z$/#
+        let matches = timestamp?.contains(iso8601Regex) ?? false
         #expect(matches, "Timestamp '\(timestamp ?? "")' should be in ISO 8601 format with fractional seconds")
     }
 

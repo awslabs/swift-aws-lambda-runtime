@@ -86,8 +86,10 @@ struct ContainerBuildBackend: BuildBackend {
         guard let buildPathOutput = dockerBuildOutputPath.split(separator: "\n").last else {
             throw BuilderErrors.failedParsingDockerOutput(dockerBuildOutputPath)
         }
+        // Use the stdlib `replacing(_:with:)` rather than Foundation's `replacingOccurrences(of:with:)`
+        // so this stays on FoundationEssentials on Linux.
         let buildOutputPath = URL(
-            string: buildPathOutput.replacingOccurrences(of: "/workspace/", with: packageDirectory.description)
+            string: String(buildPathOutput).replacing("/workspace/", with: packageDirectory.description)
         )!
 
         // build the products

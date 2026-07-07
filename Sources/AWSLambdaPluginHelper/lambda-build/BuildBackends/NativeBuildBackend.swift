@@ -61,7 +61,7 @@ struct NativeBuildBackend: BuildBackend {
                 executable: URL(fileURLWithPath: "/usr/bin/swift"),
                 arguments: showBinPathArguments,
                 logLevel: .silent
-            ).trimmingCharacters(in: .whitespacesAndNewlines)
+            ).trimming(while: { $0.isWhitespace })
 
             let productPath = URL(fileURLWithPath: binPath).appending(path: product)
             guard FileManager.default.fileExists(atPath: productPath.path()) else {

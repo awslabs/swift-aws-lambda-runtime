@@ -52,8 +52,10 @@ struct Initializer {
                 print("File written at: \(entryPoint.path)")
             }
 
-            let relativePath = entryPoint.path.replacingOccurrences(
-                of: configuration.destinationDir.path + "/",
+            // `replacingOccurrences(of:with:)` lives in full Foundation; use the stdlib
+            // `replacing(_:with:)` so this stays on FoundationEssentials on Linux.
+            let relativePath = entryPoint.path.replacing(
+                configuration.destinationDir.path + "/",
                 with: ""
             )
             print("✅ Lambda function written to \(relativePath)")
@@ -78,17 +80,11 @@ struct Initializer {
             return sourcesDir.appendingPathComponent("main.swift")
         }
 
-        // List immediate children of Sources/
-        let contents = try FileManager.default.contentsOfDirectory(
-            at: sourcesDir,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        )
+        // List immediate children of Sources/ (path-based helpers keep this off full Foundation).
+        let contents = try FileManager.default.visibleContents(of: sourcesDir)
 
         // Find subdirectories (typical Swift package layout: Sources/<TargetName>/)
-        let subdirs = contents.filter { url in
-            (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
-        }
+        let subdirs = contents.filter { FileManager.default.isDirectory(atPath: $0.path) }
 
         // If there's exactly one subdirectory, look inside it
         if let targetDir = subdirs.first, subdirs.count == 1 {
@@ -107,11 +103,9 @@ struct Initializer {
             }
 
             // Look for any .swift file containing @main
-            let swiftFiles = try FileManager.default.contentsOfDirectory(
-                at: targetDir,
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            ).filter { $0.pathExtension == "swift" }
+            let swiftFiles = try FileManager.default.visibleContents(of: targetDir).filter {
+                $0.pathExtension == "swift"
+            }
 
             for file in swiftFiles {
                 if let content = try? String(contentsOf: file, encoding: .utf8),

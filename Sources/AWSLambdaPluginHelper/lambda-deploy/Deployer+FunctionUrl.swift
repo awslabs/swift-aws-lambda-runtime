@@ -95,22 +95,23 @@ extension Deployer {
     /// the project was scaffolded with `lambda-init --with-url` and needs a Function URL.
     /// This allows `lambda-deploy` to auto-detect the need for `--with-url`.
     func detectFunctionURLUsage() -> Bool {
-        let sourcesDir = URL(fileURLWithPath: "Sources")
-        guard
-            let enumerator = FileManager.default.enumerator(
-                at: sourcesDir,
-                includingPropertiesForKeys: nil,
-                options: [.skipsHiddenFiles]
-            )
-        else {
-            return false
-        }
+        // Recursively walk `Sources/` using the path-based FileManager helpers (the URL-based
+        // `enumerator(at:)` lives in full Foundation, not FoundationEssentials).
+        let fileManager = FileManager.default
+        var pendingDirectories = [URL(fileURLWithPath: "Sources")]
 
-        for case let fileURL as URL in enumerator {
-            guard fileURL.pathExtension == "swift" else { continue }
-            guard let contents = try? String(contentsOf: fileURL, encoding: .utf8) else { continue }
-            if contents.contains("FunctionURLRequest") || contents.contains("FunctionURLResponse") {
-                return true
+        while let directory = pendingDirectories.popLast() {
+            guard let entries = try? fileManager.visibleContents(of: directory) else { continue }
+            for entry in entries {
+                if fileManager.isDirectory(atPath: entry.path) {
+                    pendingDirectories.append(entry)
+                    continue
+                }
+                guard entry.pathExtension == "swift" else { continue }
+                guard let contents = try? String(contentsOf: entry, encoding: .utf8) else { continue }
+                if contents.contains("FunctionURLRequest") || contents.contains("FunctionURLResponse") {
+                    return true
+                }
             }
         }
         return false

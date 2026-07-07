@@ -77,7 +77,7 @@ extension Deployer {
 
         if configuration.verboseLogging {
             let sizeMB = Double(archiveSize) / (1024 * 1024)
-            print("[verbose] Archive: \(archiveURL.path) (\(String(format: "%.1f", sizeMB)) MB)")
+            print("[verbose] Archive: \(archiveURL.path) (\(Self.oneDecimal(sizeMB)) MB)")
             print(
                 "[verbose] Upload strategy: \(Self.shouldUploadDirectly(archiveSize: archiveSize) ? "direct" : "S3 staging")"
             )

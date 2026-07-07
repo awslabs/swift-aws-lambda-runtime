@@ -59,7 +59,7 @@ struct Utils {
 
             guard
                 let _output = data.flatMap({
-                    String(data: $0, encoding: .utf8)?.trimmingCharacters(in: CharacterSet(["\n"]))
+                    String(data: $0, encoding: .utf8)?.trimming(while: { $0.isNewline })
                 }), !_output.isEmpty
             else {
                 return

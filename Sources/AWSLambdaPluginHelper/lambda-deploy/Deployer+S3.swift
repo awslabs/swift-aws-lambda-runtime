@@ -29,6 +29,16 @@ extension Deployer {
     /// Archives larger than this must be staged through S3.
     static let directUploadLimit: Int64 = 50 * 1024 * 1024
 
+    /// Formats a non-negative value to one decimal place (e.g. `12.34` -> `"12.3"`).
+    ///
+    /// Replaces `String(format: "%.1f", value)`, which lives in full Foundation, with an
+    /// arithmetic formatter so this stays on FoundationEssentials on Linux. Intended for
+    /// human-readable size messages, not for precise numeric formatting.
+    static func oneDecimal(_ value: Double) -> String {
+        let tenths = Int((value * 10).rounded())
+        return "\(tenths / 10).\(tenths % 10)"
+    }
+
     /// Constructs the deployment bucket name per the naming convention.
     /// Format: `swift-aws-lambda-runtime-<region>-<accountId>`
     static func deploymentBucketName(region: String, accountId: String) -> String {
@@ -103,7 +113,7 @@ extension Deployer {
     func uploadToS3(bucket: String, key: String, data: Data, using s3Client: S3, verbose: Bool) async throws {
         if verbose {
             let sizeMB = Double(data.count) / (1024 * 1024)
-            print("[verbose] Uploading archive to s3://\(bucket)/\(key) (\(String(format: "%.1f", sizeMB)) MB)...")
+            print("[verbose] Uploading archive to s3://\(bucket)/\(key) (\(Self.oneDecimal(sizeMB)) MB)...")
         }
 
         let request = S3.PutObjectRequest(body: AWSHTTPBody(bytes: data), bucket: bucket, key: key)
