@@ -1,7 +1,7 @@
 # Makefile for library
 
 format:
-	swift format format --parallel --recursive --in-place ./Package.swift Examples/ Sources/ Tests/
+	swift format format --parallel --recursive --in-place ./Package*.swift Examples/ Sources/ Tests/
 
 doc-dependency:
 	# Dynamically add the swift-docc-plugin for doc generation

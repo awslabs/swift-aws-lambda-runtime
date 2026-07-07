@@ -29,7 +29,7 @@ let defaultSwiftSettings: [SwiftSetting] =
         .enableUpcomingFeature("MemberImportVisibility"),
 
         // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0409-access-level-on-imports.md
-        .enableUpcomingFeature("InternalImportsByDefault")
+        .enableUpcomingFeature("InternalImportsByDefault"),
     ]
 
 let package = Package(
@@ -180,7 +180,7 @@ let package = Package(
                 .product(name: "SotoCore", package: "soto-core"),
             ],
             swiftSettings: defaultSwiftSettings + [
-                .treatWarning("ExistentialAny", as: .warning),
+                .treatWarning("ExistentialAny", as: .warning)
             ]
         ),
         .testTarget(
