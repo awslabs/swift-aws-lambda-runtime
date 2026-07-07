@@ -138,6 +138,21 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         self.logger = logger
     }
 
+    #if swift(>=6.4)
+    /// Assume that the current context is isolated to this actor's event loop and execute the closure.
+    ///
+    /// On Swift 6.4 and later we can rely on the standard-library `Actor.assumeIsolated`. SE-0424 and
+    /// SE-0471 let the concurrency runtime fall back to the serial executor's `checkIsolated()` /
+    /// `isIsolatingCurrentContext()` hooks when there is no Swift Concurrency task tracking the current
+    /// executor (e.g. inside NIO callbacks such as `whenComplete` or channel handler methods).
+    /// SwiftNIO implements those hooks on its event loop executor via `preconditionInEventLoop()`, so
+    /// `assumeIsolated` no longer produces the false-negative crash that required the manual cast below.
+    private nonisolated func assumeIsolatedOnEventLoop(
+        _ operation: (isolated LambdaRuntimeClient) -> Void
+    ) {
+        self.assumeIsolated(operation)
+    }
+    #else
     /// Assume that the current context is isolated to this actor's event loop and execute the closure.
     ///
     /// This is a workaround for `Actor.assumeIsolated` which can crash on open-source Swift toolchains
@@ -163,6 +178,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
             strippedOperation(self)
         }
     }
+    #endif
 
     @usableFromInline
     func close() async {
