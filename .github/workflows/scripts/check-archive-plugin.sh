@@ -13,6 +13,16 @@
 ##
 ##===----------------------------------------------------------------------===##
 
+# This script validates the packaging plugins on Swift 6.4+, where the
+# 'archive' verb is reimplemented to delegate to the AWSLambdaPluginHelper and
+# the new 'lambda-build' verb is available. It exercises BOTH verbs against the
+# example to prove:
+#   1. the legacy 'archive' surface still produces a valid bootstrap + ZIP
+#      (existing behaviour is preserved on the new code path), and
+#   2. the new 'lambda-build' verb produces an equivalent artifact.
+
+set -euo pipefail
+
 log() { printf -- "** %s\n" "$*" >&2; }
 error() { printf -- "** ERROR: %s\n" "$*" >&2; }
 fatal() { error "$@"; exit 1; }
@@ -22,36 +32,67 @@ test -n "${EXAMPLE:-}" || fatal "EXAMPLE unset"
 # Use the local checkout of swift-aws-lambda-runtime instead of the published release
 .github/workflows/scripts/use-local-deps.sh "Examples/${EXAMPLE}/Package.swift"
 
-OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
-OUTPUT_FILE=${OUTPUT_DIR}/MyLambda/bootstrap
-ZIP_FILE=${OUTPUT_DIR}/MyLambda/MyLambda.zip
+# The product name is "MyLambda" in both HelloWorld and ResourcesPackaging.
+PRODUCT=MyLambda
 
-pushd "Examples/${EXAMPLE}" || exit 1
+pushd "Examples/${EXAMPLE}" >/dev/null || exit 1
 
-# package the example (docker and swift toolchain are installed on the GH runner)
-LAMBDA_USE_LOCAL_DEPS=../.. swift package archive --allow-network-connections docker --base-docker-image swift:amazonlinux2023 || exit 1
+# ---------------------------------------------------------------------------
+# Assert that a given output directory contains a valid Linux bootstrap and ZIP.
+# $1: human-readable label of the verb under test
+# $2: path to the plugin output directory (containing <PRODUCT>/)
+# ---------------------------------------------------------------------------
+verify_output() {
+    local label="$1"
+    local output_dir="$2"
+    local bootstrap="${output_dir}/${PRODUCT}/bootstrap"
+    local zip_file="${output_dir}/${PRODUCT}/${PRODUCT}.zip"
 
-# did the plugin generated a Linux binary?
-[ -f "${OUTPUT_FILE}" ]
-file "${OUTPUT_FILE}" | grep --silent ELF
+    log "Verifying output of '${label}'"
 
-# did the plugin created a ZIP file?
-[ -f "${ZIP_FILE}" ]
+    # did the plugin generate a Linux binary?
+    [ -f "${bootstrap}" ] || fatal "${label}: bootstrap not found at ${bootstrap}"
+    file "${bootstrap}" | grep --silent ELF || fatal "${label}: bootstrap is not an ELF binary"
 
-# does the ZIP file contain the bootstrap?
-unzip -l "${ZIP_FILE}" | grep --silent bootstrap
+    # did the plugin create a ZIP file?
+    [ -f "${zip_file}" ] || fatal "${label}: ZIP not found at ${zip_file}"
 
-# if EXAMPLE is ResourcesPackaging, check if the ZIP file contains hello.txt
-if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
-    echo "Checking if resource was added to the ZIP file"
-    unzip -l "${ZIP_FILE}" | grep --silent hello.txt
-    SUCCESS=$?
-    if [ "$SUCCESS" -eq 1 ]; then
-        log "❌ Resource not found." && exit 1
-    else
-        log "✅ Resource found."
+    # does the ZIP file contain the bootstrap?
+    unzip -l "${zip_file}" | grep --silent bootstrap || fatal "${label}: bootstrap missing from ZIP"
+
+    # if EXAMPLE is ResourcesPackaging, check the ZIP file contains hello.txt
+    if [ "$EXAMPLE" == "ResourcesPackaging" ]; then
+        log "${label}: checking that the resource was added to the ZIP file"
+        if unzip -l "${zip_file}" | grep --silent hello.txt; then
+            log "✅ ${label}: resource found."
+        else
+            fatal "❌ ${label}: resource hello.txt not found in ZIP."
+        fi
     fi
-fi    
 
-echo "✅ The archive plugin is OK with example ${EXAMPLE}"
-popd || exit 1
+    log "✅ ${label}: output is OK for example ${EXAMPLE}"
+}
+
+# ---------------------------------------------------------------------------
+# 1. Legacy 'archive' verb (now delegates to AWSLambdaPluginHelper on 6.4+)
+# ---------------------------------------------------------------------------
+log "Testing 'archive' verb"
+ARCHIVE_OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
+LAMBDA_USE_LOCAL_DEPS=../.. swift package archive \
+    --allow-network-connections docker \
+    --base-docker-image swift:amazonlinux2023 || fatal "'archive' verb failed"
+verify_output "archive" "${ARCHIVE_OUTPUT_DIR}"
+
+# ---------------------------------------------------------------------------
+# 2. New 'lambda-build' verb (Swift 6.4+ only)
+# ---------------------------------------------------------------------------
+log "Testing 'lambda-build' verb"
+BUILD_OUTPUT_DIR=.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder
+LAMBDA_USE_LOCAL_DEPS=../.. swift package lambda-build \
+    --allow-network-connections docker \
+    --products "${PRODUCT}" \
+    --base-docker-image swift:amazonlinux2023 || fatal "'lambda-build' verb failed"
+verify_output "lambda-build" "${BUILD_OUTPUT_DIR}"
+
+echo "✅ Both 'archive' and 'lambda-build' are OK with example ${EXAMPLE} on Swift 6.4"
+popd >/dev/null || exit 1

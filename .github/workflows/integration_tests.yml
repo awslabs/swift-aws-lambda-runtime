@@ -31,14 +31,6 @@ on:
         type: boolean
         description: "Boolean to enable the test of the archive plugin. Defaults to true."
         default: true
-      archive_plugin_swift64_enabled:
-        type: boolean
-        description: "Boolean to enable the Swift 6.4 packaging plugin test (archive + lambda-build). Defaults to true."
-        default: true
-      archive_plugin_swift64_container_image:
-        type: string
-        description: "Container image providing the Swift 6.4+ toolchain for the packaging plugin test."
-        default: "swiftlang/swift:nightly-6.4.x-bookworm"
       check_foundation_enabled:
         type: boolean
         description: "Boolean to enable the check for Foundation dependency. Defaults to true."
@@ -50,8 +42,8 @@ on:
       matrix_linux_swift_container_image:
         type: string
         # Note: we don't use Amazon Linux 2 here because zip is not installed by default.
-        description: "Container image for the matrix test jobs. Defaults to Swift 6.3"
-        default: "swift:6.3"
+        description: "Container image for the matrix test jobs. Defaults to Swift 6.4"
+        default: "swiftlang/swift:nightly-6.4.x-bookworm"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:
@@ -128,69 +120,6 @@ jobs:
           EXAMPLE: ${{ matrix.examples }}
         run: |
             .github/workflows/scripts/check-archive-plugin.sh
-
-  test-archive-plugin-swift64:
-    name: Test packaging plugins (Swift 6.4)
-    if: ${{ inputs.archive_plugin_swift64_enabled }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        examples: ${{ fromJson(inputs.archive_plugin_examples) }}
-    # Runs in the Swift 6.4 container so that `swift(>=6.4)` is true and the new
-    # helper-delegating `archive` verb and the new `lambda-build` verb are compiled.
-    #
-    # The packaging plugins shell out to the HOST docker daemon (socket mounted below).
-    # The plugin builds the example inside an Amazon Linux container and bind-mounts the
-    # checkout into it. Because the daemon runs on the host, the bind-mount source must be
-    # a HOST path: GitHub mounts the host work dir (/home/runner/work) at /__w inside this
-    # job container, so a path like /__w/... does not exist for the host daemon. We mount
-    # /home/runner/work at the SAME path here, and the test step runs the plugin from that
-    # host-equivalent path, so the inner `docker run -v <src>:/workspace` source resolves
-    # correctly on the host.
-    container:
-      image: ${{ inputs.archive_plugin_swift64_container_image }}
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - /home/runner/work:/home/runner/work
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-        with:
-          persist-credentials: false
-
-      - name: Cache SPM dependencies
-        uses: actions/cache@v5
-        with:
-          # Cache the whole .build, not just checkouts/repositories. The plugins
-          # delegate to AWSLambdaPluginHelper, which links the SotoCore/NIO stack;
-          # compiling that on the host takes ~220s per run. Caching .build lets
-          # SwiftPM reuse the unchanged dependency objects and rebuild only the
-          # sources that changed.
-          path: Examples/${{ matrix.examples }}/.build
-          key: spm-swift64-${{ runner.os }}-${{ matrix.examples }}-${{ hashFiles(format('Examples/{0}/Package.swift', matrix.examples)) }}
-          restore-keys: |
-            spm-swift64-${{ runner.os }}-${{ matrix.examples }}-
-
-      - name: Install dependencies
-        run: |
-          apt-get -qq update
-          apt-get -qq -y install docker.io zip unzip file libssl-dev
-
-      - name: Test the packaging plugins
-        env:
-          EXAMPLE: ${{ matrix.examples }}
-        run: |
-            # GitHub mounts the host work dir (/home/runner/work) at /__w inside this
-            # container, so $GITHUB_WORKSPACE is /__w/<repo>/<repo>. The plugin shells out
-            # to the host docker daemon, which cannot resolve /__w paths. We mounted
-            # /home/runner/work at the same path, so re-enter the checkout via the
-            # host-equivalent path before running the plugin.
-            # NOTE: this step runs under `sh` (dash) inside the container, so we use
-            # POSIX `sed` rather than a bash-only `${var/a/b}` substitution.
-            HOST_WORKSPACE=$(printf '%s\n' "$GITHUB_WORKSPACE" | sed 's#^/__w/#/home/runner/work/#')
-            cd "${HOST_WORKSPACE}"
-            .github/workflows/scripts/check-archive-plugin-swift64.sh
 
   check-foundation:
     name: No dependencies on Foundation
