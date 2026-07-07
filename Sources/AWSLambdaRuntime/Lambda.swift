@@ -95,17 +95,17 @@ public enum Lambda {
                     // can read `Logger.current` and inherit the request's metadata without having
                     // to thread `context.logger` through every signature. `context.logger` keeps
                     // working unchanged for code that prefers the explicit form.
-                    // The async `withLogger` overload requires Swift 6.2+; on 6.1 we call the
-                    // handler directly (no task-local binding). Remove the guard when 6.1 support
-                    // is dropped.
-                    #if compiler(>=6.2)
-                    let handlerBox = UnsafeTransferBox(value: handler)
-                    let writerBox = UnsafeTransferBox(value: writer)
+                    // With Swift >= 6.4 we enable `nonisolated(nonsending)` by default, so the
+                    // handler is `nonisolated(nonsending)` and can be passed into the `withLogger`
+                    // closure directly. On older compilers that guarantee doesn't hold, so we call
+                    // the handler directly (no task-local binding). Remove the guard when support
+                    // for those toolchains is dropped.
+                    #if compiler(>=6.4)
                     handler = try await withLogger(requestLogger) { _ in
-                        var handler = handlerBox.value
+                        var handler = handler
                         try await handler.handle(
                             invocation.event,
-                            responseWriter: writerBox.value,
+                            responseWriter: writer,
                             context: context
                         )
                         return handler
@@ -132,21 +132,6 @@ public enum Lambda {
 
     /// The default EventLoop the Lambda is scheduled on.
     public static let defaultEventLoop: any EventLoop = NIOSingletons.posixEventLoopGroup.next()
-}
-
-/// Moves a non-`Sendable` value across an isolation boundary without a `sending` requirement.
-///
-/// Used by `runLoop` to hand the handler and response writer into `withLogger`'s
-/// `nonisolated(nonsending)` operation closure. The closure runs on a different executor than
-/// `handle`, so passing these non-`Sendable` values would otherwise be diagnosed as a cross-region
-/// send. The transfer is safe here because the run loop does not touch `writer` or `handler` while
-/// `handle` is in flight: it awaits the call and only reads the returned handler afterwards.
-@usableFromInline
-struct UnsafeTransferBox<Value>: @unchecked Sendable {
-    @usableFromInline let value: Value
-    @usableFromInline init(value: Value) {
-        self.value = value
-    }
 }
 
 // MARK: - Public API
