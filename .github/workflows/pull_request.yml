@@ -30,7 +30,14 @@ jobs:
       swift_flags: "--explicit-target-dependency-import-check error"
       swift_nightly_flags: "--explicit-target-dependency-import-check error"
       enable_linux_static_sdk_build: true
-
+      # On 6.4+ the default build system (Swift Build) fails to statically link AWSLambdaPluginHelper
+      # against the static Linux SDK: SotoCore transitively pulls in two vendored BoringSSL forks
+      # (swift-crypto's CCryptoBoringSSL and swift-nio-ssl's CNIOBoringSSL), and Swift Build emits
+      # duplicate libc++abi symbols (set_new_handler, __cxa_*, ...) at link time. The legacy (native)
+      # build system links the same package cleanly. Force it here until the upstream issue is fixed:
+      # https://github.com/swiftlang/swift/issues/90196
+      linux_static_sdk_build_command: "swift build --build-system native"
+      
   integration-tests:
     name: Integration Tests
     uses: ./.github/workflows/integration_tests.yml
