@@ -13,13 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
+
 #if swift(>=6.4)
 public import Logging
 #else
 import Logging
 #endif
-
-import NIOCore
 
 // MARK: - Client Context
 

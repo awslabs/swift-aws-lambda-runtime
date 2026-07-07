@@ -14,13 +14,14 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+import NIOHTTP1
+import NIOPosix
+
 #if swift(>=6.4)
 public import NIOCore
 #else
 import NIOCore
 #endif
-import NIOHTTP1
-import NIOPosix
 
 internal protocol LambdaChannelHandlerDelegate {
     func connectionWillClose(channel: any Channel)

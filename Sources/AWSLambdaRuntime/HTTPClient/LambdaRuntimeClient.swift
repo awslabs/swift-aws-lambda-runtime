@@ -13,6 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOHTTP1
+import NIOPosix
+
 #if swift(>=6.4)
 public import Logging
 public import NIOCore
@@ -20,8 +23,6 @@ public import NIOCore
 import Logging
 import NIOCore
 #endif
-import NIOHTTP1
-import NIOPosix
 
 @available(LambdaSwift 2.0, *)
 @usableFromInline

@@ -30,19 +30,19 @@
 #if swift(>=6.4)
 public import NIOCore
 
-    #if canImport(FoundationEssentials)
-    public import FoundationEssentials
-    #else
-    public import Foundation
-    #endif
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import Foundation
+#endif
 #else
 import NIOCore
 
-    #if canImport(FoundationEssentials)
-    import FoundationEssentials
-    #else
-    import Foundation
-    #endif
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 #endif
 
 extension ByteBuffer {

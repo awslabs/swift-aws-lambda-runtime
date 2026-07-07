@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIOPosix
+
 #if swift(>=6.4)
 public import Synchronization
 #else

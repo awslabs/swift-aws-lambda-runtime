@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+import NIOPosix
 
 #if swift(>=6.4)
 public import Logging
@@ -22,8 +23,6 @@ public import NIOCore
 import Logging
 import NIOCore
 #endif
-
-import NIOPosix
 
 #if os(macOS)
 import Darwin.C

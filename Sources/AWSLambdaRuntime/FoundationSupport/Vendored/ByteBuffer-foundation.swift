@@ -30,17 +30,17 @@
 public import NIOCore
 
 #if swift(>=6.4)
-    #if canImport(FoundationEssentials)
-    public import FoundationEssentials
-    #else
-    public import Foundation
-    #endif
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
 #else
-    #if canImport(FoundationEssentials)
-    import FoundationEssentials
-    #else
-    import Foundation
-    #endif
+public import Foundation
+#endif
+#else
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
 #endif
 
 // This is NIO's `NIOFoundationCompat` module which at the moment only adds `ByteBuffer` utility methods
