@@ -83,7 +83,10 @@ struct LambdaRunLoopTests {
         }
     }
 
-    #if compiler(>=6.2)
+    // The run loop only binds `Logger.current` when `nonisolated(nonsending)` is on by default,
+    // which we enable from Swift 6.4. Match the production guard so this only runs where the
+    // binding actually happens.
+    #if compiler(>=6.4)
     /// Logs from a free function reading the task-local ``Logger/current`` — no `context`
     /// or `logger` is threaded in. Used to prove the run loop binds the per-invocation
     /// logger so callees inherit its metadata.

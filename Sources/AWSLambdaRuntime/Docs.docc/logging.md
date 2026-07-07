@@ -61,10 +61,11 @@ try await withLogger(logger) { _ in
 
 ## Notes and limitations
 
-- Automatic per-invocation binding of `Logger.current` requires **Swift 6.2 or later**. On
-  older toolchains, code that reads `Logger.current` instead receives swift-log's
-  process-wide default logger (without the request metadata); `context.logger` is
-  unaffected and always works.
+- Automatic per-invocation binding of `Logger.current` requires **Swift 6.4 or later**, where
+  `nonisolated(nonsending)` is enabled by default on the project so the handler can be passed into the
+  `withLogger(_:)` closure. On older toolchains, code that reads `Logger.current` instead
+  receives swift-log's process-wide default logger (without the request metadata);
+  `context.logger` is unaffected and always works.
 - Task-local values propagate through structured concurrency (`async let`,
   `withTaskGroup`, child `Task {}`) but are **not** inherited by `Task.detached` — capture
   the logger explicitly across a detached boundary.
