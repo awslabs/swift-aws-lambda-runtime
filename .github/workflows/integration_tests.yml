@@ -97,7 +97,7 @@ jobs:
     name: Test archive plugin
     if: ${{ inputs.archive_plugin_enabled }}
     runs-on: ubuntu-latest
-    container
+    container:
       image: ${{ inputs.archive_plugin_container_image }}
     strategy:
       fail-fast: false

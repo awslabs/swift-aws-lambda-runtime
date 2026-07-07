@@ -37,7 +37,7 @@ jobs:
       # build system links the same package cleanly. Force it here until the upstream issue is fixed:
       # https://github.com/swiftlang/swift/issues/90196
       linux_static_sdk_build_command: "swift build --build-system native"
-      
+
   integration-tests:
     name: Integration Tests
     uses: ./.github/workflows/integration_tests.yml
