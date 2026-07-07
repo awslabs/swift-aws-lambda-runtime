@@ -15,8 +15,13 @@
 
 #if ManagedRuntimeSupport
 
+#if swift(>=6.4)
+public import Logging
+public import NIOCore
+#else
 import Logging
 import NIOCore
+#endif
 import Synchronization
 
 @available(LambdaSwift 2.0, *)
@@ -29,14 +34,14 @@ public final class LambdaManagedRuntime<Handler>: Sendable where Handler: Stream
     let loggingConfiguration: LoggingConfiguration
 
     @usableFromInline
-    let eventLoop: EventLoop
+    let eventLoop: any EventLoop
 
     @usableFromInline
     let handler: Handler
 
     public init(
         handler: Handler,
-        eventLoop: EventLoop = Lambda.defaultEventLoop,
+        eventLoop: any EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaManagedRuntime")
     ) {
         self.handler = handler

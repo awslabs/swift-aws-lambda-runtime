@@ -15,7 +15,11 @@
 
 import Logging
 
+#if swift(>=6.4)
+@testable public import AWSLambdaRuntime
+#else
 @testable import AWSLambdaRuntime
+#endif
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

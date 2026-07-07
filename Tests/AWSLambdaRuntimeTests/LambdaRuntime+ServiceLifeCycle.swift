@@ -18,6 +18,7 @@
 import ServiceLifecycle
 import Testing
 import Logging
+import UnixSignals
 
 extension LambdaRuntimeTests {
     @Test

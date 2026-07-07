@@ -17,6 +17,12 @@ import Testing
 
 @testable import AWSLambdaPluginHelper
 
+#if canImport(FoundationEssentials)
+import FoundationEssentials
+#else
+import Foundation
+#endif
+
 @Suite("DeployerConfiguration argument parsing")
 struct DeployerConfigurationTests {
 

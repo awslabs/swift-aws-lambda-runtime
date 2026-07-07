@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Logging
-import NIOCore
+internal import Logging
+internal import NIOCore
 
 #if ManagedRuntimeSupport
 

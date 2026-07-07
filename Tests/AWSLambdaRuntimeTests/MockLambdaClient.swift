@@ -16,6 +16,7 @@
 import AWSLambdaRuntime
 import Logging
 import NIOCore
+import NIOHTTP1
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

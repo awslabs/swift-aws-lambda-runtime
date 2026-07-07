@@ -291,7 +291,7 @@ struct LambdaRuntimeClientTests {
         arguments: [DisconnectBehavior(), DisconnectAfterSendingResponseBehavior()] as [any LambdaServerBehavior]
     )
     @available(LambdaSwift 2.0, *)
-    func testChannelCloseFutureWithWaitingForNextInvocation(behavior: LambdaServerBehavior) async throws {
+    func testChannelCloseFutureWithWaitingForNextInvocation(behavior: any LambdaServerBehavior) async throws {
         try await withMockServer(behaviour: behavior) { port in
             let configuration = LambdaRuntimeClient.Configuration(ip: "127.0.0.1", port: port)
 

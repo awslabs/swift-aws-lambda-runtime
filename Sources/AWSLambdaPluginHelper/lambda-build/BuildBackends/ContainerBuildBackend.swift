@@ -27,7 +27,7 @@ import Foundation
 /// `container`, and any future runtime with its own ``ContainerCLI``.
 @available(LambdaSwift 2.0, *)
 struct ContainerBuildBackend: BuildBackend {
-    let cli: ContainerCLI
+    let cli: any ContainerCLI
     let toolPath: URL
     let baseImage: String
     let disableImageUpdate: Bool

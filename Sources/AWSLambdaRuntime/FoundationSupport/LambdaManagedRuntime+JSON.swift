@@ -18,6 +18,15 @@
 #if FoundationJSONSupport
 import NIOCore
 
+#if swift(>=6.4)
+#if canImport(FoundationEssentials)
+public import FoundationEssentials
+#else
+public import struct Foundation.Data
+public import class Foundation.JSONDecoder
+public import class Foundation.JSONEncoder
+#endif
+#else
 #if canImport(FoundationEssentials)
 import FoundationEssentials
 #else
@@ -25,8 +34,9 @@ import struct Foundation.Data
 import class Foundation.JSONDecoder
 import class Foundation.JSONEncoder
 #endif
+#endif
 
-import Logging
+public import Logging
 
 @available(LambdaSwift 2.0, *)
 extension LambdaManagedRuntime {

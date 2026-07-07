@@ -13,8 +13,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import NIOCore
+package import NIOHTTP1
+#else 
 import NIOCore
 import NIOHTTP1
+#endif
+
 
 @available(LambdaSwift 2.0, *)
 enum ControlPlaneRequest: Hashable {

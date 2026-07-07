@@ -14,7 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 import NIOPosix
+#if swift(>=6.4)
+public import Synchronization
+#else
 import Synchronization
+#endif
 
 enum Consts {
     static let apiPrefix = "/2018-06-01"

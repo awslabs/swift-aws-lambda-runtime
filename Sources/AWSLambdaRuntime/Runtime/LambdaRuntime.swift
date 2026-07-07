@@ -13,8 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import Logging
+public import NIOCore
+#else
 import Logging
 import NIOCore
+#endif
 import Synchronization
 
 // This is our guardian to ensure only one LambdaRuntime is running at the time
@@ -48,11 +53,11 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     @usableFromInline
     let loggingConfiguration: LoggingConfiguration
     @usableFromInline
-    let eventLoop: EventLoop
+    let eventLoop: any EventLoop
 
     public init(
         handler: sending Handler,
-        eventLoop: EventLoop = Lambda.defaultEventLoop,
+        eventLoop: any EventLoop = Lambda.defaultEventLoop,
         logger: Logger = Logger(label: "LambdaRuntime")
     ) {
         self.handlerStorage = SendingStorage(handler)
@@ -125,7 +130,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
     internal static func startRuntimeInterfaceClient(
         endpoint: String,
         handler: Handler,
-        eventLoop: EventLoop,
+        eventLoop: any EventLoop,
         loggingConfiguration: LoggingConfiguration,
         logger: Logger,
         isSingleConcurrencyMode: Bool
@@ -167,7 +172,7 @@ public final class LambdaRuntime<Handler>: Sendable where Handler: StreamingLamb
 
     internal static func startLocalServer(
         handler: sending Handler,
-        eventLoop: EventLoop,
+        eventLoop: any EventLoop,
         loggingConfiguration: LoggingConfiguration,
         logger: Logger
     ) async throws {

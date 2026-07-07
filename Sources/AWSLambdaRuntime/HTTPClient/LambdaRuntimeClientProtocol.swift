@@ -13,7 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import NIOCore
+#else
 import NIOCore
+#endif
 
 @usableFromInline
 package protocol LambdaRuntimeClientResponseStreamWriter: LambdaResponseStreamWriter {

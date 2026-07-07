@@ -15,9 +15,21 @@ import PackageDescription
 
 let defaultSwiftSettings: [SwiftSetting] =
     [
-        .enableExperimentalFeature(
-            "AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"
-        )
+        .treatAllWarnings(as: .error),
+        .enableExperimentalFeature("AvailabilityMacro=LambdaSwift 2.0:macOS 15.0"),
+
+        // https://docs.swift.org/compiler/documentation/diagnostics/nonisolated-nonsending-by-default/
+        .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+
+        // https://github.com/apple/swift-evolution/blob/main/proposals/0335-existential-any.md
+        // Require `any` for existential types
+        .enableUpcomingFeature("ExistentialAny"),
+
+        // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0444-member-import-visibility.md
+        .enableUpcomingFeature("MemberImportVisibility"),
+
+        // https://github.com/swiftlang/swift-evolution/blob/main/proposals/0409-access-level-on-imports.md
+        .enableUpcomingFeature("InternalImportsByDefault")
     ]
 
 let package = Package(
@@ -82,7 +94,8 @@ let package = Package(
                     condition: .when(traits: ["ServiceLifecycleSupport"])
                 ),
             ],
-            swiftSettings: defaultSwiftSettings
+            exclude: ["Docs.docc"],
+            swiftSettings: defaultSwiftSettings,
         ),
         .plugin(
             name: "AWSLambdaInitializer",
@@ -166,7 +179,9 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "SotoCore", package: "soto-core"),
             ],
-            swiftSettings: defaultSwiftSettings
+            swiftSettings: defaultSwiftSettings + [
+                .treatWarning("ExistentialAny", as: .warning),
+            ]
         ),
         .testTarget(
             name: "AWSLambdaRuntimeTests",
@@ -175,7 +190,7 @@ let package = Package(
                 .product(name: "NIOTestUtils", package: "swift-nio"),
                 .product(name: "NIOFoundationCompat", package: "swift-nio"),
             ],
-            swiftSettings: defaultSwiftSettings
+            swiftSettings: defaultSwiftSettings,
         ),
 
         // for perf testing
@@ -187,7 +202,7 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
             ],
-            swiftSettings: defaultSwiftSettings
+            swiftSettings: defaultSwiftSettings,
         ),
         .testTarget(
             name: "AWSLambdaPluginHelperTests",
@@ -195,7 +210,7 @@ let package = Package(
                 .byName(name: "AWSLambdaPluginHelper"),
                 .product(name: "Logging", package: "swift-log"),
             ],
-            swiftSettings: defaultSwiftSettings
+            swiftSettings: defaultSwiftSettings,
         ),
 
     ]

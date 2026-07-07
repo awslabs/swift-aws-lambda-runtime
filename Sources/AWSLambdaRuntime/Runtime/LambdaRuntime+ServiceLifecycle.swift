@@ -14,7 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 #if ServiceLifecycleSupport
+#if swift(>=6.4)
+public import ServiceLifecycle
+#else
 import ServiceLifecycle
+#endif
 
 @available(LambdaSwift 2.0, *)
 extension LambdaRuntime: Service {

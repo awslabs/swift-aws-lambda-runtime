@@ -13,7 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import Logging
+#else
 import Logging
+#endif
 
 @available(LambdaSwift 2.0, *)
 public struct LoggingConfiguration: Sendable {

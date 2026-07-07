@@ -14,8 +14,15 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
+
+#if swift(>=6.4)
+public import Logging
+public import NIOCore
+#else
 import Logging
 import NIOCore
+#endif
+
 import NIOPosix
 
 #if os(macOS)

@@ -32,7 +32,7 @@ struct OCIArchiveBackend: ArchiveBackend {
     let name = "oci"
 
     /// The container CLI argument flavor (docker / Apple `container`).
-    let cli: ContainerCLI
+    let cli: any ContainerCLI
 
     /// The resolved path to the container CLI executable.
     let toolPath: URL

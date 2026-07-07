@@ -13,8 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import Logging
+public import NIOCore
+#else
 import Logging
 import NIOCore
+#endif
 import NIOHTTP1
 import NIOPosix
 
@@ -72,7 +77,7 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
     private enum ConnectionState {
         case disconnected
         case connecting([ConnectionContinuation])
-        case connected(Channel, LambdaChannelHandler<LambdaRuntimeClient>)
+        case connected(any Channel, LambdaChannelHandler<LambdaRuntimeClient>)
     }
 
     enum LambdaState {

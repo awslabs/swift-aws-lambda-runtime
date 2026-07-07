@@ -13,8 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import Logging
+public import NIOCore
+#else
 import Logging
 import NIOCore
+#endif
 
 @available(LambdaSwift 2.0, *)
 extension LambdaRuntime {
@@ -24,7 +29,7 @@ extension LambdaRuntime {
     ///   - body: The handler in the form of a closure.
     public convenience init(
         logger: Logger = Logger(label: "LambdaRuntime"),
-        body: @Sendable @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+        body: @Sendable @escaping (ByteBuffer, any LambdaResponseStreamWriter, LambdaContext) async throws -> Void
 
     ) where Handler == StreamingClosureHandler {
         self.init(handler: StreamingClosureHandler(body: body), logger: logger)

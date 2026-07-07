@@ -13,7 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import NIOCore
+#else
 import NIOCore
+#endif
 
 #if canImport(FoundationEssentials)
 import FoundationEssentials

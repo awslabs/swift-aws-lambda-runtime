@@ -14,7 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+#if swift(>=6.4)
+public import NIOCore
+#else
 import NIOCore
+#endif
 
 /// The base handler protocol that receives a `ByteBuffer` representing the incoming event and returns the response as a `ByteBuffer` too.
 /// This handler protocol supports response streaming. Bytes can be streamed outwards through the ``LambdaResponseStreamWriter``
@@ -129,12 +133,12 @@ public protocol LambdaResponseWriter<Output> {
 /// Allows for a handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
 @available(LambdaSwift 2.0, *)
 public struct StreamingClosureHandler: StreamingLambdaHandler {
-    let body: (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+    let body: (ByteBuffer, any LambdaResponseStreamWriter, LambdaContext) async throws -> Void
 
     /// Initialize an instance from a handler function in the form of a closure.
     /// - Parameter body: The handler function written as a closure.
     public init(
-        body: @escaping (ByteBuffer, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+        body: @escaping (ByteBuffer, any LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     ) {
         self.body = body
     }

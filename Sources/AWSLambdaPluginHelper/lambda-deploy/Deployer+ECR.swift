@@ -269,7 +269,7 @@ extension Deployer {
     /// Logs the container CLI into the registry, re-tags the local image under the ECR-qualified
     /// reference, and pushes it.
     func ecrLoginTagAndPush(
-        cli: ContainerCLI,
+        cli: any ContainerCLI,
         toolPath: URL,
         localTag: String,
         registry: String,

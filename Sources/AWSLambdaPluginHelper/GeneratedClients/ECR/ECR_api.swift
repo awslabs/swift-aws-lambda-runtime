@@ -51,7 +51,7 @@ public struct ECR: AWSService {
         region: SotoCore.Region? = nil,
         partition: AWSPartition = .aws,
         endpoint: String? = nil,
-        middleware: AWSMiddlewareProtocol? = nil,
+        middleware: (any AWSMiddlewareProtocol)? = nil,
         timeout: TimeAmount? = nil,
         byteBufferAllocator: ByteBufferAllocator = ByteBufferAllocator(),
         options: AWSServiceConfig.Options = []

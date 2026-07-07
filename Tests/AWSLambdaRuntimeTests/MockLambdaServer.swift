@@ -53,9 +53,9 @@ final class MockLambdaServer<Behavior: LambdaServerBehavior> {
     private let host: String
     private let port: Int
     private let keepAlive: Bool
-    private let group: EventLoopGroup
+    private let group: any EventLoopGroup
 
-    private var channel: Channel?
+    private var channel: (any Channel)?
     private var shutdown = false
 
     init(
@@ -120,11 +120,11 @@ final class HTTPHandler: ChannelInboundHandler {
 
     private let logger: Logger
     private let keepAlive: Bool
-    private let behavior: LambdaServerBehavior
+    private let behavior: any LambdaServerBehavior
 
     private var pending = CircularBuffer<(head: HTTPRequestHead, body: ByteBuffer?)>()
 
-    init(logger: Logger, keepAlive: Bool, behavior: LambdaServerBehavior) {
+    init(logger: Logger, keepAlive: Bool, behavior: any LambdaServerBehavior) {
         self.logger = logger
         self.keepAlive = keepAlive
         self.behavior = behavior

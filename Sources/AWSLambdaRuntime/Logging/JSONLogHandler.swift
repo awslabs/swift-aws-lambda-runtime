@@ -13,7 +13,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#if swift(>=6.4)
+public import Logging
+#else
 import Logging
+#endif
 import Synchronization
 
 #if canImport(Darwin)
@@ -24,10 +28,18 @@ import Glibc
 import Musl
 #endif
 
-#if canImport(FoundationEssentials)
-import FoundationEssentials
+#if swift(>=6.4)
+    #if canImport(FoundationEssentials)
+    public import FoundationEssentials
+    #else
+    public import Foundation
+    #endif
 #else
-import Foundation
+    #if canImport(FoundationEssentials)
+    import FoundationEssentials
+    #else
+    import Foundation
+    #endif
 #endif
 
 /// Serializes all stderr writes across JSONLogHandler instances so that

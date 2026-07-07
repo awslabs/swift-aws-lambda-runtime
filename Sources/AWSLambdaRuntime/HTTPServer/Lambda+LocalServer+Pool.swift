@@ -14,7 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 #if LocalServerSupport
+#if swift(>=6.4)
+public import DequeModule
+#else
 import DequeModule
+#endif
 import Synchronization
 
 @available(LambdaSwift 2.0, *)

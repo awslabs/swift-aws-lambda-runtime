@@ -320,7 +320,7 @@ extension Lambda {
             self.statementId = statementId
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.action, forKey: .action)
@@ -799,7 +799,7 @@ extension Lambda {
             self.qualifier = qualifier
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.authType, forKey: .authType)
@@ -913,7 +913,7 @@ extension Lambda {
             self.qualifier = qualifier
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             _ = encoder.container(keyedBy: CodingKeys.self)
             request.encodePath(self.functionName, key: "FunctionName")
@@ -952,7 +952,7 @@ extension Lambda {
             self.statusCode = statusCode
         }
 
-        public init(from decoder: Decoder) throws {
+        public init(from decoder: any Decoder) throws {
             let response = decoder.userInfo[.awsResponse]! as! ResponseDecodingContainer
             self.statusCode = response.decodeStatus()
         }
@@ -972,7 +972,7 @@ extension Lambda {
             self.qualifier = qualifier
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             _ = encoder.container(keyedBy: CodingKeys.self)
             request.encodePath(self.functionName, key: "FunctionName")
@@ -1471,7 +1471,7 @@ extension Lambda {
             self.qualifier = qualifier
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             _ = encoder.container(keyedBy: CodingKeys.self)
             request.encodePath(self.functionName, key: "FunctionName")
@@ -1549,7 +1549,7 @@ extension Lambda {
             self.qualifier = qualifier
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             _ = encoder.container(keyedBy: CodingKeys.self)
             request.encodePath(self.functionName, key: "FunctionName")
@@ -1905,7 +1905,7 @@ extension Lambda {
             self.statementId = statementId
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             _ = encoder.container(keyedBy: CodingKeys.self)
             request.encodePath(self.functionName, key: "FunctionName")
@@ -2110,7 +2110,7 @@ extension Lambda {
             self.type = type
         }
 
-        public init(from decoder: Decoder) throws {
+        public init(from decoder: any Decoder) throws {
             let response = decoder.userInfo[.awsResponse]! as! ResponseDecodingContainer
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.message = try container.decodeIfPresent(String.self, forKey: .message)
@@ -2209,7 +2209,7 @@ extension Lambda {
             self.zipFile = zipFile
         }
 
-        public func encode(to encoder: Encoder) throws {
+        public func encode(to encoder: any Encoder) throws {
             let request = encoder.userInfo[.awsRequest]! as! RequestEncodingContainer
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encodeIfPresent(self.architectures, forKey: .architectures)

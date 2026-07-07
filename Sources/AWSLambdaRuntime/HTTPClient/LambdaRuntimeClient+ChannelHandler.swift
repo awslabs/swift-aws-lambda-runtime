@@ -14,7 +14,11 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+#if swift(>=6.4)
+public import NIOCore
+#else
 import NIOCore
+#endif
 import NIOHTTP1
 import NIOPosix
 
@@ -47,7 +51,7 @@ internal final class LambdaChannelHandler<Delegate: LambdaChannelHandlerDelegate
     }
 
     private var state: State = .disconnected
-    private var lastError: Error?
+    private var lastError: (any Error)?
     private var reusableErrorBuffer: ByteBuffer?
     private let logger: Logger
     private let delegate: Delegate
@@ -452,7 +456,7 @@ extension LambdaChannelHandler: ChannelInboundHandler {
         }
     }
 
-    func errorCaught(context: ChannelHandlerContext, error: Error) {
+    func errorCaught(context: ChannelHandlerContext, error: any Error) {
         self.logger.trace(
             "Channel error caught",
             metadata: [

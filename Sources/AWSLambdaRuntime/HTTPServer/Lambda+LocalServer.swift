@@ -14,9 +14,15 @@
 //===----------------------------------------------------------------------===//
 
 #if LocalServerSupport
+#if swift(>=6.4)
+public import Logging
+public import NIOCore
+public import NIOHTTP1
+#else
 import Logging
 import NIOCore
 import NIOHTTP1
+#endif
 import NIOPosix
 
 // for UUID

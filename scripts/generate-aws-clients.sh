@@ -125,6 +125,7 @@ import PackageDescription
 
 let package = Package(
     name: "SotoClientGen",
+    platforms: [.macOS(.v15)],
     dependencies: [
         .package(url: "https://github.com/soto-project/soto-codegenerator", from: "${SOTO_CODEGEN_VERSION}"),
         .package(url: "https://github.com/soto-project/soto-core.git", from: "${SOTO_CORE_VERSION}"),
@@ -193,8 +194,9 @@ license_header() {
 EOF
 }
 
-# Post-process one generated file in place: prepend the license header and insert
-# `@available(LambdaSwift 2.0, *)` before each top-level public/extension declaration.
+# Post-process one generated file in place: prepend the license header, insert
+# `@available(LambdaSwift 2.0, *)` before each top-level public/extension declaration,
+# and apply ExistentialAny / InternalImportsByDefault fixes.
 #
 # The package does not declare a platforms: floor, but soto-core's types carry an
 # availability annotation, so every top-level declaration in the generated code must
@@ -221,6 +223,43 @@ postprocess_file() {
             { print }
         ' "${src}"
     } > "${dest}"
+
+    # --- ExistentialAny fixes ---
+    # Wrap optional protocol types with `any` (e.g. AWSMiddlewareProtocol? -> (any AWSMiddlewareProtocol)?)
+    sed -i '' 's/middleware: AWSMiddlewareProtocol?/middleware: (any AWSMiddlewareProtocol)?/g' "${dest}"
+    # Encoder/Decoder in function signatures
+    sed -i '' 's/encoder: Encoder)/encoder: any Encoder)/g' "${dest}"
+    sed -i '' 's/decoder: Decoder)/decoder: any Decoder)/g' "${dest}"
+
+    # --- InternalImportsByDefault fixes (gated behind #if swift(>=6.4)) ---
+    # Files that expose Foundation types (e.g. Date) in public API need public imports.
+    # Check for Date in public properties OR in @inlinable function parameters.
+    if grep -q 'public.*let.*: Date' "${dest}" || \
+       grep -q 'public.*var.*: Date' "${dest}" || \
+       grep -q ': Date?' "${dest}"; then
+        local tmp="${dest}.tmp"
+        awk '
+        /^#if canImport\(FoundationEssentials\)$/ {
+            print "#if swift(>=6.4)"
+            print "#if canImport(FoundationEssentials)"
+            print "public import FoundationEssentials"
+            print "#else"
+            print "public import Foundation"
+            print "#endif"
+            print "#else"
+            print "#if canImport(FoundationEssentials)"
+            print "import FoundationEssentials"
+            print "#else"
+            print "import Foundation"
+            print "#endif"
+            print "#endif"
+            # Skip the original 4 lines (#if, import, #else, import, #endif)
+            getline; getline; getline; getline
+            next
+        }
+        { print }
+        ' "${dest}" > "${tmp}" && mv "${tmp}" "${dest}"
+    fi
 }
 
 copy_and_postprocess() {
