@@ -31,6 +31,10 @@ on:
         type: boolean
         description: "Boolean to enable the test of the archive plugin. Defaults to true."
         default: true
+      archive_plugin_container_image:
+        type: string
+        description: "Container image for the archive plugin test jobs. Defaults to Swift 6.4"
+        default: "swiftlang/swift:nightly-6.4.x-bookworm"
       check_foundation_enabled:
         type: boolean
         description: "Boolean to enable the check for Foundation dependency. Defaults to true."
@@ -41,7 +45,6 @@ on:
         required: true
       matrix_linux_swift_container_image:
         type: string
-        # Note: we don't use Amazon Linux 2 here because zip is not installed by default.
         description: "Container image for the matrix test jobs. Defaults to Swift 6.4"
         default: "swiftlang/swift:nightly-6.4.x-bookworm"
 
@@ -94,6 +97,8 @@ jobs:
     name: Test archive plugin
     if: ${{ inputs.archive_plugin_enabled }}
     runs-on: ubuntu-latest
+    container
+      image: ${{ inputs.archive_plugin_container_image }}
     strategy:
       fail-fast: false
       matrix:
