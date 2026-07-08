@@ -2,6 +2,14 @@
 
 import PackageDescription
 
+// Match the swift-aws-lambda-runtime project default.
+// Declared before `package` because a top-level global that references a later-declared
+// global reads its zero value (here an empty array), which would silently drop the setting.
+let swiftSettings: [SwiftSetting] = [
+    // https://docs.swift.org/compiler/documentation/diagnostics/nonisolated-nonsending-by-default/
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+]
+
 let package = Package(
     name: "StreamingCodable",
     platforms: [.macOS(.v15)],
@@ -32,9 +40,3 @@ let package = Package(
         ),
     ]
 )
-
-// Match the swift-aws-lambda-runtime project default.
-let swiftSettings: [SwiftSetting] = [
-    // https://docs.swift.org/compiler/documentation/diagnostics/nonisolated-nonsending-by-default/
-    .enableUpcomingFeature("NonisolatedNonsendingByDefault")
-]
