@@ -156,14 +156,14 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
                 to: ((LambdaRuntimeClient) -> Void).self
             )
             strippedOperation(self)
-        }    
+        }
     }
     // private nonisolated func assumeIsolatedOnEventLoop(
     //     _ operation: (isolated LambdaRuntimeClient) -> Void
     // ) {
     //     self.assumeIsolated(operation)
     // }
-    
+
     @usableFromInline
     func close() async {
         self.logger.trace("Close lambda runtime client")

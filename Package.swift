@@ -29,7 +29,7 @@ let package = Package(
     // Starting with Swift 6.4, macOS v12 is the default
     // The below line will be removed when we will support 6.4, 6.5, and 6.
     // (end of 2027?)
-    platforms: [ .macOS(.v12) ],
+    platforms: [.macOS(.v12)],
     products: [
         .library(name: "AWSLambdaRuntime", targets: ["AWSLambdaRuntime"]),
 
