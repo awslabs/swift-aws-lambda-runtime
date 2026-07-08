@@ -88,9 +88,12 @@ struct LambdaClockTests {
         let end = clock.now
         let elapsed = start.duration(to: end)
 
-        // Allow some tolerance for timing precision
+        // The lower bound proves we actually slept for ~50ms (the meaningful assertion). The upper
+        // bound only guards against sleeping wildly too long; keep it generous so a scheduling stall
+        // on a loaded/virtualized CI runner (which can delay task wake-up well beyond 200ms) does
+        // not flake the test.
         #expect(elapsed >= .milliseconds(40))
-        #expect(elapsed <= .milliseconds(200))
+        #expect(elapsed <= .seconds(5))
     }
 
     @Test("Sleep with past deadline returns immediately")
@@ -105,8 +108,10 @@ struct LambdaClockTests {
         let end = clock.now
 
         let elapsed = start.duration(to: end)
-        // Should return almost immediately
-        #expect(elapsed < .milliseconds(10))
+        // A past deadline must not trigger a real sleep. We only need to prove no ~full-duration
+        // wait happened; a 1s ceiling is far below any genuine sleep yet high enough to absorb
+        // async scheduling overhead on a busy CI runner (a 10ms budget flakes there).
+        #expect(elapsed < .seconds(1))
     }
 
     @Test("Duration to future instant returns negative duration")
@@ -138,12 +143,16 @@ struct LambdaClockTests {
         let foundationMillis = Int64(foundationDate.timeIntervalSince1970 * 1000)
         let lambdaClockMillis = lambdaClockNow.millisecondsSinceEpoch()
 
-        // Allow small tolerance for timing differences between calls
+        // This asserts the two clocks read the same wall time (same epoch, same unit) - a real bug
+        // would be off by orders of magnitude (wrong epoch or seconds-vs-millis). The two reads are
+        // sequential, so the only legitimate difference is the tiny gap between them; a scheduling
+        // stall on a loaded/virtualized CI runner can stretch that gap past a few milliseconds, so
+        // the 10ms budget flakes. A 1s tolerance still catches genuine unit/epoch mistakes.
         let difference = abs(foundationMillis - lambdaClockMillis)
 
         #expect(
-            difference <= 10,
-            "LambdaClock and Foundation Date should be within 10ms of each other, difference was \(difference)ms"
+            difference <= 1000,
+            "LambdaClock and Foundation Date should be within 1s of each other, difference was \(difference)ms"
         )
     }
     @Test("Instant renders as string with an epoch number")

@@ -158,8 +158,34 @@ struct ArchiveBackendSelectionTests {
     }
 }
 
+/// Resolves the `zip` command line tool, which the ``ZipArchiveBackend`` shells out to.
+///
+/// Looks the tool up on `PATH` first (so it works regardless of the distribution's layout), then
+/// falls back to a few well-known locations. Returns `nil` when `zip` is not installed, which lets
+/// the archive test skip gracefully instead of failing purely because the CLI is absent (the
+/// official Swift Linux images do not ship `zip` by default).
+@available(LambdaSwift 2.0, *)
+func resolveZipTool() -> URL? {
+    let fileManager = FileManager.default
+
+    var candidates: [String] = []
+    if let path = ProcessInfo.processInfo.environment["PATH"] {
+        candidates += path.split(separator: ":").map { "\($0)/zip" }
+    }
+    candidates += ["/usr/bin/zip", "/bin/zip", "/usr/local/bin/zip", "/opt/homebrew/bin/zip"]
+
+    for candidate in candidates where fileManager.isExecutableFile(atPath: candidate) {
+        return URL(fileURLWithPath: candidate)
+    }
+    return nil
+}
+
 @Suite("ZipArchiveBackend")
 struct ZipArchiveBackendTests {
+
+    /// The resolved `zip` tool, or `nil` when it isn't installed.
+    @available(LambdaSwift 2.0, *)
+    static let zipToolPath: URL? = resolveZipTool()
 
     @available(LambdaSwift 2.0, *)
     @Test("name is zip")
@@ -170,8 +196,17 @@ struct ZipArchiveBackendTests {
     }
 
     @available(LambdaSwift 2.0, *)
-    @Test("archive produces a <product>.zip per built product")
+    @Test(
+        "archive produces a <product>.zip per built product",
+        .enabled(
+            if: ZipArchiveBackendTests.zipToolPath != nil,
+            "the `zip` CLI is not installed on this machine; skipping the archive test"
+        )
+    )
     func archiveProducesZip() throws {
+        // Guaranteed non-nil by the `.enabled(if:)` trait above, but unwrap explicitly so the
+        // backend receives the resolved path rather than a hardcoded one.
+        let zipToolPath = try #require(Self.zipToolPath)
         // Lay out a fake build output: <tmp>/build/<product> executable, and a separate output dir.
         let root = FileManager.default.temporaryDirectory
             .appending(path: "ziparchive-test-\(UUID().uuidString)")
@@ -185,7 +220,7 @@ struct ZipArchiveBackendTests {
         let binary = buildDir.appending(path: product)
         try Data("#!/bin/sh\necho hi\n".utf8).write(to: binary)
 
-        let backend = ZipArchiveBackend(zipToolPath: URL(fileURLWithPath: "/usr/bin/zip"), architecture: .arm64)
+        let backend = ZipArchiveBackend(zipToolPath: zipToolPath, architecture: .arm64)
         let archives = try backend.archive(
             products: [product: binary],
             outputDirectory: outputDir,

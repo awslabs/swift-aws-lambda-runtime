@@ -27,6 +27,9 @@ jobs:
     with:
       enable_windows_checks: false
       linux_exclude_swift_versions: "[{\"swift_version\": \"5.9\"}, {\"swift_version\": \"5.10\"}, {\"swift_version\": \"6.0\"}, {\"swift_version\": \"6.1\"}]"
+      # The ZipArchiveBackend tests shell out to the `zip` CLI, which the official Swift Linux
+      # container images do not ship by default. Install it before running the unit tests.
+      linux_pre_build_command: "apt-get update -y && apt-get install -y zip"
       swift_flags: "--explicit-target-dependency-import-check error"
       swift_nightly_flags: "--explicit-target-dependency-import-check error"
       enable_linux_static_sdk_build: true

@@ -19,14 +19,22 @@ let package = Package(
             dependencies: [
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
                 .product(name: "AWSLambdaEvents", package: "swift-aws-lambda-events"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
         .testTarget(
             name: "Streaming+CodableTests",
             dependencies: [
                 "StreamingCodable",
                 .product(name: "AWSLambdaRuntime", package: "swift-aws-lambda-runtime"),
-            ]
+            ],
+            swiftSettings: swiftSettings
         ),
     ]
 )
+
+// Match the swift-aws-lambda-runtime project default.
+let swiftSettings: [SwiftSetting] = [
+    // https://docs.swift.org/compiler/documentation/diagnostics/nonisolated-nonsending-by-default/
+    .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+]
