@@ -32,3 +32,26 @@ generate-docs: doc-dependency
 		--output-path ./docs
 	
 	mv Package.swift.bak Package.swift
+
+# Run compilation + tests on Linux across Swift toolchains, using Docker.
+# Each target uses an isolated --scratch-path so Linux build products don't clash with the
+# local (macOS) .build or with each other. `zip` is installed because the ArchiveBackend tests
+# shell out to /usr/bin/zip, which is absent from the base images.
+DOCKER_RUN = docker run --rm -v "$(CURDIR)":/pkg -w /pkg
+
+.PHONY: test-linux test-linux-6.2 test-linux-6.3 test-linux-6.4
+
+test-linux-6.2:
+	$(DOCKER_RUN) swift:6.2-noble \
+		bash -c "apt-get update -qq && apt-get install -y -qq zip && swift test --scratch-path .build-linux-6.2"
+
+test-linux-6.3:
+	$(DOCKER_RUN) swift:6.3-noble \
+		bash -c "apt-get update -qq && apt-get install -y -qq zip && swift test --scratch-path .build-linux-6.3"
+
+test-linux-6.4:
+	$(DOCKER_RUN) swiftlang/swift:nightly-6.4.x-bookworm \
+		bash -c "apt-get update -qq && apt-get install -y -qq zip && swift test --scratch-path .build-linux-6.4"
+
+# Run all three in sequence.
+test-linux: test-linux-6.2 test-linux-6.3 test-linux-6.4

@@ -31,10 +31,6 @@ on:
         type: boolean
         description: "Boolean to enable the test of the archive plugin. Defaults to true."
         default: true
-      archive_plugin_container_image:
-        type: string
-        description: "Container image for the archive plugin test jobs. Defaults to Swift 6.4"
-        default: "swiftlang/swift:nightly-6.4.x-bookworm"
       check_foundation_enabled:
         type: boolean
         description: "Boolean to enable the check for Foundation dependency. Defaults to true."
@@ -97,13 +93,12 @@ jobs:
     name: Test archive plugin
     if: ${{ inputs.archive_plugin_enabled }}
     runs-on: ubuntu-latest
-    container:
-      image: ${{ inputs.archive_plugin_container_image }}
     strategy:
       fail-fast: false
       matrix:
         examples: ${{ fromJson(inputs.archive_plugin_examples) }}
-    # These must run on Ubuntu and not in a container, because the plugin uses docker
+    # These must run on bare Ubuntu and not in a container: the plugin shells out to the host
+    # docker daemon, and we can't run docker inside a docker job container.
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
