@@ -35,7 +35,7 @@ struct AWSLambdaBuilder: CommandPlugin {
         // value itself is left to the helper.
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
         let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
-        
+
         // Resolve the tool that matches the requested cross-compilation method. The plugin sandbox
         // can only run tools it resolves up front, so we must pick the right binary here:
         // `swift` for `--cross-compile swift-static-sdk` (no container runtime needed),
