@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-public import NIOCore
+import NIOCore
 
 @available(LambdaSwift 2.0, *)
 struct ControlPlaneRequestEncoder: _EmittingChannelHandler {

@@ -15,8 +15,8 @@
 
 #if LocalServerSupport
 public import Logging
-public import NIOCore
-public import NIOHTTP1
+import NIOCore
+import NIOHTTP1
 import NIOPosix
 
 // for UUID

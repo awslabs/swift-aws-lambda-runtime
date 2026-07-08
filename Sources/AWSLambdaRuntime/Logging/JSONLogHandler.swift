@@ -25,9 +25,9 @@ import Musl
 #endif
 
 #if canImport(FoundationEssentials)
-public import FoundationEssentials
+import FoundationEssentials
 #else
-public import Foundation
+import Foundation
 #endif
 
 /// Serializes all stderr writes across JSONLogHandler instances so that

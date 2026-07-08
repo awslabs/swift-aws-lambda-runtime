@@ -13,7 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-public import NIOCore
+import NIOCore
 package import NIOHTTP1
 
 @available(LambdaSwift 2.0, *)

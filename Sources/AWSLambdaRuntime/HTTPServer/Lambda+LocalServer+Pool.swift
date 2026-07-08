@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #if LocalServerSupport
-public import DequeModule
+import DequeModule
 import Synchronization
 
 @available(LambdaSwift 2.0, *)
