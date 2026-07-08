@@ -95,12 +95,6 @@ public enum Lambda {
                     // can read `Logger.current` and inherit the request's metadata without having
                     // to thread `context.logger` through every signature. `context.logger` keeps
                     // working unchanged for code that prefers the explicit form.
-                    // With Swift >= 6.4 we enable `nonisolated(nonsending)` by default, so the
-                    // handler is `nonisolated(nonsending)` and can be passed into the `withLogger`
-                    // closure directly. On older compilers that guarantee doesn't hold, so we call
-                    // the handler directly (no task-local binding). Remove the guard when support
-                    // for those toolchains is dropped.
-                    #if compiler(>=6.4)
                     handler = try await withLogger(requestLogger) { _ in
                         var handler = handler
                         try await handler.handle(
@@ -110,13 +104,6 @@ public enum Lambda {
                         )
                         return handler
                     }
-                    #else
-                    try await handler.handle(
-                        invocation.event,
-                        responseWriter: writer,
-                        context: context
-                    )
-                    #endif
                     requestLogger.trace("Handler finished processing invocation")
                 } catch {
                     requestLogger.trace("Handler failed processing invocation", metadata: ["Handler error": "\(error)"])
