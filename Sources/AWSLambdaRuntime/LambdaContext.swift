@@ -227,7 +227,7 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         )
     }
 
-    /// Create a `LambdaContext` with an explicit logger. 
+    /// Create a `LambdaContext` with an explicit logger.
     ///
     /// Omits `cognitoIdentity` / `clientContext` (the runtime does not set them)
     /// `@usableFromInline` so the `@inlinable` `Lambda.runLoop` can call it.
