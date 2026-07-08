@@ -30,7 +30,8 @@ struct AWSLambdaDeployer: CommandPlugin {
         let productsArgument = argumentExtractor.extractOption(named: "products")
         // `--cross-compile` selects the container CLI used to push an OCI image to ECR (docker or
         // container).
-
+        let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
+        
         let products: [Product]
         if !productsArgument.isEmpty {
             products = try context.package.products(named: productsArgument)
