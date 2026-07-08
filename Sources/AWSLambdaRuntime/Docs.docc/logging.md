@@ -25,7 +25,7 @@ Threading `context.logger` through every function your handler calls is tedious.
 the runtime binds the request logger as the task-local
 [`Logger.current`](https://github.com/apple/swift-log) for the duration of the handler
 call. Code anywhere in the handler's call tree can read `Logger.current` and inherit the
-invocation's metadata — without a `LambdaContext` or `Logger` parameter:
+invocation's metadata, without a `LambdaContext` or `Logger` parameter:
 
 ```swift
 import Logging
@@ -48,8 +48,8 @@ whichever reads better; `context.logger` is more explicit at the call site.
 
 `Logger.current` is bound with the free function `withLogger(_:)` from swift-log. The
 runtime does this for you per invocation, but you can also bind a logger at application
-startup so it is in scope before and around `run()` — useful with
-[ServiceLifecycle](https://github.com/swift-server/swift-service-lifecycle):
+startup so it is in scope before and around `run()`. This is useful when combining Lambda with
+other services, such as the [ServiceLifecycle](https://github.com/swift-server/swift-service-lifecycle):
 
 ```swift
 let logger = Logger(label: "my-function")
@@ -59,16 +59,11 @@ try await withLogger(logger) { _ in
 }
 ```
 
-## Notes and limitations
+## Note
 
-- Automatic per-invocation binding of `Logger.current` requires **Swift 6.4 or later**, where
-  `nonisolated(nonsending)` is enabled by default on the project so the handler can be passed into the
-  `withLogger(_:)` closure. On older toolchains, code that reads `Logger.current` instead
-  receives swift-log's process-wide default logger (without the request metadata);
-  `context.logger` is unaffected and always works.
-- Task-local values propagate through structured concurrency (`async let`,
-  `withTaskGroup`, child `Task {}`) but are **not** inherited by `Task.detached` — capture
-  the logger explicitly across a detached boundary.
+Task-local values propagate through structured concurrency (`async let`,
+`withTaskGroup`, child `Task {}`) but are **not** inherited by `Task.detached`.
+You must capture the logger explicitly across a detached boundary.
 
 ## Topics
 

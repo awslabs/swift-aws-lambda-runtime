@@ -29,11 +29,11 @@ aws configure
 
 `lambda-deploy` does not implement its own credential handling. It leverages your existing AWS CLI configuration to locate credentials, using the same resolution chain as [Soto Core](https://github.com/soto-project/soto-core). Soto Core is the foundation of [Soto](https://soto.codes), the community-maintained AWS SDK for Swift; it provides the request signing and credential resolution that the plugin reuses. This means any credential source you already use with the AWS CLI works without extra configuration:
 
-- Long-term credentials (access key and secret access key) in `~/.aws/credentials`
-- AWS IAM Identity Center (SSO) and `aws sso login` sessions
+- Long-term credentials (access key and secret access key) in `~/.aws/credentials` (**strongly discouraged**)
+- AWS IAM Identity Center (SSO) and `aws sso login` sessions (**best practice for humans deploying from the Terminal**)
 - Roles assumed through your AWS config profiles
 - Amazon EC2 instance metadata (IMDS)
-- Container credentials on Amazon ECS and Amazon EKS
+- Container credentials on Amazon ECS and Amazon EKS (**best when running in a CI**)
 
 On EC2, ECS, or EKS, credentials are typically provided automatically by the instance or task role, so running `aws configure` is not required in those environments.
 
@@ -47,7 +47,7 @@ swift package --allow-network-connections all:443 lambda-deploy --profile my-pro
 
 The `lambda-deploy` plugin automatically detects whether the function exists. If the function does not exist, it creates a new one (including the IAM role). If the function already exists, it updates the code.
 
-The command assumes you've already built the ZIP file with `swift package lambda-build`, as described in <doc:deploying-prerequisites>.
+The command assumes you've already built the ZIP file or OCI image with `swift package lambda-build`, as described in <doc:deploying-prerequisites>.
 
 ```sh
 swift package --allow-network-connections all:443 lambda-deploy

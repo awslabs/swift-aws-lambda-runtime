@@ -174,7 +174,8 @@ either host.
 On binary size: statically linking musl does not, in practice, produce a much
 larger binary than the container build. Both statically link the Swift standard
 library, which dominates the size, so the two land close to each other (in a
-trivial function, the static-SDK binary is actually slightly smaller). Stripping applies through `--no-strip` exactly as with the other methods.
+trivial function, the static-SDK binary is actually slightly smaller).
+Stripping applies through `--no-strip` exactly as with the other methods.
 
 ### Choosing the package format
 
@@ -266,8 +267,8 @@ invoke time). See [lambda-deploy](#lambda-deploy).
 
 ## lambda-deploy
 
-`lambda-deploy` deploys the ZIP archive produced by `lambda-build` to AWS. It
-manages the full IAM role lifecycle, automatically creating a role with the
+`lambda-deploy` deploys the ZIP or OCI archive produced by `lambda-build` to AWS.
+It manages the full IAM role lifecycle, automatically creating a role with the
 `AWSLambdaBasicExecutionRole` policy when you don't provide an existing one. It
 also stages large archives (over 50 MB) through S3.
 
@@ -285,9 +286,11 @@ swift package --allow-network-connections all:443 lambda-deploy
 On success, the plugin reports the function ARN and a ready-to-use
 `aws lambda invoke` command.
 
-To expose the function through a Function URL, use `--with-url`. The URL is
-protected with `AWS_IAM` authentication, restricted to authenticated principals
-in your AWS account:
+To expose the function through a Function URL, use `--with-url`. 
+To expose your function with an URL, your function's handler code must accept 
+`FunctionURLRequest` as input event and return a `FunctionURLResponse`.
+The URL is protected with `AWS_IAM` authentication, restricted to authenticated
+principals in your AWS account:
 
 ```sh
 swift package --allow-network-connections all:443 lambda-deploy --with-url

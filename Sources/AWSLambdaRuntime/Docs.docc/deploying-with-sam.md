@@ -59,7 +59,7 @@ Outputs:
 EOF
 ```
 
-In this example, the Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGAteway v2 JSON response. See the example code in the [APIGateway example README file](https://github.com/awslabs/swift-aws-lambda-runtime/blob/main/Examples/APIGatewayV2/README.md).
+In this example, the Lambda function must accept an APIGateway v2 JSON payload as input parameter and return a valid APIGateway v2 JSON response. See the example code in the [APIGateway example README file](https://github.com/awslabs/swift-aws-lambda-runtime/blob/main/Examples/APIGatewayV2/README.md).
 
 To deploy the function with SAM, use the `sam deploy` command. The very first time you deploy a function, you should use the `--guided` flag to configure the deployment. The command will ask you a series of questions to configure the deployment.
 

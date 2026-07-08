@@ -13,7 +13,7 @@ Deploy Swift Lambda functions on Amazon EC2 instances with concurrent execution 
 
 Lambda Managed Instances enables you to run Lambda functions on your current-generation Amazon EC2 instances while maintaining serverless simplicity. AWS handles all infrastructure management tasks including instance lifecycle, OS and runtime patching, routing, load balancing, and auto-scaling, while you benefit from EC2 flexibility and cost optimization.
 
-The key difference from traditional Lambda is concurrent execution support—multiple invocations can run simultaneously within the same execution environment on the same EC2 host.
+The key difference from traditional Lambda is concurrent execution support: multiple invocations can run simultaneously within the same execution environment on the same EC2 host.
 
 ### When to Use Lambda Managed Instances
 
