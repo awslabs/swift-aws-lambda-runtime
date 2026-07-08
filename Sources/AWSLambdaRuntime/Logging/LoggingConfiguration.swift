@@ -41,19 +41,7 @@ public struct LoggingConfiguration: Sendable {
         self.init(baseLogger: Logger.current)
     }
 
-    @available(
-        *,
-        deprecated,
-        message:
-            "This initializer will be removed in a future major version update. Use init() instead, which uses the task-local Logger.current. To supply a specific logger, bind it with withLogger(_:) around the call."
-    )
-    public init(logger: Logger) {
-        self.init(baseLogger: logger)
-    }
-
-    /// Designated initializer. Internal so the runtime can build a configuration from a
-    /// specific logger without going through the deprecated `init(logger:)`.
-    /// `@usableFromInline` so the deprecated `@inlinable` `Lambda.runLoop` overload can call it.
+    /// Designated initializer.
     @usableFromInline
     init(baseLogger: Logger) {
         // Read AWS_LAMBDA_LOG_FORMAT (default: Text)

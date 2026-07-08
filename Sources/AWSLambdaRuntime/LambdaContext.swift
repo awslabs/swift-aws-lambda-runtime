@@ -227,12 +227,9 @@ public struct LambdaContext: CustomDebugStringConvertible, Sendable {
         )
     }
 
-    /// Create a `LambdaContext` with an explicit logger. Internal so the runtime can build a
-    /// context from the per-invocation logger without going through the deprecated public
-    /// `logger:` initializer or binding the task-local just to construct the context.
+    /// Create a `LambdaContext` with an explicit logger. 
     ///
-    /// Omits `cognitoIdentity` / `clientContext` (the runtime does not set them), which also
-    /// keeps this signature distinct from the deprecated public `logger:` initializer.
+    /// Omits `cognitoIdentity` / `clientContext` (the runtime does not set them)
     /// `@usableFromInline` so the `@inlinable` `Lambda.runLoop` can call it.
     @usableFromInline
     init(
