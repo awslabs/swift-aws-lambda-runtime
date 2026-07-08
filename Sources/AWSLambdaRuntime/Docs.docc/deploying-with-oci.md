@@ -11,8 +11,6 @@ Package your Swift Lambda function as an OCI container image and deploy it to AW
 
 ## Overview
 
-> Warning: The command plugins require **Swift 6.4 or later**. On older toolchains, `swift package lambda-build` and `lambda-deploy` are not available. After installing [swiftly](https://www.swift.org/install/macos/), run `swiftly install 6.4.x-snapshot`.
-
 By default `lambda-build` produces a ZIP archive. That is the simplest option and gives the fastest cold starts for most functions. Lambda also accepts a function packaged as an [OCI container image](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html). Pass `--archive-format oci` and `lambda-build` builds the image locally, then `lambda-deploy` pushes it to Amazon ECR and creates a container-image function. The function code is the same either way. Only the packaging changes.
 
 > See <doc:deploying-prerequisites> for the AWS account, credentials, and region every deployment needs. This article assumes you can already deploy a ZIP function with <doc:deploying-with-the-plugin>.

@@ -34,15 +34,6 @@ struct AWSLambdaBuilder: CommandPlugin {
         // The helper requires --configuration; the plugin supplies the default. Validation of the
         // value itself is left to the helper.
         let configurationArgument = argumentExtractor.extractOption(named: "configuration")
-        let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
-        // `--container-cli` only exists on the deprecated `archive` command. Reject it here rather
-        // than let it fall through to the helper and be silently ignored (which would build with the
-        // wrong CLI). The user is told to use the canonical `--cross-compile` instead.
-        guard argumentExtractor.extractOption(named: "container-cli").isEmpty else {
-            throw BuilderErrors.invalidArgument(
-                "'--container-cli' is not supported by lambda-build. Use '--cross-compile <docker|container>' instead."
-            )
-        }
 
         // Resolve the tool that matches the requested cross-compilation method. The plugin sandbox
         // can only run tools it resolves up front, so we must pick the right binary here:

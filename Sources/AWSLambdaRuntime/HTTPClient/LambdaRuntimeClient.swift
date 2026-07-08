@@ -13,16 +13,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOHTTP1
-import NIOPosix
-
-#if swift(>=6.4)
 public import Logging
 public import NIOCore
-#else
-import Logging
-import NIOCore
-#endif
+import NIOHTTP1
+import NIOPosix
 
 @available(LambdaSwift 2.0, *)
 @usableFromInline
@@ -139,47 +133,11 @@ final actor LambdaRuntimeClient: LambdaRuntimeClientProtocol {
         self.logger = logger
     }
 
-    #if swift(>=6.4)
-    /// Assume that the current context is isolated to this actor's event loop and execute the closure.
-    ///
-    /// On Swift 6.4 and later we can rely on the standard-library `Actor.assumeIsolated`. SE-0424 and
-    /// SE-0471 let the concurrency runtime fall back to the serial executor's `checkIsolated()` /
-    /// `isIsolatingCurrentContext()` hooks when there is no Swift Concurrency task tracking the current
-    /// executor (e.g. inside NIO callbacks such as `whenComplete` or channel handler methods).
-    /// SwiftNIO implements those hooks on its event loop executor via `preconditionInEventLoop()`, so
-    /// `assumeIsolated` no longer produces the false-negative crash that required the manual cast below.
     private nonisolated func assumeIsolatedOnEventLoop(
         _ operation: (isolated LambdaRuntimeClient) -> Void
     ) {
         self.assumeIsolated(operation)
     }
-    #else
-    /// Assume that the current context is isolated to this actor's event loop and execute the closure.
-    ///
-    /// This is a workaround for `Actor.assumeIsolated` which can crash on open-source Swift toolchains
-    /// built with runtime assertions enabled. In those toolchains, `assumeIsolated` performs a strict
-    /// runtime check via `_taskIsCurrentExecutor` that fails when called from NIO callbacks
-    /// (e.g. `whenComplete`, channel handler methods) because there is no Swift Concurrency task
-    /// tracking the current executor in thread-local storage.
-    ///
-    /// We use `eventLoop.preconditionInEventLoop()` as our safety check instead, then perform
-    /// the same unsafe cast that `assumeIsolated` does internally after its check passes.
-    /// See: https://github.com/swiftlang/swift/blob/main/stdlib/public/Concurrency/ExecutorAssertions.swift#L348
-    /// See: https://forums.swift.org/t/actor-assumeisolated-erroneously-crashes-when-using-a-dispatch-queue-as-the-underlying-executor/72434/3
-    private nonisolated func assumeIsolatedOnEventLoop(
-        _ operation: (isolated LambdaRuntimeClient) -> Void
-    ) {
-        self.eventLoop.preconditionInEventLoop()
-        // This is safe: we verified we're on the event loop, which is this actor's executor.
-        withoutActuallyEscaping(operation) { escapingOperation in
-            let strippedOperation = unsafeBitCast(
-                escapingOperation,
-                to: ((LambdaRuntimeClient) -> Void).self
-            )
-            strippedOperation(self)
-        }
-    }
-    #endif
 
     @usableFromInline
     func close() async {

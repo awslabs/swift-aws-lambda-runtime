@@ -13,13 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=6.4)
 public import Logging
 public import NIOCore
-#else
-import Logging
-import NIOCore
-#endif
 
 @available(LambdaSwift 2.0, *)
 extension LambdaRuntime {

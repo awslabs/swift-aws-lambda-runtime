@@ -209,7 +209,6 @@ struct BuilderConfiguration: CustomStringConvertible {
 
         let verboseArgument = argumentExtractor.extractFlag(named: "verbose") > 0
         let outputPathArgument = argumentExtractor.extractOption(named: "output-path")
-        let outputDirectoryArgument = argumentExtractor.extractOption(named: "output-directory")
         let packageIDArgument = argumentExtractor.extractOption(named: "package-id")
         let packageDisplayNameArgument = argumentExtractor.extractOption(named: "package-display-name")
         let packageDirectoryArgument = argumentExtractor.extractOption(named: "package-directory")
@@ -264,13 +263,9 @@ struct BuilderConfiguration: CustomStringConvertible {
         self.zipToolPath = URL(fileURLWithPath: zipToolPathArgument.first!)
 
         // output directory
-        // --output-directory is a deprecated alias for --output-path (backward compatibility)
         let resolvedOutputPath: String
         if let outputPath = outputPathArgument.first {
             resolvedOutputPath = outputPath
-        } else if let outputDirectory = outputDirectoryArgument.first {
-            print("warning: '--output-directory' is deprecated, use '--output-path' instead.")
-            resolvedOutputPath = outputDirectory
         } else {
             throw BuilderErrors.invalidArgument("--output-path is required")
         }

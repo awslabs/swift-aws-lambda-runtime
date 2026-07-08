@@ -13,11 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=6.4)
 public import NIOCore
-#else
-import NIOCore
-#endif
 
 /// The protocol a decoder must conform to so that it can be used with ``LambdaCodableAdapter`` to decode incoming
 /// `ByteBuffer` events.

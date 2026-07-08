@@ -13,13 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Synchronization
-
-#if swift(>=6.4)
 public import Logging
-#else
-import Logging
-#endif
+import Synchronization
 
 #if canImport(Darwin)
 import Darwin
@@ -29,18 +24,10 @@ import Glibc
 import Musl
 #endif
 
-#if swift(>=6.4)
 #if canImport(FoundationEssentials)
 public import FoundationEssentials
 #else
 public import Foundation
-#endif
-#else
-#if canImport(FoundationEssentials)
-import FoundationEssentials
-#else
-import Foundation
-#endif
 #endif
 
 /// Serializes all stderr writes across JSONLogHandler instances so that
@@ -64,29 +51,6 @@ public struct JSONLogHandler: LogHandler {
         self.logLevel = logLevel
         self.requestID = requestID
         self.traceID = traceID
-    }
-
-    @available(*, deprecated, message: "Use log(event:) instead")
-    public func log(
-        level: Logger.Level,
-        message: Logger.Message,
-        metadata: Logger.Metadata?,
-        source: String,
-        file: String,
-        function: String,
-        line: UInt
-    ) {
-        self.log(
-            event: LogEvent(
-                level: level,
-                message: message,
-                metadata: metadata,
-                source: source as String?,
-                file: file,
-                function: function,
-                line: line
-            )
-        )
     }
 
     public func log(event: LogEvent) {

@@ -22,7 +22,7 @@
             }
             
             @Step {
-                In a terminal with Swift 6.4 or more recent installed, invoke the `lambda-build` command to build and zip your Lambda function.
+                In a terminal, invoke the `lambda-build` command to build and zip your Lambda function.
                 
                 @Code(name: "Commands in a Terminal", file: 04-01-02-plugin-archive.sh)
             }

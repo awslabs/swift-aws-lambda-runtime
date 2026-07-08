@@ -13,13 +13,7 @@
 ##
 ##===----------------------------------------------------------------------===##
 
-# This script validates the packaging plugins on Swift 6.4+, where the
-# 'archive' verb is reimplemented to delegate to the AWSLambdaPluginHelper and
-# the new 'lambda-build' verb is available. It exercises BOTH verbs against the
-# example to prove:
-#   1. the legacy 'archive' surface still produces a valid bootstrap + ZIP
-#      (existing behaviour is preserved on the new code path), and
-#   2. the new 'lambda-build' verb produces an equivalent artifact.
+# This script validates the packaging plugins
 
 set -euo pipefail
 
@@ -74,17 +68,7 @@ verify_output() {
 }
 
 # ---------------------------------------------------------------------------
-# 1. Legacy 'archive' verb (now delegates to AWSLambdaPluginHelper on 6.4+)
-# ---------------------------------------------------------------------------
-log "Testing 'archive' verb"
-ARCHIVE_OUTPUT_DIR=.build/plugins/AWSLambdaPackager/outputs/AWSLambdaPackager
-LAMBDA_USE_LOCAL_DEPS=../.. swift package archive \
-    --allow-network-connections docker \
-    --base-docker-image swift:amazonlinux2023 || fatal "'archive' verb failed"
-verify_output "archive" "${ARCHIVE_OUTPUT_DIR}"
-
-# ---------------------------------------------------------------------------
-# 2. New 'lambda-build' verb (Swift 6.4+ only)
+# 1. 'lambda-build' verb
 # ---------------------------------------------------------------------------
 log "Testing 'lambda-build' verb"
 BUILD_OUTPUT_DIR=.build/plugins/AWSLambdaBuilder/outputs/AWSLambdaBuilder
@@ -94,5 +78,5 @@ LAMBDA_USE_LOCAL_DEPS=../.. swift package lambda-build \
     --base-docker-image swift:amazonlinux2023 || fatal "'lambda-build' verb failed"
 verify_output "lambda-build" "${BUILD_OUTPUT_DIR}"
 
-echo "✅ Both 'archive' and 'lambda-build' are OK with example ${EXAMPLE} on Swift 6.4"
+echo "✅ 'lambda-build' is OK with example ${EXAMPLE}"
 popd >/dev/null || exit 1

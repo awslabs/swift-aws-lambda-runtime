@@ -11,8 +11,6 @@ Scaffold, build, and deploy your Lambda function with the bundled SwiftPM comman
 
 ## Overview
 
-> Warning: The command plugins require **Swift 6.4 or later**. On older toolchains, `swift package lambda-init`, `lambda-build`, and `lambda-deploy` are not available, use the `archive` plugin instead. After installing [swiftly](https://www.swift.org/install/macos/), run `swiftly install 6.4.x-snapshot`.
-
 Swift AWS Lambda Runtime ships three SwiftPM command plugins that cover the full
 lifecycle of a Lambda function, from creating the project to deploying it on AWS:
 
@@ -155,7 +153,7 @@ fails with guidance if a matching SDK is not found. Install it once with the
 `swift sdk install` command, passing the SDK download URL and its checksum. Find
 the current URL and checksum on the
 [Static Linux SDK](https://www.swift.org/documentation/articles/static-linux-getting-started.html)
-page. For example, for Swift 6.3.3:
+page. For example, for Swift 6.4 :
 
 ```sh
 swift sdk install \
@@ -331,6 +329,3 @@ swift package --allow-network-connections docker lambda-build
 # 3. Deploy it to AWS
 swift package --allow-network-connections all:443 lambda-deploy
 ```
-
-> Note: The legacy `archive` command remains available as a deprecated alias for
-> `lambda-build`.

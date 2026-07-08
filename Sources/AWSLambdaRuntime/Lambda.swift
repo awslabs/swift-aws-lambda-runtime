@@ -14,15 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 import Dispatch
-import NIOPosix
-
-#if swift(>=6.4)
 public import Logging
 public import NIOCore
-#else
-import Logging
-import NIOCore
-#endif
+import NIOPosix
 
 #if os(macOS)
 import Darwin.C
@@ -38,49 +32,6 @@ import ucrt
 
 @available(LambdaSwift 2.0, *)
 public enum Lambda {
-    @available(
-        *,
-        deprecated,
-        message:
-            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
-    )
-    @inlinable
-    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
-        runtimeClient: RuntimeClient,
-        handler: Handler,
-        logger: Logger
-    ) async throws where Handler: StreamingLambdaHandler {
-        try await self.runLoop(
-            runtimeClient: runtimeClient,
-            handler: handler,
-            loggingConfiguration: LoggingConfiguration(logger: logger),
-            logger: logger,
-            isSingleConcurrencyMode: true
-        )
-    }
-
-    @available(
-        *,
-        deprecated,
-        message:
-            "This method will be removed in a future major version update. Use runLoop(runtimeClient:handler:loggingConfiguration:logger:isSingleConcurrencyMode:) instead."
-    )
-    @inlinable
-    package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
-        runtimeClient: RuntimeClient,
-        handler: Handler,
-        loggingConfiguration: LoggingConfiguration,
-        logger: Logger
-    ) async throws where Handler: StreamingLambdaHandler {
-        try await self.runLoop(
-            runtimeClient: runtimeClient,
-            handler: handler,
-            loggingConfiguration: loggingConfiguration,
-            logger: logger,
-            isSingleConcurrencyMode: true
-        )
-    }
-
     @inlinable
     package static func runLoop<RuntimeClient: LambdaRuntimeClientProtocol, Handler>(
         runtimeClient: RuntimeClient,

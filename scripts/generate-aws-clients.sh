@@ -231,7 +231,7 @@ postprocess_file() {
     sed -i '' 's/encoder: Encoder)/encoder: any Encoder)/g' "${dest}"
     sed -i '' 's/decoder: Decoder)/decoder: any Decoder)/g' "${dest}"
 
-    # --- InternalImportsByDefault fixes (gated behind #if swift(>=6.4)) ---
+    # --- InternalImportsByDefault fixes  ---
     # Files that expose Foundation types (e.g. Date) in public API need public imports.
     # Check for Date in public properties OR in @inlinable function parameters.
     if grep -q 'public.*let.*: Date' "${dest}" || \
@@ -240,18 +240,10 @@ postprocess_file() {
         local tmp="${dest}.tmp"
         awk '
         /^#if canImport\(FoundationEssentials\)$/ {
-            print "#if swift(>=6.4)"
             print "#if canImport(FoundationEssentials)"
             print "public import FoundationEssentials"
             print "#else"
             print "public import Foundation"
-            print "#endif"
-            print "#else"
-            print "#if canImport(FoundationEssentials)"
-            print "import FoundationEssentials"
-            print "#else"
-            print "import Foundation"
-            print "#endif"
             print "#endif"
             # Skip the original 4 lines (#if, import, #else, import, #endif)
             getline; getline; getline; getline

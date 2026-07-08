@@ -30,15 +30,6 @@ struct AWSLambdaDeployer: CommandPlugin {
         let productsArgument = argumentExtractor.extractOption(named: "products")
         // `--cross-compile` selects the container CLI used to push an OCI image to ECR (docker or
         // container).
-        let crossCompileArgument = argumentExtractor.extractOption(named: "cross-compile")
-        // `--container-cli` only exists on the deprecated `archive` command. Reject it here rather
-        // than let it fall through to the helper and be silently ignored (which would push with the
-        // wrong CLI). The user is told to use the canonical `--cross-compile` instead.
-        guard argumentExtractor.extractOption(named: "container-cli").isEmpty else {
-            throw DeployerPluginErrors.invalidArgument(
-                "'--container-cli' is not supported by lambda-deploy. Use '--cross-compile <docker|container>' instead."
-            )
-        }
 
         let products: [Product]
         if !productsArgument.isEmpty {

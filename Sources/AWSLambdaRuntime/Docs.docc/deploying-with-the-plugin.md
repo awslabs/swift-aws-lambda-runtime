@@ -11,8 +11,6 @@ Deploy your Swift Lambda function from the command line with the bundled `lambda
 
 ## Overview
 
-> Warning: The command plugins require **Swift 6.4 or later**. On older toolchains, `swift package lambda-init`, `lambda-build`, and `lambda-deploy` are not available, use the `archive` plugin instead. After installing [swiftly](https://www.swift.org/install/macos/), run `swiftly install 6.4.x-snapshot`.
-
 The `lambda-deploy` plugin provides the simplest way to deploy your Lambda function from the command line. It handles IAM role creation, code upload, and function creation or update automatically.
 
 In this example, we're building the HelloWorld example from the [Examples](https://github.com/awslabs/swift-aws-lambda-runtime/tree/main/Examples) directory.

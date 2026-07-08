@@ -13,11 +13,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#if swift(>=6.4)
 public import NIOCore
-#else
-import NIOCore
-#endif
 
 @available(LambdaSwift 2.0, *)
 struct ControlPlaneRequestEncoder: _EmittingChannelHandler {

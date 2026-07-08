@@ -14,14 +14,9 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+public import NIOCore
 import NIOHTTP1
 import NIOPosix
-
-#if swift(>=6.4)
-public import NIOCore
-#else
-import NIOCore
-#endif
 
 internal protocol LambdaChannelHandlerDelegate {
     func connectionWillClose(channel: any Channel)

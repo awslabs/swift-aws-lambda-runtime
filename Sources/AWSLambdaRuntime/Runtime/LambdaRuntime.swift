@@ -13,15 +13,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Synchronization
-
-#if swift(>=6.4)
 public import Logging
 public import NIOCore
-#else
-import Logging
-import NIOCore
-#endif
+import Synchronization
 
 // This is our guardian to ensure only one LambdaRuntime is running at the time
 // We use an Atomic here to ensure thread safety
