@@ -47,6 +47,7 @@ public protocol StreamingLambdaHandlerWithEvent: _Lambda_SendableMetatype {
     ///     headers will be sent.
     ///   - If ``LambdaResponseStreamWriter/finish()`` has already been called before the error is thrown, the
     ///     error will be logged.
+    nonisolated(nonsending)
     mutating func handle(
         _ event: Event,
         responseWriter: some LambdaResponseStreamWriter,
@@ -114,12 +115,12 @@ public struct StreamingLambdaCodableAdapter<
 /// A closure-based streaming handler that works with decoded JSON events.
 /// Allows for a streaming handler to be defined in a clean manner, leveraging Swift's trailing closure syntax.
 public struct StreamingFromEventClosureHandler<Event: Decodable>: StreamingLambdaHandlerWithEvent {
-    let body: @Sendable (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+    let body: nonisolated(nonsending) (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
 
     /// Initialize with a closure that receives a decoded event.
     /// - Parameter body: The handler closure that receives a decoded event, response writer, and context.
     public init(
-        body: @Sendable @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+        body: nonisolated(nonsending) @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     ) {
         self.body = body
     }
@@ -129,6 +130,7 @@ public struct StreamingFromEventClosureHandler<Event: Decodable>: StreamingLambd
     ///   - event: The decoded event object.
     ///   - responseWriter: The response writer for streaming output.
     ///   - context: The Lambda context.
+    nonisolated(nonsending)
     public func handle(
         _ event: Event,
         responseWriter: some LambdaResponseStreamWriter,
@@ -160,7 +162,7 @@ extension LambdaRuntime {
     public convenience init<Event: Decodable>(
         decoder: JSONDecoder = JSONDecoder(),
         logger: Logger = Logger.current,
-        streamingBody: @Sendable @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+        streamingBody: nonisolated(nonsending) @Sendable @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
     )
     where
         Handler == StreamingLambdaCodableAdapter<

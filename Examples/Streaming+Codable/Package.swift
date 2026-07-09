@@ -2,12 +2,18 @@
 
 import PackageDescription
 
-// Match the swift-aws-lambda-runtime project default.
-// Declared before `package` because a top-level global that references a later-declared
-// global reads its zero value (here an empty array), which would silently drop the setting.
+// This example intentionally does NOT enable `NonisolatedNonsendingByDefault` at the
+// project level. Instead, it demonstrates the targeted approach: applying
+// `nonisolated(nonsending)` directly at the handler and adapter level (see
+// `Sources/LambdaStreaming+Codable.swift`) so this module interoperates with the
+// swift-aws-lambda-runtime library, which does enable the feature.
+//
+// To flip the whole project instead, uncomment the line below and remove the explicit
+// `nonisolated(nonsending)` annotations from the handler/adapter/closure signatures.
+//
 let swiftSettings: [SwiftSetting] = [
     // https://docs.swift.org/compiler/documentation/diagnostics/nonisolated-nonsending-by-default/
-    .enableUpcomingFeature("NonisolatedNonsendingByDefault")
+    // .enableUpcomingFeature("NonisolatedNonsendingByDefault")
 ]
 
 let package = Package(
