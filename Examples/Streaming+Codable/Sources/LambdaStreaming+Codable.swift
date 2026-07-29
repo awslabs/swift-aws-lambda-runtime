@@ -48,11 +48,11 @@ public protocol StreamingLambdaHandlerWithEvent: _Lambda_SendableMetatype {
     ///   - If ``LambdaResponseStreamWriter/finish()`` has already been called before the error is thrown, the
     ///     error will be logged.
     nonisolated(nonsending)
-    mutating func handle(
-        _ event: Event,
-        responseWriter: some LambdaResponseStreamWriter,
-        context: LambdaContext
-    ) async throws
+        mutating func handle(
+            _ event: Event,
+            responseWriter: some LambdaResponseStreamWriter,
+            context: LambdaContext
+        ) async throws
 }
 
 /// Adapts a ``StreamingLambdaHandlerWithEvent`` to work as a ``StreamingLambdaHandler``
@@ -131,11 +131,12 @@ public struct StreamingFromEventClosureHandler<Event: Decodable>: StreamingLambd
     ///   - responseWriter: The response writer for streaming output.
     ///   - context: The Lambda context.
     nonisolated(nonsending)
-    public func handle(
-        _ event: Event,
-        responseWriter: some LambdaResponseStreamWriter,
-        context: LambdaContext
-    ) async throws {
+        public func handle(
+            _ event: Event,
+            responseWriter: some LambdaResponseStreamWriter,
+            context: LambdaContext
+        ) async throws
+    {
         try await self.body(event, responseWriter, context)
     }
 }
@@ -162,7 +163,9 @@ extension LambdaRuntime {
     public convenience init<Event: Decodable>(
         decoder: JSONDecoder = JSONDecoder(),
         logger: Logger = Logger.current,
-        streamingBody: nonisolated(nonsending) @Sendable @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws -> Void
+        streamingBody:
+            nonisolated(nonsending) @Sendable @escaping (Event, LambdaResponseStreamWriter, LambdaContext) async throws
+            -> Void
     )
     where
         Handler == StreamingLambdaCodableAdapter<
