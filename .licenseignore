@@ -39,3 +39,4 @@ Sources/AWSLambdaPluginHelper/GeneratedClients/**
 **/*.txt
 *.toml
 .kiro/*
+aws-doc/*
