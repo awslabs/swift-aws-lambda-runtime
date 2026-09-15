@@ -11,7 +11,7 @@ The Swift AWS Lambda Runtime is an implementation of the [AWS Lambda Runtime API
 
 **The full documentation lives on the [Swift Package Index](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/documentation/awslambdaruntime).**
 
-New to Swift on Lambda? Start with the [step-by-step tutorial](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/documentation/awslambdaruntime/tutorials/table-of-content). It walks you through writing, building, testing, and deploying your first function.
+New to Swift on Lambda? Start with the [step-by-step tutorial](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/main/tutorials/table-of-content). It walks you through writing, building, testing, and deploying your first function.
 
 The documentation also covers:
 
