@@ -91,7 +91,7 @@ The managed instances support is implemented behind a Swift package trait (`Mana
 dependencies: [
     .package(
         url: "https://github.com/awslabs/swift-aws-lambda-runtime.git",
-        from: "2.0.0",
+        from: "3.0.0",
         traits: [
             // Keep other default traits but exclude ManagedRuntimeSupport
             "FoundationJSONSupport",
