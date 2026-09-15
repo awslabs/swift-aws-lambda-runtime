@@ -67,7 +67,7 @@ let package = Package(
     name: "MyLambda",
     platforms: [.macOS(.v15)],
     dependencies: [
-        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0"),
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "3.0.0"),
         .package(url: "https://github.com/awslabs/swift-aws-lambda-events.git", from: "1.0.0"),
     ],
     targets: [

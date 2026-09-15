@@ -18,6 +18,9 @@ import FoundationEssentials
 import Foundation
 #endif
 
+/// The `SupportedPlatform.MacOSVersion` matching the `LambdaSwift 2.0` availability macro.
+private let minimumMacOSVersion = "v15"
+
 @available(LambdaSwift 2.0, *)
 struct Initializer {
 
@@ -59,6 +62,14 @@ struct Initializer {
                 with: ""
             )
             print("✅ Lambda function written to \(relativePath)")
+
+            // The runtime API is only available on macOS 15 or later. Without the matching
+            // platform requirement, the generated function does not compile on macOS.
+            try self.addMacOSPlatformRequirement(
+                to: configuration.destinationDir,
+                verboseLogging: configuration.verboseLogging
+            )
+
             print("📦 You can now package with: 'swift package lambda-build'")
         } catch {
             print("🛑 Failed to create the Lambda function file: \(error)")
@@ -66,6 +77,51 @@ struct Initializer {
             // failure is not silently swallowed.
             throw error
         }
+    }
+
+    /// Adds the macOS platform requirement of `AWSLambdaRuntime` to the package manifest.
+    ///
+    /// The runtime API is annotated with `@available(LambdaSwift 2.0, *)`, an availability macro
+    /// that expands to `macOS 15.0`. A package that does not declare that platform requirement
+    /// fails to build on macOS with "is only available in macOS 15.0 or newer".
+    ///
+    /// `platforms` is set by appending an assignment at the end of the manifest rather than by
+    /// inserting an argument into the `Package(...)` call. `Package` is a class, so mutating it
+    /// after initialization is valid, and appending needs no parsing of the existing manifest.
+    private func addMacOSPlatformRequirement(to destinationDir: URL, verboseLogging: Bool) throws {
+        let manifestURL = destinationDir.appendingPathComponent("Package.swift")
+
+        guard FileManager.default.fileExists(atPath: manifestURL.path) else {
+            print("⚠️  No Package.swift found at \(manifestURL.path).")
+            print("   Add 'platforms: [.macOS(.\(minimumMacOSVersion))]' to your package manifest manually.")
+            return
+        }
+
+        let manifest = try String(contentsOf: manifestURL, encoding: .utf8)
+
+        // Don't override platform requirements the developer already declared.
+        let declaresPlatforms = manifest.split(separator: "\n").contains { line in
+            let statement = line.trimming(while: \.isWhitespace)
+            return statement.hasPrefix("platforms:") || statement.hasPrefix("package.platforms")
+        }
+        guard !declaresPlatforms else {
+            if verboseLogging {
+                print("Package.swift already declares platform requirements, leaving it unchanged")
+            }
+            return
+        }
+
+        let existing = manifest.hasSuffix("\n") ? manifest : manifest + "\n"
+        try """
+        \(existing)
+        // The AWSLambdaRuntime API requires macOS 15 or later.
+        package.platforms = [
+            .macOS(.\(minimumMacOSVersion))
+        ]
+
+        """.write(to: manifestURL, atomically: true, encoding: .utf8)
+
+        print("✅ Added 'package.platforms = [.macOS(.\(minimumMacOSVersion))]' to Package.swift")
     }
 
     /// Finds the main entry point Swift file in the Sources directory.

@@ -9,6 +9,6 @@ let package = Package(
         .macOS(.v15)
     ],
     dependencies: [
-        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "2.0.0")
+        .package(url: "https://github.com/awslabs/swift-aws-lambda-runtime.git", from: "3.0.0")
     ]
 )

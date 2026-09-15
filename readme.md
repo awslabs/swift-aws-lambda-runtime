@@ -34,7 +34,7 @@ You need the Swift 6.x toolchain, [Docker](https://docs.docker.com/desktop/insta
 ```bash
 mkdir MyLambda && cd MyLambda
 swift package init --type executable --name MyLambda
-swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 2.0.0
+swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 3.0.0
 swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
 ```
 
@@ -93,7 +93,7 @@ aws lambda invoke \
   /dev/stdout
 ```
 
-For the full walkthrough, see the [getting started guide](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/documentation/awslambdaruntime/quick-setup) and the [tutorial](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/documentation/awslambdaruntime/tutorials/table-of-content).
+For the full walkthrough, see the [getting started guide](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/documentation/awslambdaruntime/quick-setup) and the [tutorial](https://swiftpackageindex.com/awslabs/swift-aws-lambda-runtime/main/tutorials/table-of-content).
 
 ## Examples
 
