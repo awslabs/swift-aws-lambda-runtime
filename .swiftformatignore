@@ -1,2 +1,3 @@
 Sources/AWSLambdaPluginHelper/lambda-init/Template.swift
 Sources/AWSLambdaPluginHelper/GeneratedClients
+aws-doc/
