@@ -55,6 +55,7 @@ import ucrt
 @available(LambdaSwift 2.0, *)
 public struct LambdaClock: Clock {
     public typealias Duration = Swift.Duration
+    public init() {}
 
     /// A moment in time represented as milliseconds since the Unix epoch.
     ///
