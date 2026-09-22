@@ -15,9 +15,9 @@ jobs:
       license_header_check_project_name: "SwiftAWSLambdaRuntime"
       shell_check_enabled: true
       python_lint_check_enabled: true
-      api_breakage_check_container_image: "swiftlang/swift:nightly-6.4.x-bookworm"
-      docs_check_container_image: "swiftlang/swift:nightly-6.4.x-bookworm"
-      format_check_container_image: "swiftlang/swift:nightly-6.4.x-bookworm"
+      api_breakage_check_container_image: "swift/swift:6.4-noble"
+      docs_check_container_image: "swift/swift:6.4-noble"
+      format_check_container_image: "swift/swift:6.4-noble"
       yamllint_check_enabled: true
       docs_check_enabled: true
 
