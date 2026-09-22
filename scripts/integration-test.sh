@@ -36,7 +36,7 @@ set -euo pipefail
 # Configuration
 # ---------------------------------------------------------------------------
 
-FUNCTION_NAME="swift-lambda-e2e-test-$(date +%s)"
+FUNCTION_NAME="SwiftLambdaE2ERest$(date +%s)"
 AWS_REGION="us-east-1"
 CLEANUP_NEEDED=false
 WORK_DIR=""
@@ -131,7 +131,7 @@ scaffold_project() {
             return
         fi
     else
-        WORK_DIR=$(mktemp -d -t "swift-lambda-e2e-XXXXXX")
+        WORK_DIR=$(mktemp -d -t "SwiftLambdaE2E")
         log "  Working directory: ${WORK_DIR}"
     fi
 
@@ -142,15 +142,15 @@ scaffold_project() {
 
     # Add macOS 15 platform requirement (needed by AWSLambdaRuntime)
     # Use -i.bak (works on both BSD/macOS and GNU/Linux sed) and remove the backup.
-    sed -i.bak 's/name: "'"${FUNCTION_NAME}"'",/name: "'"${FUNCTION_NAME}"'",\n    platforms: [.macOS(.v15)],/' Package.swift
+    sed -i.bak 's/name: "'"${FUNCTION_NAME}"'"\n    "target:",/name: "'"${FUNCTION_NAME}"'",\n    platforms: [.macOS(.v15)],\n    target:/' Package.swift
     rm -f Package.swift.bak
 
     # Add the lambda runtime dependency
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch sebsto/new-plugins
+    swift package add-dependency https://github.com/awslabs/swift-aws-lambda-runtime.git --from 3.0.0
     swift package add-target-dependency AWSLambdaRuntime "${FUNCTION_NAME}" --package swift-aws-lambda-runtime
 
     # Also add AWSLambdaEvents for the URL template
-    swift package add-dependency https://github.com/swift-server/swift-aws-lambda-events.git --branch main
+    swift package add-dependency https://github.com/awslabs/swift-aws-lambda-events.git --from 1.0.0
     swift package add-target-dependency AWSLambdaEvents "${FUNCTION_NAME}" --package swift-aws-lambda-events
 
     log "  Swift package initialized."
@@ -191,7 +191,7 @@ build_function() {
         return
     fi
 
-    swift package --allow-network-connections docker lambda-build --products "${FUNCTION_NAME}"
+    swift package --disable-sandbox lambda-build --cross-compile container --products "${FUNCTION_NAME}"
 
     log "  Build and packaging complete."
 }

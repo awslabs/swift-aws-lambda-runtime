@@ -42,7 +42,7 @@ on:
       matrix_linux_swift_container_image:
         type: string
         description: "Container image for the matrix test jobs. Defaults to Swift 6.4"
-        default: "swiftlang/swift:nightly-6.4.x-bookworm"
+        default: "swift:6.4-noble"
 
 ## We are cancelling previously triggered workflow runs
 concurrency:

@@ -39,8 +39,8 @@ echo "⚡️ Create your Swift command line project"
 swift package init --type executable --name MyLambda
 
 echo "📦 Add the AWS Lambda Swift runtime to your project"
-swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --branch main
-swift package add-dependency https://github.com/swift-server/swift-aws-lambda-events.git --branch main
+swift package add-dependency https://github.com/swift-server/swift-aws-lambda-runtime.git --from 3.0.0
+swift package add-dependency https://github.com/swift-server/swift-aws-lambda-events.git --from 3.0.0
 swift package add-target-dependency AWSLambdaRuntime MyLambda --package swift-aws-lambda-runtime
 swift package add-target-dependency AWSLambdaEvents MyLambda --package swift-aws-lambda-events
 
