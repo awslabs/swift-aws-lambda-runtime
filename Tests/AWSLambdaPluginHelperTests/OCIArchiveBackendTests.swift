@@ -141,4 +141,58 @@ struct OCIArchiveBackendTests {
         #expect(contents.contains("FROM public.ecr.aws/amazonlinux/amazonlinux:2023-minimal"))
         #expect(contents.contains("ENTRYPOINT [\"/var/runtime/bootstrap\"]"))
     }
+
+    @available(LambdaSwift 2.0, *)
+    @Test(
+        "archive copies resource bundles from both the native and the Swift Build build systems",
+        arguments: ["MyPackage_MyLambda.resources", "MyPackage_MyLambda.bundle"]
+    )
+    func archiveCopiesResourceBundle(bundleName: String) throws {
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "ociarchive-test-\(UUID().uuidString)")
+        let buildDir = root.appending(path: "build")
+        let outputDir = root.appending(path: "out")
+        try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // <tmp>/build/<product> executable, a resource bundle, and a build artifact that must not be packaged
+        let bundleDir = buildDir.appending(path: bundleName)
+        try FileManager.default.createDirectory(at: bundleDir, withIntermediateDirectories: true)
+        try Data("hello".utf8).write(to: bundleDir.appending(path: "hello.txt"))
+        try FileManager.default.createDirectory(
+            at: buildDir.appending(path: "MyLambda.swiftmodule"),
+            withIntermediateDirectories: true
+        )
+        let product = "MyLambda"
+        let binary = buildDir.appending(path: product)
+        try Data("#!/bin/sh\necho hi\n".utf8).write(to: binary)
+
+        let backend = OCIArchiveBackend(
+            cli: DockerCLI(),
+            toolPath: URL(fileURLWithPath: "/nonexistent/docker-\(UUID().uuidString)"),
+            architecture: .arm64,
+            baseImage: OCIArchiveBackend.defaultBaseImage
+        )
+
+        // the image build fails (no real CLI), but the context is laid out first
+        #expect(throws: (any Error).self) {
+            _ = try backend.archive(
+                products: [product: binary],
+                outputDirectory: outputDir,
+                verboseLogging: false
+            )
+        }
+
+        let contextDir = outputDir.appending(path: product)
+        #expect(
+            FileManager.default.fileExists(
+                atPath: contextDir.appending(path: bundleName).appending(path: "hello.txt").path()
+            )
+        )
+        #expect(!FileManager.default.fileExists(atPath: contextDir.appending(path: "MyLambda.swiftmodule").path()))
+
+        let dockerfile = try String(decoding: Data(contentsOf: contextDir.appending(path: "Dockerfile")), as: UTF8.self)
+        #expect(dockerfile.contains("COPY \(bundleName) /var/runtime/\(bundleName)"))
+        #expect(!dockerfile.contains("swiftmodule"))
+    }
 }
