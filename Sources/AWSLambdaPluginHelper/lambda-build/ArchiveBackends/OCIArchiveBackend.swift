@@ -150,7 +150,7 @@ struct OCIArchiveBackend: ArchiveBackend {
         return lines.joined(separator: "\n") + "\n"
     }
 
-    /// Copies every `*.resources` bundle found beside the built artifact into `contextDirectory`,
+    /// Copies every `*.resources` or `*.bundle` resource bundle found beside the built artifact into `contextDirectory`,
     /// returning the copied directory names.
     private func copyResources(besideArtifact artifactPath: URL, into contextDirectory: URL) throws -> [String] {
         var artifactPathComponents = artifactPath.pathComponents
@@ -163,7 +163,9 @@ struct OCIArchiveBackend: ArchiveBackend {
             guard let artifactURL = URL(string: "\(artifactDirectory)/\(fileInArtifactDirectory)") else {
                 continue
             }
-            guard artifactURL.pathExtension == "resources" else {
+            // the native build system names resource bundles `*.resources`,
+            // Swift Build (the default since Swift 6.4) names them `*.bundle`
+            guard ["resources", "bundle"].contains(artifactURL.pathExtension) else {
                 continue  // not a resources bundle, skip
             }
             let resourcesDirectoryName = artifactURL.lastPathComponent
