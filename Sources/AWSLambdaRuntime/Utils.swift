@@ -108,7 +108,7 @@ extension AmazonHeaders {
 /// Temporary storage for value being sent from one isolation domain to another
 @usableFromInline
 @available(LambdaSwift 2.0, *)
-struct SendingStorage<Value>: ~Copyable, @unchecked Sendable {
+struct SendingStorage<Value>: ~Copyable, Sendable {
     @usableFromInline
     struct ValueAlreadySentError: Error {
         @usableFromInline
