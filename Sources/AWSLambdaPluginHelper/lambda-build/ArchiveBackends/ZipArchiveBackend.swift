@@ -22,7 +22,7 @@ import Foundation
 /// Packages built executables into ZIP archives suitable for upload to AWS Lambda.
 ///
 /// Each product is laid out as a `bootstrap` executable (the name the Lambda runtime expects)
-/// alongside any `*.resources` bundles, then zipped via the `zip` tool.
+/// alongside any `*.resources` or `*.bundle` resource bundles, then zipped via the `zip` tool.
 @available(LambdaSwift 2.0, *)
 struct ZipArchiveBackend: ArchiveBackend {
     let name = "zip"
@@ -81,7 +81,9 @@ struct ZipArchiveBackend: ArchiveBackend {
                     continue
                 }
 
-                guard artifactURL.pathExtension == "resources" else {
+                // the native build system names resource bundles `*.resources`,
+                // Swift Build (the default since Swift 6.4) names them `*.bundle`
+                guard ["resources", "bundle"].contains(artifactURL.pathExtension) else {
                     continue  // Not resources, so don't copy
                 }
                 let resourcesDirectoryName = artifactURL.lastPathComponent

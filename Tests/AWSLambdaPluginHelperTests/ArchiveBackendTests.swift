@@ -247,4 +247,50 @@ struct ZipArchiveBackendTests {
         #expect(manifest.zipPath == zipURL.path())
         #expect(manifest.architecture == .arm64)
     }
+
+    @available(LambdaSwift 2.0, *)
+    @Test(
+        "archive includes resource bundles from both the native and the Swift Build build systems",
+        .enabled(
+            if: ZipArchiveBackendTests.zipToolPath != nil,
+            "the `zip` CLI is not installed on this machine; skipping the archive test"
+        ),
+        arguments: ["MyPackage_MyLambda.resources", "MyPackage_MyLambda.bundle"]
+    )
+    func archiveIncludesResourceBundle(bundleName: String) throws {
+        let zipToolPath = try #require(Self.zipToolPath)
+        let root = FileManager.default.temporaryDirectory
+            .appending(path: "ziparchive-test-\(UUID().uuidString)")
+        let buildDir = root.appending(path: "build")
+        let outputDir = root.appending(path: "out")
+        try FileManager.default.createDirectory(at: outputDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        // <tmp>/build/<product> executable, a resource bundle, and a build artifact that must not be packaged
+        let bundleDir = buildDir.appending(path: bundleName)
+        try FileManager.default.createDirectory(at: bundleDir, withIntermediateDirectories: true)
+        try Data("hello".utf8).write(to: bundleDir.appending(path: "hello.txt"))
+        try FileManager.default.createDirectory(
+            at: buildDir.appending(path: "MyLambda.swiftmodule"),
+            withIntermediateDirectories: true
+        )
+        let product = "MyLambda"
+        let binary = buildDir.appending(path: product)
+        try Data("#!/bin/sh\necho hi\n".utf8).write(to: binary)
+
+        let backend = ZipArchiveBackend(zipToolPath: zipToolPath, architecture: .arm64)
+        _ = try backend.archive(
+            products: [product: binary],
+            outputDirectory: outputDir,
+            verboseLogging: false
+        )
+
+        let workingDir = outputDir.appending(path: product)
+        #expect(
+            FileManager.default.fileExists(
+                atPath: workingDir.appending(path: bundleName).appending(path: "hello.txt").path()
+            )
+        )
+        #expect(!FileManager.default.fileExists(atPath: workingDir.appending(path: "MyLambda.swiftmodule").path()))
+    }
 }
